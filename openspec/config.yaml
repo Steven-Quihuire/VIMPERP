@@ -1,0 +1,58 @@
+# OpenSpec SDD configuration — vimcore
+schema: spec-driven
+
+context: |
+  Project: vimcore (planned change identity: vimcore/erp)
+  Repo state: bootstrap in progress — /home/linux/Vimcore is still not a git repo, but the monorepo foundation now exists.
+  Tech stack: pnpm workspace + Turbo, React/Vite frontend, Express 5 + Drizzle + PostgreSQL backend, Docker Compose, TypeScript only.
+  Confirmed stack: pnpm monorepo (Turbo/Turborepo-style),
+    React frontend (screaming/clean architecture, TanStack Query, Zustand, shadcn),
+    Node + Express 5 + Drizzle + PostgreSQL backend, Docker Compose, TypeScript only.
+  Testing: Vitest is available at the root and app packages. Strict TDD is now enabled for follow-up slices.
+  Artifact store: hybrid (Engram observations + openspec/ files).
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Distinguish detected facts from proposed defaults; confirm the stack before apply
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+    - Follow feature-first vertical slices (domain/application/infrastructure/presentation)
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+    - Bootstrap task must establish test runner before any implementation task
+  apply:
+    guidelines:
+      - Follow existing code patterns
+      - TypeScript only; pnpm only; no Axios; PostgreSQL + Drizzle only on the backend
+    tdd: true
+    test_command: "pnpm test"
+  verify:
+    test_command: "pnpm test"
+    build_command: "pnpm build"
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas
+
+testing:
+  strict_tdd: true
+  detected: "2026-07-27"
+  runner:
+    command: "pnpm test"
+    framework: vitest
+  layers:
+    unit: true
+    integration: true
+    e2e: false
+  coverage:
+    available: true
+    command: "pnpm --filter api test -- --coverage"
+  quality:
+    linter: true
+    type_checker: true
+    formatter: true

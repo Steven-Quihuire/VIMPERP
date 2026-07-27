@@ -1,0 +1,49 @@
+# identity-access Specification
+
+## Purpose
+
+Define credential-based authentication, protected access, and minimum RBAC for the first slice.
+
+## Requirements
+
+### Requirement: Credential Authentication
+
+The system MUST support email-or-username plus password sign-in and MUST NOT require or expose social login.
+
+#### Scenario: Valid credentials create an authenticated session
+- GIVEN a registered user with valid credentials
+- WHEN the user signs in
+- THEN the system SHALL grant authenticated access to allowed areas
+
+#### Scenario: Invalid credentials are rejected
+- GIVEN an unregistered or wrong credential pair
+- WHEN sign-in is attempted
+- THEN the system MUST deny access without revealing sensitive verification details
+
+### Requirement: Protected Access and Roles
+
+The system MUST protect dashboard, company, and locale APIs behind authentication and SHALL define at least `platform-admin`, `company-owner`, and `company-user` roles.
+
+#### Scenario: Authorized role reaches protected resources
+- GIVEN an authenticated user with a permitted role
+- WHEN the user requests an allowed dashboard or company resource
+- THEN the system SHALL return the resource
+
+#### Scenario: Unauthorized access is blocked
+- GIVEN an unauthenticated user or insufficient role
+- WHEN a protected resource is requested
+- THEN the system MUST deny access
+
+### Requirement: Bootstrap Admin Safety
+
+The system MAY provide temporary `admin / admin` bootstrap credentials for non-production bootstrap only and MUST prevent that behavior from being valid in production.
+
+#### Scenario: Bootstrap environment allows seed admin
+- GIVEN a bootstrap or development environment
+- WHEN the seeded admin credentials are used
+- THEN the system SHALL allow platform-admin access
+
+#### Scenario: Production disallows seed admin behavior
+- GIVEN a production environment
+- WHEN the seeded admin credentials are attempted
+- THEN the system MUST reject them
