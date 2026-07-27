@@ -31,12 +31,13 @@ export const useCreateCompany = (apiBaseUrl?: string) => {
   });
 };
 
-export const usePalettePreference = (apiBaseUrl?: string) => {
+export const usePalettePreference = (apiBaseUrl?: string, enabled = true) => {
   const repository = createOnboardingRepository(apiBaseUrl);
 
   return useQuery({
     queryKey: palettePreferenceQueryKey,
     queryFn: () => repository.getPalettePreference(),
+    enabled,
   });
 };
 

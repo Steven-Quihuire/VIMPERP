@@ -1,4 +1,4 @@
-import { pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { index, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
 export const authRoleEnum = pgEnum('auth_role', [
   'platform-admin',
@@ -62,7 +62,7 @@ export const notificationsTable = pgTable('notifications', {
   type: text('type').notNull(),
   message: text('message').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
-});
+}, (table) => [index('notifications_target_role_idx').on(table.targetRole)]);
 
 export const auditEventsTable = pgTable('audit_events', {
   id: text('id').primaryKey(),

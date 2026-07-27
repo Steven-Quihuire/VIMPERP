@@ -1,5 +1,11 @@
 import express, { type Express } from 'express';
 
+import {
+  createGetCompanySummary,
+} from '../features/admin/application/get-company-summary';
+import { createListAdminNotifications } from '../features/admin/application/list-admin-notifications';
+import type { AdminGateway } from '../features/admin/domain/admin';
+import { createDrizzleAdminGateway } from '../features/admin/infrastructure/drizzle-admin.gateway';
 import { createAdminRouter } from '../features/admin/presentation/admin.router';
 import { createCreateCompany } from '../features/companies/application/create-company';
 import { createGetThemePreference } from '../features/companies/application/get-theme-preference';
@@ -29,6 +35,12 @@ import { createDrizzleHealthGateway } from '../features/sample-health/infrastruc
 import { createHealthRouter } from '../features/sample-health/presentation/health.router';
 import { errorMiddleware } from '../shared/presentation/error.middleware';
 import { createDb } from '../shared/infrastructure/db/client';
+import {
+  createLogger,
+  createMetricsRouter,
+  createRequestContextMiddleware,
+  createRequestMetrics,
+} from '../shared/presentation/observability';
 
 type CreateAppInput = {
   databaseUrl?: string;
@@ -37,6 +49,7 @@ type CreateAppInput = {
   passwordHasher?: PasswordHasher;
   sessionTokenService?: SessionTokenService;
   companyOnboardingGateway?: CompanyOnboardingGateway;
+  adminGateway?: AdminGateway;
   nodeEnv?: 'development' | 'test' | 'production';
   seedAdminEnabled?: boolean;
   sessionCookieName?: string;
@@ -56,9 +69,12 @@ export const createApp = (input: CreateAppInput = {}): Express => {
     input.sessionTokenService ?? createSessionTokenService();
   const companyOnboardingGateway =
     input.companyOnboardingGateway ?? createDrizzleCompanyOnboardingGateway(db);
+  const adminGateway = input.adminGateway ?? createDrizzleAdminGateway(db);
   const nodeEnv = input.nodeEnv ?? 'development';
   const seedAdminEnabled = nodeEnv !== 'production' && (input.seedAdminEnabled ?? false);
   const sessionCookieName = input.sessionCookieName ?? 'vimcore_session';
+  const requestMetrics = createRequestMetrics();
+  const logger = createLogger(nodeEnv !== 'test');
   const resolveAuthSession = createResolveAuthSession({
     authIdentityGateway,
     seedAdminSessions,
@@ -68,7 +84,9 @@ export const createApp = (input: CreateAppInput = {}): Express => {
   const requirePlatformAdmin = createRequireRole('platform-admin');
 
   app.use(express.json());
+  app.use(createRequestContextMiddleware({ logger, metrics: requestMetrics }));
   app.use(createHealthRouter(getHealth));
+  app.use(createMetricsRouter(requestMetrics));
   app.use(
     createAuthRouter({
       login: createLogin({
@@ -86,6 +104,8 @@ export const createApp = (input: CreateAppInput = {}): Express => {
   );
   app.use(
     createAdminRouter({
+      getCompanySummary: createGetCompanySummary(adminGateway),
+      listNotifications: createListAdminNotifications(adminGateway),
       requireAuth,
       requirePlatformAdmin,
     }),

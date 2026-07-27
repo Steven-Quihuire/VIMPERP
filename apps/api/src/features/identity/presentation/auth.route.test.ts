@@ -2,6 +2,7 @@ import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
 import { createApp } from '../../../app/create-app';
+import type { AdminGateway } from '../../admin/domain/admin';
 import type {
   AuthIdentityGateway,
   AuthMembership,
@@ -65,6 +66,17 @@ const sessionTokenService: SessionTokenService = {
   create: () => 'session-token',
 };
 
+const adminGateway: AdminGateway = {
+  getCompanySummary: async () =>
+    await Promise.resolve({
+      totalCompanies: 0,
+      notificationCount: 0,
+      auditEventCount: 0,
+      companies: [],
+    }),
+  listNotifications: async () => await Promise.resolve([]),
+};
+
 const getSessionCookie = (headers: string | string[] | undefined): string => {
   const cookieHeaders = Array.isArray(headers)
     ? headers
@@ -106,6 +118,7 @@ describe('auth routes', () => {
     ]);
 
     const app = createApp({
+      adminGateway,
       authIdentityGateway: gateway,
       passwordHasher,
       sessionTokenService,
@@ -147,6 +160,7 @@ describe('auth routes', () => {
     });
 
     const app = createApp({
+      adminGateway,
       authIdentityGateway: gateway,
       passwordHasher,
       sessionTokenService,
@@ -179,6 +193,7 @@ describe('auth routes', () => {
     });
 
     const app = createApp({
+      adminGateway,
       authIdentityGateway: gateway,
       passwordHasher,
       sessionTokenService,
@@ -231,6 +246,7 @@ describe('auth routes', () => {
     ]);
 
     const app = createApp({
+      adminGateway,
       authIdentityGateway: gateway,
       passwordHasher,
       sessionTokenService,
@@ -263,11 +279,17 @@ describe('auth routes', () => {
       .set('Cookie', getSessionCookie(platformAdminLogin.headers['set-cookie']));
 
     expect(platformAdminResponse.status).toBe(200);
-    expect(platformAdminResponse.body).toEqual({ companies: [], totalCompanies: 0 });
+    expect(platformAdminResponse.body).toEqual({
+      totalCompanies: 0,
+      notificationCount: 0,
+      auditEventCount: 0,
+      companies: [],
+    });
   });
 
   it('allows seeded admin credentials only outside production', async () => {
     const app = createApp({
+      adminGateway,
       passwordHasher,
       sessionTokenService,
       seedAdminEnabled: true,
@@ -284,6 +306,7 @@ describe('auth routes', () => {
 
   it('rejects admin/admin in production even if seed admin is requested', async () => {
     const app = createApp({
+      adminGateway,
       passwordHasher,
       sessionTokenService,
       seedAdminEnabled: true,

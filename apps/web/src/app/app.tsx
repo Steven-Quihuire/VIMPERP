@@ -8,11 +8,13 @@ import {
   Routes,
 } from 'react-router-dom';
 
-import { DashboardPage } from '../features/auth/presentation/dashboard-page';
 import { LoginPage } from '../features/auth/presentation/login-page';
 import { useAuth } from '../features/auth/presentation/use-auth';
+import { DashboardPage } from '../features/dashboard/presentation/dashboard-page';
+import { DesktopGate } from '../features/desktop-access/presentation/desktop-gate';
 import { needsCompanyOnboarding } from '../features/onboarding/domain/onboarding';
 import { OnboardingPage } from '../features/onboarding/presentation/onboarding-page';
+import { ThemeProvider } from '../features/theme/presentation/theme-provider';
 
 const ProtectedDashboard = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
@@ -31,7 +33,7 @@ const ProtectedDashboard = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
 
   return (
     <DashboardPage
-      email={auth.session.user.email}
+      session={auth.session}
       {...(apiBaseUrl ? { apiBaseUrl } : {})}
     />
   );
@@ -106,7 +108,11 @@ export const App = ({
   return (
     <QueryClientProvider client={queryClient}>
       <RouterComponent {...routerProps}>
-        <AppRoutes {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+        <DesktopGate>
+          <ThemeProvider {...(apiBaseUrl ? { apiBaseUrl } : {})}>
+            <AppRoutes {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+          </ThemeProvider>
+        </DesktopGate>
       </RouterComponent>
     </QueryClientProvider>
   );

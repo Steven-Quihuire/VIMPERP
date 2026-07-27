@@ -39,10 +39,10 @@ Chain strategy: feature-branch-chain
 
 ## Phase 4: Dashboard + Admin + Desktop + Theme (PR 4)
 
-- [ ] 4.1 RED `GET /admin/companies/summary` ⇒ 200; RED `GET /admin/notifications` ⇒ 200; GREEN impl; Drizzle migration notifications/audit_events; index `notifications(target_role)`; pino+request-id+`/health`/`/metrics`.
-- [ ] 4.2 Web `apps/web/src/features/dashboard`: sidebar+cards+queries; RED shows modules for `company-owner`; GREEN filter by role.
-- [ ] 4.3 RED `isDesktop(ua, pointer)` false mobile; Playwright ⇒ blocking page (threat #2); GREEN hook+`<DesktopGate>`.
-- [ ] 4.4 5 palette tokens (CSS vars) in `apps/web/src/features/theme`; RED applying palette sets `data-palette` on `<html>`; no dark/light; GREEN `usePalette`+`ThemeProvider`.
+- [x] 4.1 RED `GET /admin/companies/summary` ⇒ 200; RED `GET /admin/notifications` ⇒ 200; GREEN impl; Drizzle migration notifications/audit_events; index `notifications(target_role)`; pino+request-id+`/health`/`/metrics`.
+- [x] 4.2 Web `apps/web/src/features/dashboard`: sidebar+cards+queries; RED shows modules for `company-owner`; GREEN filter by role.
+- [x] 4.3 RED `isDesktop(ua, pointer)` false mobile; Playwright ⇒ blocking page (threat #2); GREEN hook+`<DesktopGate>`.
+- [x] 4.4 5 palette tokens (CSS vars) in `apps/web/src/features/theme`; RED applying palette sets `data-palette` on `<html>`; no dark/light; GREEN `usePalette`+`ThemeProvider`.
 
 ## Phase 5: E2E + CI + Coverage (PR 5)
 

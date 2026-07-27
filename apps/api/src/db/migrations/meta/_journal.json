@@ -15,6 +15,13 @@
       "when": 1785186786562,
       "tag": "0001_fearless_vulcan",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785189407317,
+      "tag": "0002_moaning_stature",
+      "breakpoints": true
     }
   ]
 }
