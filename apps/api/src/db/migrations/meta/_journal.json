@@ -8,6 +8,13 @@
       "when": 1785184280977,
       "tag": "0000_nosy_black_cat",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785186786562,
+      "tag": "0001_fearless_vulcan",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,12 @@
 import express, { type Express } from 'express';
 
 import { createAdminRouter } from '../features/admin/presentation/admin.router';
+import { createCreateCompany } from '../features/companies/application/create-company';
+import { createGetThemePreference } from '../features/companies/application/get-theme-preference';
+import { createUpdateThemePreference } from '../features/companies/application/update-theme-preference';
+import type { CompanyOnboardingGateway } from '../features/companies/domain/company';
+import { createDrizzleCompanyOnboardingGateway } from '../features/companies/infrastructure/drizzle-company.gateway';
+import { createCompanyRouter } from '../features/companies/presentation/company.router';
 import { createLogin } from '../features/identity/application/login';
 import { createLogout } from '../features/identity/application/logout';
 import { createResolveAuthSession } from '../features/identity/application/resolve-auth-session';
@@ -30,6 +36,7 @@ type CreateAppInput = {
   authIdentityGateway?: AuthIdentityGateway;
   passwordHasher?: PasswordHasher;
   sessionTokenService?: SessionTokenService;
+  companyOnboardingGateway?: CompanyOnboardingGateway;
   nodeEnv?: 'development' | 'test' | 'production';
   seedAdminEnabled?: boolean;
   sessionCookieName?: string;
@@ -47,6 +54,8 @@ export const createApp = (input: CreateAppInput = {}): Express => {
   const passwordHasher = input.passwordHasher ?? createArgon2PasswordHasher();
   const sessionTokenService =
     input.sessionTokenService ?? createSessionTokenService();
+  const companyOnboardingGateway =
+    input.companyOnboardingGateway ?? createDrizzleCompanyOnboardingGateway(db);
   const nodeEnv = input.nodeEnv ?? 'development';
   const seedAdminEnabled = nodeEnv !== 'production' && (input.seedAdminEnabled ?? false);
   const sessionCookieName = input.sessionCookieName ?? 'vimcore_session';
@@ -79,6 +88,14 @@ export const createApp = (input: CreateAppInput = {}): Express => {
     createAdminRouter({
       requireAuth,
       requirePlatformAdmin,
+    }),
+  );
+  app.use(
+    createCompanyRouter({
+      requireAuth,
+      createCompany: createCreateCompany(companyOnboardingGateway),
+      getThemePreference: createGetThemePreference(companyOnboardingGateway),
+      updateThemePreference: createUpdateThemePreference(companyOnboardingGateway),
     }),
   );
   app.use(errorMiddleware);

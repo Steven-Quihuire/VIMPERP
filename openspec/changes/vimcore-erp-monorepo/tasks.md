@@ -33,9 +33,9 @@ Chain strategy: feature-branch-chain
 
 ## Phase 3: Company Onboarding (PR 3)
 
-- [ ] 3.1 RED `POST /companies` valid ⇒ 201+`notification`+`audit_event`+`membership(company-owner)` atomic; missing step ⇒ 400; GREEN tenant-create UC+Drizzle tx+Zod+migration (companies+profile+branches).
-- [ ] 3.2 Web `apps/web/src/features/onboarding`: 5-step Zustand (account, legal/tax, services, address, contact); RED stepper refuses empty; GREEN store guard.
-- [ ] 3.3 RED palette default applied on create; `GET /me/preferences` returns it; GREEN `theme_preferences` row in tx + Web palette selector + `PATCH /me/preferences` mutation.
+- [x] 3.1 RED `POST /companies` valid ⇒ 201+`notification`+`audit_event`+`membership(company-owner)` atomic; missing step ⇒ 400; GREEN tenant-create UC+Drizzle tx+Zod+migration (companies+profile+branches).
+- [x] 3.2 Web `apps/web/src/features/onboarding`: 5-step Zustand (account, legal/tax, services, address, contact); RED stepper refuses empty; GREEN store guard.
+- [x] 3.3 RED palette default applied on create; `GET /me/preferences` returns it; GREEN `theme_preferences` row in tx + Web palette selector + `PATCH /me/preferences` mutation.
 
 ## Phase 4: Dashboard + Admin + Desktop + Theme (PR 4)
 

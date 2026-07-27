@@ -10,6 +10,7 @@ export class HttpError extends Error {
 export type HttpClient = {
   get: <T>(path: string) => Promise<T>;
   post: <TBody>(path: string, body?: TBody) => Promise<Response>;
+  patch: <TBody>(path: string, body: TBody) => Promise<Response>;
 };
 
 const readErrorMessage = async (response: Response) => {
@@ -54,6 +55,25 @@ export const createHttpClient = (baseUrl: string): HttpClient => ({
     if (body !== undefined) {
       requestInit.body = JSON.stringify(body);
     }
+
+    const response = await fetch(`${baseUrl}${path}`, requestInit);
+
+    if (!response.ok) {
+      throw new HttpError(await readErrorMessage(response), response.status);
+    }
+
+    return response;
+  },
+  patch: async <TBody>(path: string, body: TBody) => {
+    const requestInit: RequestInit = {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(body),
+    };
 
     const response = await fetch(`${baseUrl}${path}`, requestInit);
 

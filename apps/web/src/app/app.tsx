@@ -11,6 +11,8 @@ import {
 import { DashboardPage } from '../features/auth/presentation/dashboard-page';
 import { LoginPage } from '../features/auth/presentation/login-page';
 import { useAuth } from '../features/auth/presentation/use-auth';
+import { needsCompanyOnboarding } from '../features/onboarding/domain/onboarding';
+import { OnboardingPage } from '../features/onboarding/presentation/onboarding-page';
 
 const ProtectedDashboard = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
@@ -21,6 +23,10 @@ const ProtectedDashboard = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
 
   if (!auth.session) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (needsCompanyOnboarding(auth.session)) {
+    return <Navigate to="/onboarding" replace />;
   }
 
   return (
@@ -35,10 +41,33 @@ const LoginRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
   if (auth.isSuccess && auth.session) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={needsCompanyOnboarding(auth.session) ? '/onboarding' : '/dashboard'} replace />;
   }
 
   return <LoginPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />;
+};
+
+const ProtectedOnboarding = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+  const auth = useAuth(apiBaseUrl);
+
+  if (auth.isLoading) {
+    return <p>Loading...</p>;
+  }
+
+  if (!auth.session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!needsCompanyOnboarding(auth.session)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return (
+    <OnboardingPage
+      session={auth.session}
+      {...(apiBaseUrl ? { apiBaseUrl } : {})}
+    />
+  );
 };
 
 const RootLayout = () => <Outlet />;
@@ -54,6 +83,10 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
       <Route
         path="/dashboard"
         element={<ProtectedDashboard {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+      />
+      <Route
+        path="/onboarding"
+        element={<ProtectedOnboarding {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
       />
     </Route>
   </Routes>

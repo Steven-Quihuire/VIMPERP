@@ -72,6 +72,10 @@ describe('App auth flow', () => {
         ));
       }
 
+      if (url.endsWith('/me/preferences')) {
+        return Promise.resolve(createJsonResponse({ paletteId: 'ocean' }, 200));
+      }
+
       if (url.endsWith('/auth/login')) {
         expect(init?.method).toBe('POST');
         return Promise.resolve(new Response(null, { status: 204 }));
