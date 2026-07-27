@@ -4,9 +4,9 @@ import { describe, expect, it } from 'vitest';
 import { App } from '../../../app/app';
 
 describe('App', () => {
-  it('renders Sample', () => {
-    render(<App />);
+  it('renders login by default', async () => {
+    render(<App initialEntries={['/login']} />);
 
-    expect(screen.getByText('Sample')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
   });
 });

@@ -6,7 +6,7 @@
 
 Decision needed before apply: Yes
 Chained PRs recommended: Yes
-Chain strategy: pending
+Chain strategy: feature-branch-chain
 400-line budget risk: High
 
 ### Work Units (feature-branch-chain; base `feature/erp-bootstrap`)
@@ -26,10 +26,10 @@ Chain strategy: pending
 
 ## Phase 2: Identity & Access (PR 2)
 
-- [ ] 2.1 RED `POST /auth/login` valid ⇒ 204+`Set-Cookie`; invalid ⇒ 401 generic; RED `GET /auth/me` unauth ⇒ 401, auth ⇒ 200+`memberships`; GREEN controller+UC+repo+`users`/`sessions`+argon2id+`requireAuth`; Drizzle migration+boot.
-- [ ] 2.2 RED `company-user` ⇒ `GET /admin/*` ⇒ 403 (threat #1); GREEN `memberships`+`requireRole(platform-admin)`+role enum; RED Playwright unauth `/dashboard` ⇒ `/login` (threat #1); GREEN Router guard via `useAuth()`.
-- [ ] 2.3 RED boot `NODE_ENV=production`+`SEED_ADMIN_ENABLED=true` ⇒ refuses; prod `admin/admin` ⇒ 401 (threat #4); GREEN env-gated seed+NODE_ENV guard.
-- [ ] 2.4 Web `apps/web/src/features/auth`: login form, `useLogin` mutation, Zustand session cache, `useAuth` hook.
+- [x] 2.1 RED `POST /auth/login` valid ⇒ 204+`Set-Cookie`; invalid ⇒ 401 generic; RED `GET /auth/me` unauth ⇒ 401, auth ⇒ 200+`memberships`; GREEN controller+UC+repo+`users`/`sessions`+argon2id+`requireAuth`; Drizzle migration+boot.
+- [x] 2.2 RED `company-user` ⇒ `GET /admin/*` ⇒ 403 (threat #1); GREEN `memberships`+`requireRole(platform-admin)`+role enum; RED Playwright unauth `/dashboard` ⇒ `/login` (threat #1); GREEN Router guard via `useAuth()`.
+- [x] 2.3 RED boot `NODE_ENV=production`+`SEED_ADMIN_ENABLED=true` ⇒ refuses; prod `admin/admin` ⇒ 401 (threat #4); GREEN env-gated seed+NODE_ENV guard.
+- [x] 2.4 Web `apps/web/src/features/auth`: login form, `useLogin` mutation, Zustand session cache, `useAuth` hook.
 
 ## Phase 3: Company Onboarding (PR 3)
 
