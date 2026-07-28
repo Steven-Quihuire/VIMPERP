@@ -11,6 +11,8 @@ const envSchema = z
     NODE_ENV: z
       .enum(['development', 'test', 'production'])
       .default('development'),
+    PROVISIONING_STALE_TIMEOUT_MS: z.coerce.number().int().positive().default(15 * 60 * 1000),
+    PROVISIONING_SWEEP_INTERVAL_MS: z.coerce.number().int().positive().default(5 * 60 * 1000),
     SEED_ADMIN_ENABLED: z
       .enum(['true', 'false'])
       .optional()

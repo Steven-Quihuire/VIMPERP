@@ -39,6 +39,10 @@ const themePreferenceSchema = z.object({
 
 type AuthenticatedResponseLocals = {
   auth: AuthSession;
+  requestContext?: {
+    correlationId: string;
+    requestId: string;
+  };
 };
 
 export const createCompanyRouter = ({
@@ -49,7 +53,9 @@ export const createCompanyRouter = ({
 }: {
   requireAuth: RequestHandler;
   createCompany: (input: {
+    correlationId: string;
     ownerUserId: string;
+    requestId: string;
     name: string;
     legalIdentifier: string;
     services: string[];
@@ -77,8 +83,11 @@ export const createCompanyRouter = ({
     try {
       const body = createCompanyBodySchema.parse(request.body);
       const auth = (response.locals as AuthenticatedResponseLocals).auth;
+      const requestContext = (response.locals as AuthenticatedResponseLocals).requestContext;
       const result = await createCompany({
+        correlationId: requestContext?.correlationId ?? String(response.getHeader('x-correlation-id')),
         ownerUserId: auth.user.id,
+        requestId: requestContext?.requestId ?? String(response.getHeader('x-request-id')),
         ...body,
       });
 

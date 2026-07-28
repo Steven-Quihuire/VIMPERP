@@ -8,6 +8,7 @@ import {
   branchesTable,
   companiesTable,
   companyProfilesTable,
+  companyServicesTable,
   membershipsTable,
   notificationsTable,
   themePreferencesTable,
@@ -26,13 +27,36 @@ const toPaletteId = (value: string): PaletteId => {
   return 'ocean';
 };
 
+const normalizeServices = (services: string[]) => {
+  const normalizedServices = new Set<string>();
+
+  for (const service of services) {
+    const normalizedService = service.trim();
+
+    if (normalizedService.length > 0) {
+      normalizedServices.add(normalizedService);
+    }
+  }
+
+  return [...normalizedServices];
+};
+
 export const createDrizzleCompanyOnboardingGateway = (
   db: AppDb,
+  {
+    createId,
+    now = () => new Date(),
+  }: {
+    createId?: () => string;
+    now?: () => Date;
+  } = {},
 ): CompanyOnboardingGateway => ({
   createCompany: async (input) => {
     return db.transaction(async (tx) => {
-      const companyId = randomUUID();
-      const createdAt = new Date();
+      const generateId = createId ?? randomUUID;
+      const companyId = generateId();
+      const createdAt = now();
+      const services = normalizeServices(input.services);
 
       await tx.insert(companiesTable).values({
         id: companyId,
@@ -43,7 +67,7 @@ export const createDrizzleCompanyOnboardingGateway = (
       await tx.insert(companyProfilesTable).values({
         companyId,
         legalIdentifier: input.legalIdentifier,
-        services: JSON.stringify(input.services),
+        services: JSON.stringify(services),
         country: input.address.country,
         city: input.address.city,
         exactLocation: input.address.exactLocation,
@@ -51,10 +75,19 @@ export const createDrizzleCompanyOnboardingGateway = (
         contactEmail: input.contact.email,
       });
 
+      await tx.insert(companyServicesTable).values(
+        services.map((service) => ({
+          id: generateId(),
+          companyId,
+          name: service,
+          createdAt,
+        })),
+      );
+
       if (input.branches.length > 0) {
         await tx.insert(branchesTable).values(
           input.branches.map((branch) => ({
-            id: randomUUID(),
+            id: generateId(),
             companyId,
             name: branch.name,
             locale: branch.locale ?? null,
@@ -75,7 +108,7 @@ export const createDrizzleCompanyOnboardingGateway = (
       });
 
       await tx.insert(notificationsTable).values({
-        id: randomUUID(),
+        id: generateId(),
         companyId,
         targetRole: 'platform-admin',
         type: 'company.registered',
@@ -84,14 +117,23 @@ export const createDrizzleCompanyOnboardingGateway = (
       });
 
       await tx.insert(auditEventsTable).values({
-        id: randomUUID(),
+        id: generateId(),
         actorUserId: input.ownerUserId,
         companyId,
         type: 'company.created',
-        details: JSON.stringify({
+        correlationId: input.correlationId,
+        entityType: 'company',
+        entityId: companyId,
+        details: {
           legalIdentifier: input.legalIdentifier,
-          services: input.services,
-        }),
+          services,
+        },
+        oldValues: null,
+        newValues: {
+          name: input.name,
+          legalIdentifier: input.legalIdentifier,
+          services,
+        },
         createdAt,
       });
 

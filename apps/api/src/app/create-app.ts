@@ -9,9 +9,14 @@ import { createDrizzleAdminGateway } from '../features/admin/infrastructure/driz
 import { createAdminRouter } from '../features/admin/presentation/admin.router';
 import { createCreateCompany } from '../features/companies/application/create-company';
 import { createGetThemePreference } from '../features/companies/application/get-theme-preference';
+import { createSweepStaleProvisioningRuns } from '../features/companies/application/sweep-stale-provisioning-runs';
 import { createUpdateThemePreference } from '../features/companies/application/update-theme-preference';
-import type { CompanyOnboardingGateway } from '../features/companies/domain/company';
+import type {
+  CompanyOnboardingGateway,
+  ProvisioningRecorder,
+} from '../features/companies/domain/company';
 import { createDrizzleCompanyOnboardingGateway } from '../features/companies/infrastructure/drizzle-company.gateway';
+import { createDrizzleProvisioningRecorder } from '../features/companies/infrastructure/drizzle-provisioning.recorder';
 import { createCompanyRouter } from '../features/companies/presentation/company.router';
 import { createLogin } from '../features/identity/application/login';
 import { createLogout } from '../features/identity/application/logout';
@@ -33,7 +38,10 @@ import { createGetHealth } from '../features/sample-health/application/get-healt
 import type { HealthGateway } from '../features/sample-health/domain/health';
 import { createDrizzleHealthGateway } from '../features/sample-health/infrastructure/drizzle-health.gateway';
 import { createHealthRouter } from '../features/sample-health/presentation/health.router';
-import { errorMiddleware } from '../shared/presentation/error.middleware';
+import {
+  createErrorMiddleware,
+  type ApplicationErrorRecorder,
+} from '../shared/presentation/error.middleware';
 import { createDb } from '../shared/infrastructure/db/client';
 import {
   createLogger,
@@ -49,13 +57,15 @@ type CreateAppInput = {
   passwordHasher?: PasswordHasher;
   sessionTokenService?: SessionTokenService;
   companyOnboardingGateway?: CompanyOnboardingGateway;
+  provisioningRecorder?: ProvisioningRecorder & ApplicationErrorRecorder;
   adminGateway?: AdminGateway;
   nodeEnv?: 'development' | 'test' | 'production';
   seedAdminEnabled?: boolean;
   sessionCookieName?: string;
+  provisioningStaleTimeoutMs?: number;
 };
 
-export const createApp = (input: CreateAppInput = {}): Express => {
+export const createAppRuntime = (input: CreateAppInput = {}) => {
   const db = createDb(input.databaseUrl);
   const app = express();
   const seedAdminSessions = new Map<string, Date>();
@@ -69,6 +79,8 @@ export const createApp = (input: CreateAppInput = {}): Express => {
     input.sessionTokenService ?? createSessionTokenService();
   const companyOnboardingGateway =
     input.companyOnboardingGateway ?? createDrizzleCompanyOnboardingGateway(db);
+  const provisioningRecorder =
+    input.provisioningRecorder ?? createDrizzleProvisioningRecorder(db);
   const adminGateway = input.adminGateway ?? createDrizzleAdminGateway(db);
   const nodeEnv = input.nodeEnv ?? 'development';
   const seedAdminEnabled = nodeEnv !== 'production' && (input.seedAdminEnabled ?? false);
@@ -82,6 +94,12 @@ export const createApp = (input: CreateAppInput = {}): Express => {
   });
   const requireAuth = createRequireAuth(resolveAuthSession, sessionCookieName);
   const requirePlatformAdmin = createRequireRole('platform-admin');
+  const sweepStaleProvisioningRuns = createSweepStaleProvisioningRuns({
+    recorder: provisioningRecorder,
+    ...(input.provisioningStaleTimeoutMs !== undefined
+      ? { staleTimeoutMs: input.provisioningStaleTimeoutMs }
+      : {}),
+  });
 
   app.use(express.json());
   app.use(createRequestContextMiddleware({ logger, metrics: requestMetrics }));
@@ -113,12 +131,22 @@ export const createApp = (input: CreateAppInput = {}): Express => {
   app.use(
     createCompanyRouter({
       requireAuth,
-      createCompany: createCreateCompany(companyOnboardingGateway),
+      createCompany: createCreateCompany({
+        gateway: companyOnboardingGateway,
+        recorder: provisioningRecorder,
+      }),
       getThemePreference: createGetThemePreference(companyOnboardingGateway),
       updateThemePreference: createUpdateThemePreference(companyOnboardingGateway),
     }),
   );
-  app.use(errorMiddleware);
+  app.use(createErrorMiddleware({ recorder: provisioningRecorder }));
 
-  return app;
+  return {
+    app,
+    sweepStaleProvisioningRuns,
+  };
+};
+
+export const createApp = (input: CreateAppInput = {}): Express => {
+  return createAppRuntime(input).app;
 };

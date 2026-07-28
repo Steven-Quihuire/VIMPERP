@@ -48,16 +48,16 @@ Tracker branch `feature/observability-audit-provisioning` is a draft/no-merge in
 
 ## Phase 3: Provisioning Orchestration + Sweep (PR 3)
 
-- [ ] 3.1 [RED] write `provisioning.recorder.test.ts` (start/succeed/fail/sweep stubs)
-- [ ] 3.2 [GREEN] create `apps/api/src/features/companies/infrastructure/drizzle-provisioning.recorder.ts`
-- [ ] 3.3 [RED] extend `features/companies/domain/company.ts` with `ProvisioningRecorder` port + `correlationId` input
-- [ ] 3.4 [RED] write `create-company.test.ts` for run-start, atomic tx, succeed/fail orchestration
-- [ ] 3.5 [GREEN] modify `features/companies/application/create-company.ts` to wrap gateway with recorder
-- [ ] 3.6 [REFACTOR] keep gateway one atomic tx; ensure recorder writes commit OUTSIDE `db.transaction`
-- [ ] 3.7 [RED] write `sweep-stale-provisioning-runs.test.ts` (only stale `running` → `incomplete`)
-- [ ] 3.8 [GREEN] create `features/companies/application/sweep-stale-provisioning-runs.ts`
-- [ ] 3.9 [GREEN] wire Zod-validated interval worker (unref'd) in `apps/api/src/main.ts`; wire deps in `create-app.ts`
-- [ ] 3.10 modify `drizzle-company.gateway.ts` to insert `company_services` rows + write JSONB audit
+- [x] 3.1 [RED] write `provisioning.recorder.test.ts` (start/succeed/fail/sweep stubs)
+- [x] 3.2 [GREEN] create `apps/api/src/features/companies/infrastructure/drizzle-provisioning.recorder.ts`
+- [x] 3.3 [RED] extend `features/companies/domain/company.ts` with `ProvisioningRecorder` port + `correlationId` input
+- [x] 3.4 [RED] write `create-company.test.ts` for run-start, atomic tx, succeed/fail orchestration
+- [x] 3.5 [GREEN] modify `features/companies/application/create-company.ts` to wrap gateway with recorder
+- [x] 3.6 [REFACTOR] keep gateway one atomic tx; ensure recorder writes commit OUTSIDE `db.transaction`
+- [x] 3.7 [RED] write `sweep-stale-provisioning-runs.test.ts` (only stale `running` → `incomplete`)
+- [x] 3.8 [GREEN] create `features/companies/application/sweep-stale-provisioning-runs.ts`
+- [x] 3.9 [GREEN] wire Zod-validated interval worker (unref'd) in `apps/api/src/main.ts`; wire deps in `create-app.ts`
+- [x] 3.10 modify `drizzle-company.gateway.ts` to insert `company_services` rows + write JSONB audit
 
 ## Phase 4: Admin API (PR 4)
 

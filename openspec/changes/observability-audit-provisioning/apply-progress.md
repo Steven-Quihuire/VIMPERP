@@ -4,7 +4,7 @@
 observability-audit-provisioning
 
 ## Work Unit
-PR 2 / Observability foundation (`pr-2/observability-foundation` -> `pr-1/schema-baseline`)
+PR 3 / Provisioning orchestration (`pr-3/provisioning-orchestration` -> `pr-2/observability-foundation`)
 
 ## Previous Progress Merged
 - Prior batch created RED scaffolding only for `0003_company_services.test.ts` and stopped because Docker/Postgres was unavailable.
@@ -24,6 +24,16 @@ PR 2 / Observability foundation (`pr-2/observability-foundation` -> `pr-1/schema
 - [x] 2.3 `error.middleware.test.ts`
 - [x] 2.4 `error.middleware.ts` recorder integration
 - [x] 2.5 `observability.ts` correlation/request context propagation
+- [x] 3.1 `provisioning.recorder.test.ts`
+- [x] 3.2 `drizzle-provisioning.recorder.ts`
+- [x] 3.3 `company.ts` provisioning recorder port + correlation/request ids
+- [x] 3.4 `create-company.test.ts`
+- [x] 3.5 `create-company.ts` orchestration wrapper
+- [x] 3.6 gateway transaction preserved; recorder commits outside `db.transaction`
+- [x] 3.7 `sweep-stale-provisioning-runs.test.ts`
+- [x] 3.8 `sweep-stale-provisioning-runs.ts`
+- [x] 3.9 `create-app.ts` + `main.ts` provisioning sweep wiring
+- [x] 3.10 `drizzle-company.gateway.ts` company-services + JSONB audit runtime writes
 
 ## Correction Batch
 - [x] R3-001 Added RED coverage for malformed and non-array legacy `company_profiles.services`, then made `0003_company_services.sql` fall back to an empty array when parsing fails or the parsed JSON is not an array.
@@ -39,26 +49,41 @@ PR 2 / Observability foundation (`pr-2/observability-foundation` -> `pr-1/schema
 | 2.1 | `apps/api/src/shared/infrastructure/observability/error-sanitizer.test.ts` | Unit | N/A (new file) | ✅ Added failing allowlist/redaction/fingerprint tests; RED: exit 1, `Cannot find module './error-sanitizer'` | ✅ Focused rerun passed after `error-sanitizer.ts`; GREEN: exit 0, `2 passed` | ✅ Covered allowlisted context retention plus equivalent-secret fingerprint stability/truncation | ✅ Extracted redaction, truncation, and fingerprint helpers without changing the persisted contract |
 | 2.3 | `apps/api/src/shared/presentation/error.middleware.test.ts` | Integration | ✅ Baseline rerun before edits: `12 passed` across admin/company/auth routes | ✅ Added failing 500-recording tests; RED: exit 1, `2 failed` because `createErrorMiddleware` did not exist | ✅ Focused rerun passed after middleware factory + recorder integration; GREEN: exit 0, `2 passed` | ✅ Covered successful recorder path plus swallowed recorder failure path over a real Express request | ✅ Kept middleware response contract unchanged while isolating recorder injection behind a no-op default |
 | 2.5 | `apps/api/src/shared/presentation/error.middleware.test.ts` | Integration | ✅ Same baseline rerun before edits: `12 passed` across admin/company/auth routes | ✅ Added failing correlation/request-context assertions inside the 500-recording route test before touching `observability.ts` | ✅ Focused rerun passed after bounded `x-correlation-id` handling and `response.locals.requestContext`; GREEN: exit 0, `2 passed` | ✅ Covered explicit bounded header propagation and default fallback to `x-request-id` when no correlation header is provided | ✅ Logged correlation alongside request ids and kept the middleware API backward-compatible |
+| 3.1 / 3.2 | `apps/api/src/features/companies/infrastructure/provisioning.recorder.test.ts` | Unit | N/A (new file) | ✅ Added failing adapter tests first; RED: exit 1, `Cannot find module './drizzle-provisioning.recorder'` | ✅ Focused rerun passed after `drizzle-provisioning.recorder.ts`; GREEN: exit 0, `3 passed` | ✅ Covered run start metadata, success/failure step finalization, sanitized error persistence, and stale sweep count passthrough | ✅ Extracted shared step-row mapping and injectable id/time seams without changing the recorder contract |
+| 3.3 / 3.4 / 3.5 / 3.6 | `apps/api/src/features/companies/application/create-company.test.ts` | Unit | ✅ Baseline rerun before edits: `3 passed` in `company.route.test.ts` | ✅ Added failing orchestration tests first; RED: exit 1, `3 failed` (`gateway.createCompany is not a function`) because the use case did not accept a recorder-backed composition | ✅ Focused rerun passed after recorder orchestration + gateway normalization path; GREEN: exit 0, `3 passed` | ✅ Covered successful run finalization, `Error` failure summaries, and non-`Error` failure fallback while preserving the atomic gateway call boundary | ✅ Extracted `toErrorSummary` and kept all recorder commits outside the gateway transaction |
+| 3.7 / 3.8 | `apps/api/src/features/companies/application/sweep-stale-provisioning-runs.test.ts` | Unit | N/A (new file) | ✅ Added failing sweep tests first; RED: exit 1, `Cannot find module './sweep-stale-provisioning-runs'` | ✅ Focused rerun passed after sweep use case implementation; GREEN: exit 0, `2 passed` | ✅ Covered stale-running transition behavior and the default 15 minute timeout calculation | ✅ Extracted the default timeout constant and kept the use case as a thin port-driven application service |
+| 3.9 | `apps/api/src/main.test.ts`, `apps/api/src/shared/config/env.test.ts`, `apps/api/src/features/companies/presentation/company.route.test.ts` | Unit + Integration | ✅ Baseline reruns before edits: `3 passed` in `env.test.ts` and `3 passed` in `company.route.test.ts` | ✅ Added failing worker/env tests first; RED: exit 1, `4 failed` (`startProvisioningSweepWorker is not a function`, missing provisioning env defaults/validation) | ✅ Focused rerun passed after `createAppRuntime`, worker scheduling, and env validation wiring; GREEN: exit 0, `3 passed` files / `10 passed` tests | ✅ Covered unref'd interval scheduling, swallowed sweep failures, env defaults/validation, and the onboarding route with an injected recorder | ✅ Split runtime composition from HTTP app creation so `main.ts` owns the worker while `create-app.ts` owns dependency wiring |
+| 3.10 | `apps/api/src/features/companies/infrastructure/drizzle-company.gateway.test.ts` | Unit | ✅ Baseline rerun before edits: `3 passed` in `company.route.test.ts` | ✅ Added failing dual-write/audit assertions first; RED: exit 1, `1 failed` because the gateway still used random ids and lacked normalized service + JSONB audit writes | ✅ Focused rerun passed after gateway dual-write/audit implementation; GREEN: exit 0, `1 passed` | ✅ Covered `company_services` inserts and structured audit metadata inside the same atomic transaction | ✅ Added injectable id/time seams for deterministic tests while preserving the gateway's transaction boundary |
 
-## Work Unit Evidence
+## Work Unit Evidence — PR 2
 | Evidence | Value |
 |---|---|
 | Focused test command and exact result | `pnpm --filter api test src/shared/infrastructure/observability/error-sanitizer.test.ts src/shared/presentation/error.middleware.test.ts src/features/admin/presentation/admin.route.test.ts src/features/companies/presentation/company.route.test.ts src/features/identity/presentation/auth.route.test.ts` -> exit 0, `5 passed` files / `16 passed` tests |
 | Runtime harness command/scenario and exact result | `pnpm --filter api test src/shared/presentation/error.middleware.test.ts` -> exit 0, `2 passed`; scenario exercises a real Express request through `createRequestContextMiddleware` + `createErrorMiddleware`, proving sanitized persistence and failure-swallowed 500 handling |
 | Rollback boundary | Revert `apps/api/src/shared/infrastructure/observability/error-sanitizer.ts`, `apps/api/src/shared/presentation/error.middleware.ts`, `apps/api/src/shared/presentation/observability.ts`, and the two new shared test files; scope is limited to shared sanitizer/correlation/error-recording behavior for PR 2 |
 
+## Work Unit Evidence — PR 3
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `pnpm --filter api test src/features/companies/application/create-company.test.ts src/features/companies/application/sweep-stale-provisioning-runs.test.ts src/features/companies/infrastructure/provisioning.recorder.test.ts src/features/companies/infrastructure/drizzle-company.gateway.test.ts src/features/companies/presentation/company.route.test.ts src/main.test.ts src/shared/config/env.test.ts` -> exit 0, `7 passed` files / `19 passed` tests |
+| Runtime harness command/scenario and exact result | `docker compose exec -T postgres pg_isready -U postgres -d vimcore && DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/vimcore pnpm --filter api exec drizzle-kit migrate && docker compose exec -T postgres psql -U postgres -d vimcore -c 'TRUNCATE TABLE provisioning_steps, application_errors, provisioning_runs, sessions, memberships, theme_preferences, notifications, audit_events, branches, company_services, company_profiles, companies, users;' && DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/vimcore pnpm --filter api exec tsx src/testing/e2e-state.ts reset-and-seed-owner && DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/vimcore HOST=127.0.0.1 PORT=3100 NODE_ENV=development SEED_ADMIN_ENABLED=false pnpm --filter api exec tsx src/main.ts` with `curl` login + two `/companies` POSTs and DB inspection via `docker compose exec -T postgres psql ...` -> exit 0. Scenario results: login `204`, successful onboarding `201`, duplicate-owner onboarding `500`; `provisioning_runs` contained `2` rows (`succeeded` for `corr-runtime-success`, `failed` for `corr-runtime-fail`), `provisioning_steps` contained matching success/failure step rows, `application_errors` contained `1` sanitized row for the failed request, `company_services` contained `2` normalized rows (`Implementation`, `Support`) for the successful company, and `audit_events` contained `1` JSONB `company.created` row with correlation/entity metadata. |
+| Rollback boundary | Revert `apps/api/src/features/companies/application/create-company.ts`, `apps/api/src/features/companies/application/sweep-stale-provisioning-runs.ts`, `apps/api/src/features/companies/domain/company.ts`, `apps/api/src/features/companies/infrastructure/drizzle-provisioning.recorder.ts`, `apps/api/src/features/companies/infrastructure/drizzle-company.gateway.ts`, `apps/api/src/app/create-app.ts`, `apps/api/src/main.ts`, `apps/api/src/shared/config/env.ts`, `apps/api/src/features/companies/presentation/company.router.ts`, and the accompanying PR3 test files; scope is limited to provisioning orchestration, recorder wiring, sweep scheduling, and onboarding dual-write/audit persistence |
+
 ## Remaining Tasks
-- [ ] Phase 3 / PR 3 tasks 3.1-3.10
 - [ ] Phase 4 / PR 4 tasks 4.1-4.6
 - [ ] Phase 5 / PR 5 tasks 5.1-5.6
 - [ ] Phase 6 verification tasks 6.1-6.4
 
 ## Notes
-- `0003_company_services.sql` now tolerates malformed JSON and valid non-array JSON by parsing through a helper function and coercing unsupported shapes to `[]`, which preserves successful backfill behavior for real arrays and prevents migration aborts.
-- `0004_audit_events.sql` now replaces malformed legacy `details` text with `{"malformedLegacyDetails": true}` so migration inspectability remains intact without persisting raw secrets.
-- `error-sanitizer.ts` now persists allowlisted context only, redacts credential-shaped strings in message/stack, truncates stored text, and hashes fingerprints from normalized redacted messages.
-- `createRequestContextMiddleware` now preserves `x-request-id`, honors bounded valid `x-correlation-id` values, falls back to `requestId`, and stores both ids on `response.locals.requestContext` for later PR 3 orchestration work.
-- `createErrorMiddleware` wraps 500 recording behind an injected recorder port with a no-op default so PR 2 stays backward-compatible until PR 3 wires the real Drizzle recorder.
+- `create-company.ts` now opens a durable provisioning run before the atomic gateway transaction and finalizes it afterward, so rollback-proof observability stays outside `db.transaction`.
+- `company.ts` now carries both `correlationId` and `requestId`; the extra `requestId` field is required to satisfy the `provisioning_runs.request_id` schema and the proposal requirement to thread request ids into onboarding persistence.
+- `drizzle-provisioning.recorder.ts` now acts as both the provisioning recorder and the sanitized application-error recorder, letting the same Drizzle adapter serve the onboarding use case and the shared error middleware.
+- `create-app.ts` now exposes `createAppRuntime()` so `main.ts` can start the unref'd sweep worker without coupling interval orchestration to HTTP app construction.
+- `drizzle-company.gateway.ts` now dual-writes normalized `company_services` rows while keeping the legacy text column populated, and it writes structured JSONB audit metadata with correlation/entity fields in the same atomic transaction.
+- PR 3 runtime evidence is now complete: Docker Postgres accepted connections, the API handled one successful onboarding plus one duplicate-owner failure path, and direct Postgres inspection confirmed `provisioning_runs`, `provisioning_steps`, `application_errors`, `company_services`, and JSONB `audit_events` behavior.
+
+## Typecheck Note
+- `pnpm --filter api typecheck` remains blocked by a pre-existing repository issue in `apps/api/src/db/migrations/__tests__/migration-test-helpers.ts`: `TS1343 The 'import.meta' meta-property is only allowed when the '--module' option is ...`. No PR 3 files currently fail typecheck after the local fixes above.
 
 ## Correction Evidence: review-f144c45cfc6af3ed
 | Evidence | Value |
@@ -73,3 +98,11 @@ PR 2 / Observability foundation (`pr-2/observability-foundation` -> `pr-1/schema
 | Focused test command and exact result | `pnpm --filter api test src/shared/infrastructure/observability/error-sanitizer.test.ts src/shared/presentation/error.middleware.test.ts` -> RED before fix: exit 1, `4 failed | 5 passed`; long JSON secret RED: exit 1, `1 failed | 8 passed`; GREEN after fix: exit 0, `2 passed` files / `9 passed` tests |
 | Runtime harness command/scenario and exact result | N/A as a separate command; the focused command includes `src/shared/presentation/error.middleware.test.ts`, whose real Express scenarios prove synchronous and rejected recorder failures are swallowed before returning the generic 500 body |
 | Rollback boundary | Revert `apps/api/src/shared/infrastructure/observability/error-sanitizer.ts`, `apps/api/src/shared/infrastructure/observability/error-sanitizer.test.ts`, `apps/api/src/shared/presentation/error.middleware.ts`, `apps/api/src/shared/presentation/error.middleware.test.ts`, and this evidence section; correction scope only changes PR2 sanitizer and error-recorder safety behavior |
+
+## Correction Evidence: review-c7a83118c81a7dfe
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `pnpm --filter api test src/features/companies/application/create-company.test.ts src/features/companies/infrastructure/drizzle-company.gateway.test.ts` -> RED before fix: exit 1, `2 failed` files / `4 failed | 3 passed` tests; GREEN after fix: exit 0, `2 passed` files / `7 passed` tests. PR3 focused regression command `pnpm --filter api test src/features/companies/application/create-company.test.ts src/features/companies/application/sweep-stale-provisioning-runs.test.ts src/features/companies/infrastructure/provisioning.recorder.test.ts src/features/companies/infrastructure/drizzle-company.gateway.test.ts src/features/companies/presentation/company.route.test.ts src/main.test.ts src/shared/config/env.test.ts` -> exit 0, `7 passed` files / `22 passed` tests |
+| Runtime harness command/scenario and exact result | `docker compose exec -T postgres pg_isready -U postgres -d vimcore` -> exit 0, Postgres accepting connections; `DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/vimcore pnpm --filter api exec drizzle-kit migrate` -> exit 0, `migrations applied successfully!`; DB-backed gateway duplicate-service check via `DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/vimcore pnpm --filter api exec tsx -e '<inline createDrizzleCompanyOnboardingGateway duplicate-service check with cleanup>'` -> exit 0, `db gateway duplicate-service check passed: services=["Implementation","Support"]` |
+| Typecheck command and exact result | `pnpm --filter api typecheck` -> exit 2, blocked only by pre-existing `apps/api/src/db/migrations/__tests__/migration-test-helpers.ts(10,35)` `TS1343` `import.meta` module setting issue after the correction test typing issue was fixed |
+| Rollback boundary | Revert `apps/api/src/features/companies/application/create-company.ts`, `apps/api/src/features/companies/application/create-company.test.ts`, `apps/api/src/features/companies/infrastructure/drizzle-company.gateway.ts`, `apps/api/src/features/companies/infrastructure/drizzle-company.gateway.test.ts`, and this evidence section; correction scope only changes PR3 onboarding provisioning finalization resilience, provisioning error-summary sanitation, and deterministic service deduplication |

@@ -2,10 +2,12 @@ import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
 import { createApp } from '../../../app/create-app';
+import type { ApplicationErrorRecorder } from '../../../shared/presentation/error.middleware';
 import type {
   CompanyOnboardingGateway,
   CreateCompanyInput,
   PaletteId,
+  ProvisioningRecorder,
 } from '../domain/company';
 import type {
   AuthIdentityGateway,
@@ -101,6 +103,14 @@ const sessionTokenService: SessionTokenService = {
   create: () => 'session-token',
 };
 
+const provisioningRecorder: ProvisioningRecorder & ApplicationErrorRecorder = {
+  startRun: async () => await Promise.resolve({ runId: 'run-1' }),
+  succeedRun: async () => await Promise.resolve(),
+  failRun: async () => await Promise.resolve(),
+  sweepStaleRuns: async () => await Promise.resolve(0),
+  record: async () => await Promise.resolve(),
+};
+
 const getSessionCookie = (headers: string | string[] | undefined): string => {
   const cookieHeaders = Array.isArray(headers)
     ? headers
@@ -142,6 +152,7 @@ const createAuthenticatedApp = async () => {
     authIdentityGateway: authGateway,
     companyOnboardingGateway: companyGateway,
     passwordHasher,
+    provisioningRecorder,
     sessionTokenService,
     seedAdminEnabled: false,
     nodeEnv: 'test',

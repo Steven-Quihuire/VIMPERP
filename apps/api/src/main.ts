@@ -1,14 +1,49 @@
-import { createApp } from './app/create-app';
+import { createAppRuntime } from './app/create-app';
 import { readEnv } from './shared/config/env';
 
-const env = readEnv();
-const app = createApp({
-  databaseUrl: env.DATABASE_URL,
-  nodeEnv: env.NODE_ENV,
-  seedAdminEnabled: env.SEED_ADMIN_ENABLED,
-  sessionCookieName: env.SESSION_COOKIE_NAME,
-});
+export const startProvisioningSweepWorker = ({
+  logger,
+  run,
+  sweepIntervalMs,
+  schedule = setInterval,
+}: {
+  logger: { error: (context: unknown, message: string) => void };
+  run: () => Promise<number>;
+  sweepIntervalMs: number;
+  schedule?: typeof setInterval;
+}) => {
+  const timer = schedule(() => {
+    void run().catch((error) => {
+      logger.error({ err: error }, 'Provisioning sweep failed');
+    });
+  }, sweepIntervalMs);
 
-app.listen(env.PORT, env.HOST, () => {
-  console.log(`api listening on http://${env.HOST}:${env.PORT}`);
-});
+  timer.unref();
+
+  return timer;
+};
+
+export const startServer = () => {
+  const env = readEnv();
+  const { app, sweepStaleProvisioningRuns } = createAppRuntime({
+    databaseUrl: env.DATABASE_URL,
+    nodeEnv: env.NODE_ENV,
+    provisioningStaleTimeoutMs: env.PROVISIONING_STALE_TIMEOUT_MS,
+    seedAdminEnabled: env.SEED_ADMIN_ENABLED,
+    sessionCookieName: env.SESSION_COOKIE_NAME,
+  });
+
+  startProvisioningSweepWorker({
+    logger: console,
+    run: sweepStaleProvisioningRuns,
+    sweepIntervalMs: env.PROVISIONING_SWEEP_INTERVAL_MS,
+  });
+
+  return app.listen(env.PORT, env.HOST, () => {
+    console.log(`api listening on http://${env.HOST}:${env.PORT}`);
+  });
+};
+
+if (!process.env.VITEST) {
+  startServer();
+}
