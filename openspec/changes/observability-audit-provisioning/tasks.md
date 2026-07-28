@@ -40,11 +40,11 @@ Tracker branch `feature/observability-audit-provisioning` is a draft/no-merge in
 
 ## Phase 2: Observability Foundation (PR 2)
 
-- [ ] 2.1 [RED] write `error-sanitizer.test.ts` for allowlist + regex redaction + fingerprint
-- [ ] 2.2 [GREEN] create `apps/api/src/shared/infrastructure/observability/error-sanitizer.ts`
-- [ ] 2.3 [RED] write `error.middleware.test.ts` asserting 500 records sanitized row (no-throw)
-- [ ] 2.4 [GREEN] modify `error.middleware.ts` to call sanitizer + persist via recorder port
-- [ ] 2.5 [GREEN] modify `shared/presentation/observability.ts` to honor bounded sanitized `x-correlation-id` and set `response.locals.requestContext`
+- [x] 2.1 [RED] write `error-sanitizer.test.ts` for allowlist + regex redaction + fingerprint
+- [x] 2.2 [GREEN] create `apps/api/src/shared/infrastructure/observability/error-sanitizer.ts`
+- [x] 2.3 [RED] write `error.middleware.test.ts` asserting 500 records sanitized row (no-throw)
+- [x] 2.4 [GREEN] modify `error.middleware.ts` to call sanitizer + persist via recorder port
+- [x] 2.5 [GREEN] modify `shared/presentation/observability.ts` to honor bounded sanitized `x-correlation-id` and set `response.locals.requestContext`
 
 ## Phase 3: Provisioning Orchestration + Sweep (PR 3)
 

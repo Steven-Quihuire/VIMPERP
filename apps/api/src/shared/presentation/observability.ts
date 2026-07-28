@@ -4,6 +4,14 @@ import type { RequestHandler, Router } from 'express';
 import { Router as createRouter } from 'express';
 import pino, { type Logger } from 'pino';
 
+const CORRELATION_ID_MAX_LENGTH = 128;
+const CORRELATION_ID_PATTERN = /^[A-Za-z0-9._:-]+$/;
+
+export type RequestContext = {
+  correlationId: string;
+  requestId: string;
+};
+
 export type RequestMetrics = {
   recordRequestStart: () => void;
   recordRequestComplete: (statusCode: number) => void;
@@ -52,14 +60,33 @@ export const createRequestContextMiddleware = ({
 }): RequestHandler => {
   return (request, response, next) => {
     const requestId = randomUUID();
+    const correlationIdHeader = request.headers['x-correlation-id'];
     const startedAt = Date.now();
+    const correlationId =
+      typeof correlationIdHeader === 'string'
+        ? (() => {
+            const boundedValue = correlationIdHeader.trim().slice(0, CORRELATION_ID_MAX_LENGTH);
+
+            if (boundedValue.length === 0 || !CORRELATION_ID_PATTERN.test(boundedValue)) {
+              return requestId;
+            }
+
+            return boundedValue;
+          })()
+        : requestId;
 
     metrics.recordRequestStart();
     response.setHeader('x-request-id', requestId);
+    response.setHeader('x-correlation-id', correlationId);
+    (response.locals as { requestContext: RequestContext }).requestContext = {
+      correlationId,
+      requestId,
+    };
 
     response.on('finish', () => {
       metrics.recordRequestComplete(response.statusCode);
       logger.info({
+        correlationId,
         method: request.method,
         path: request.path,
         requestId,
