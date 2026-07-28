@@ -1,9 +1,25 @@
 import express, { type Express } from 'express';
 
 import {
+  createGetApplicationErrorDetail,
+} from '../features/admin/application/get-application-error-detail';
+import {
+  createGetAuditEventDetail,
+} from '../features/admin/application/get-audit-event-detail';
+import {
   createGetCompanySummary,
 } from '../features/admin/application/get-company-summary';
+import {
+  createGetProvisioningRunDetail,
+} from '../features/admin/application/get-provisioning-run-detail';
+import {
+  createListApplicationErrors,
+} from '../features/admin/application/list-application-errors';
 import { createListAdminNotifications } from '../features/admin/application/list-admin-notifications';
+import { createListAuditEvents } from '../features/admin/application/list-audit-events';
+import {
+  createListProvisioningRuns,
+} from '../features/admin/application/list-provisioning-runs';
 import type { AdminGateway } from '../features/admin/domain/admin';
 import { createDrizzleAdminGateway } from '../features/admin/infrastructure/drizzle-admin.gateway';
 import { createAdminRouter } from '../features/admin/presentation/admin.router';
@@ -124,6 +140,12 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     createAdminRouter({
       getCompanySummary: createGetCompanySummary(adminGateway),
       listNotifications: createListAdminNotifications(adminGateway),
+      listProvisioningRuns: createListProvisioningRuns(adminGateway),
+      getProvisioningRunDetail: createGetProvisioningRunDetail(adminGateway),
+      listApplicationErrors: createListApplicationErrors(adminGateway),
+      getApplicationErrorDetail: createGetApplicationErrorDetail(adminGateway),
+      listAuditEvents: createListAuditEvents(adminGateway),
+      getAuditEventDetail: createGetAuditEventDetail(adminGateway),
       requireAuth,
       requirePlatformAdmin,
     }),

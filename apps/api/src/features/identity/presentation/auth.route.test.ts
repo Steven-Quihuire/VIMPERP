@@ -75,6 +75,51 @@ const adminGateway: AdminGateway = {
       companies: [],
     }),
   listNotifications: async () => await Promise.resolve([]),
+  listProvisioningRuns: async () => await Promise.resolve({ items: [], nextCursor: null }),
+  getProvisioningRun: async () =>
+    await Promise.resolve({
+      id: 'run-1',
+      correlationId: 'corr-1',
+      requestId: 'req-1',
+      actorUserId: 'user-1',
+      process: 'company-onboarding',
+      status: 'succeeded',
+      attempt: 1,
+      idempotencyKey: null,
+      errorSummary: null,
+      createdAt: '2026-07-28T10:00:00.000Z',
+      updatedAt: '2026-07-28T10:01:00.000Z',
+      steps: [],
+    }),
+  listApplicationErrors: async () => await Promise.resolve({ items: [], nextCursor: null }),
+  getApplicationError: async () =>
+    await Promise.resolve({
+      id: 'error-1',
+      correlationId: 'corr-1',
+      requestId: 'req-1',
+      fingerprint: 'fingerprint-1',
+      status: '500',
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Unexpected server error',
+      stack: null,
+      context: null,
+      createdAt: '2026-07-28T10:00:00.000Z',
+    }),
+  listAuditEvents: async () => await Promise.resolve({ items: [], nextCursor: null }),
+  getAuditEvent: async () =>
+    await Promise.resolve({
+      id: 'audit-1',
+      actorUserId: 'user-1',
+      companyId: 'company-1',
+      type: 'company.created',
+      correlationId: 'corr-1',
+      entityType: 'company',
+      entityId: 'company-1',
+      details: {},
+      oldValues: null,
+      newValues: null,
+      createdAt: '2026-07-28T10:00:00.000Z',
+    }),
 };
 
 const getSessionCookie = (headers: string | string[] | undefined): string => {

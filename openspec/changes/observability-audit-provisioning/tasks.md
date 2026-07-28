@@ -61,12 +61,12 @@ Tracker branch `feature/observability-audit-provisioning` is a draft/no-merge in
 
 ## Phase 4: Admin API (PR 4)
 
-- [ ] 4.1 [RED] extend `features/admin/domain/admin.ts` with observability read types and gateway port methods
-- [ ] 4.2 [GREEN] add 6 list/detail queries to `drizzle-admin.gateway.ts` (cursor pagination, Zod filters)
-- [ ] 4.3 [RED] extend `admin.route.test.ts` with 200/403/401 cases for each new route
-- [ ] 4.4 [GREEN] add 6 routes in `admin.router.ts` guarded by `requireAuth` + `requirePlatformAdmin`
-- [ ] 4.5 [GREEN] create 6 use cases under `features/admin/application/` (list/get runs, errors, audit)
-- [ ] 4.6 [REFACTOR] centralize cursor encoding; no Drizzle rows leak to responses
+- [x] 4.1 [RED] extend `features/admin/domain/admin.ts` with observability read types and gateway port methods
+- [x] 4.2 [GREEN] add 6 list/detail queries to `drizzle-admin.gateway.ts` (cursor pagination, Zod filters)
+- [x] 4.3 [RED] extend `admin.route.test.ts` with 200/403/401 cases for each new route
+- [x] 4.4 [GREEN] add 6 routes in `admin.router.ts` guarded by `requireAuth` + `requirePlatformAdmin`
+- [x] 4.5 [GREEN] create 6 use cases under `features/admin/application/` (list/get runs, errors, audit)
+- [x] 4.6 [REFACTOR] centralize cursor encoding; no Drizzle rows leak to responses
 
 ## Phase 5: Admin Web Workspace (PR 5)
 
