@@ -79,7 +79,9 @@ describe('App onboarding flow', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
-    expect(screen.getByText('Complete the account step before continuing.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Complete the account step before continuing.'),
+    ).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalledWith(
       'http://localhost:3000/companies',
       expect.anything(),
