@@ -46,7 +46,7 @@ Chain strategy: feature-branch-chain
 
 ## Phase 5: E2E + CI + Coverage (PR 5)
 
-- [ ] 5.1 Playwright desktop+mobile; E2E: login→onboarding→dashboard; admin new-company; palette; mobile-block.
-- [ ] 5.2 RED CI-lint parses `.github/workflows/ci.yml` `permissions: contents: read`+no `pull_request_target`+secrets (threat #3); GREEN test.
-- [ ] 5.3 `.github/workflows/ci.yml`: one gate — install, typecheck, lint, unit, integration, build, Playwright, coverage, audit, gitleaks.
-- [ ] 5.4 Vitest coverage 80% `apps/api/src/features/{identity,companies,admin}`; update `openspec/config.yaml` `verify.coverage_threshold: 80`.
+- [x] 5.1 Playwright desktop+mobile; E2E: login→onboarding→dashboard; admin new-company; palette; mobile-block.
+- [x] 5.2 RED CI-lint parses `.github/workflows/ci.yml` `permissions: contents: read`+no `pull_request_target`+secrets (threat #3); GREEN test.
+- [x] 5.3 `.github/workflows/ci.yml`: one gate — install, typecheck, lint, unit, integration, build, Playwright, coverage, audit, gitleaks.
+- [x] 5.4 Vitest coverage 80% `apps/api/src/features/{identity,companies,admin}`; update `openspec/config.yaml` `verify.coverage_threshold: 80`.

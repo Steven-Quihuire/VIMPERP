@@ -1,5 +1,6 @@
 import { createAuthRepository } from '../../auth/infrastructure/auth-client';
 import type { AuthSession } from '../../auth/domain/auth';
+import { getApiBaseUrl } from '../../../shared/lib/http/api-base-url';
 import { createHttpClient } from '../../../shared/lib/http/http-client';
 import type { PaletteId } from '../domain/onboarding';
 
@@ -19,7 +20,7 @@ export type CreateCompanyPayload = {
   paletteId: PaletteId;
 };
 
-export const createOnboardingRepository = (apiBaseUrl = 'http://localhost:3000') => {
+export const createOnboardingRepository = (apiBaseUrl = getApiBaseUrl()) => {
   const httpClient = createHttpClient(apiBaseUrl);
   const authRepository = createAuthRepository(apiBaseUrl);
 

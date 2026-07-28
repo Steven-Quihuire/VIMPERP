@@ -7,6 +7,10 @@
     "types": ["node", "vitest/globals"]
   },
   "include": [
+    ".github/**/*.ts",
+    "e2e/**/*.ts",
+    "playwright.config.ts",
+    "playwright.global-teardown.ts",
     "sum.ts",
     "sum.test.ts",
     "eslint.config.ts",

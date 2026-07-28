@@ -1,3 +1,4 @@
+import { getApiBaseUrl } from '../../../shared/lib/http/api-base-url';
 import { createHttpClient } from '../../../shared/lib/http/http-client';
 import type {
   DashboardCompanySummary,
@@ -10,7 +11,7 @@ export type DashboardRepository = {
 };
 
 export const createDashboardRepository = (
-  apiBaseUrl = 'http://localhost:3000',
+  apiBaseUrl = getApiBaseUrl(),
 ): DashboardRepository => {
   const httpClient = createHttpClient(apiBaseUrl);
 

@@ -35,7 +35,7 @@ rules:
   verify:
     test_command: "pnpm test"
     build_command: "pnpm build"
-    coverage_threshold: 0
+    coverage_threshold: 80
   archive:
     - Warn before merging destructive deltas
 
@@ -48,10 +48,10 @@ testing:
   layers:
     unit: true
     integration: true
-    e2e: false
+    e2e: true
   coverage:
     available: true
-    command: "pnpm --filter api test -- --coverage"
+    command: "pnpm --filter api test:coverage"
   quality:
     linter: true
     type_checker: true

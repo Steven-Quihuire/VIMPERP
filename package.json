@@ -7,14 +7,18 @@
     "db:down": "docker compose down",
     "db:up": "docker compose up -d postgres",
     "dev": "turbo run dev --parallel",
+    "e2e": "playwright test",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
     "lint": "turbo run lint && eslint . --max-warnings=0",
+    "test:ci-lint": "vitest run .github/workflows/ci.workflow.test.ts",
+    "test:coverage": "pnpm --filter api test:coverage",
     "test": "vitest run sum.test.ts && turbo run test",
     "typecheck": "turbo run typecheck && tsc --noEmit"
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",
+    "@playwright/test": "^1.62.0",
     "@types/node": "^24.3.0",
     "@vitest/coverage-v8": "^3.2.4",
     "eslint": "^9.34.0",
