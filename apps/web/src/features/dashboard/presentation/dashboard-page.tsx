@@ -12,6 +12,7 @@ import {
 } from '../../onboarding/presentation/use-onboarding';
 import { usePalette } from '../../theme/presentation/theme-context';
 import {
+  adminWorkspaceLinks,
   canViewAdminSignals,
   getVisibleDashboardModules,
 } from '../domain/dashboard';
@@ -80,6 +81,17 @@ export const DashboardPage = ({
               <li key={notification.id}>{notification.message}</li>
             ))}
           </ul>
+
+          <section>
+            <h3>Observability workspace</h3>
+            <ul>
+              {adminWorkspaceLinks.map((link) => (
+                <li key={link.id}>
+                  <a href={link.href}>{link.label}</a>
+                </li>
+              ))}
+            </ul>
+          </section>
         </section>
       ) : (
         <section>

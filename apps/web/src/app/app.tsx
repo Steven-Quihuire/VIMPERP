@@ -10,7 +10,14 @@ import {
 
 import { LoginPage } from '../features/auth/presentation/login-page';
 import { useAuth } from '../features/auth/presentation/use-auth';
+import { canViewAdminSignals } from '../features/dashboard/domain/dashboard';
+import { ApplicationErrorDetailPage } from '../features/dashboard/presentation/application-error-detail-page';
+import { ApplicationErrorsListPage } from '../features/dashboard/presentation/application-errors-list-page';
+import { AuditEventDetailPage } from '../features/dashboard/presentation/audit-event-detail-page';
+import { AuditEventsListPage } from '../features/dashboard/presentation/audit-events-list-page';
 import { DashboardPage } from '../features/dashboard/presentation/dashboard-page';
+import { ProvisioningRunDetailPage } from '../features/dashboard/presentation/provisioning-run-detail-page';
+import { ProvisioningRunsListPage } from '../features/dashboard/presentation/provisioning-runs-list-page';
 import { DesktopGate } from '../features/desktop-access/presentation/desktop-gate';
 import { needsCompanyOnboarding } from '../features/onboarding/domain/onboarding';
 import { OnboardingPage } from '../features/onboarding/presentation/onboarding-page';
@@ -72,6 +79,28 @@ const ProtectedOnboarding = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   );
 };
 
+const ProtectedAdminDashboard = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+  const auth = useAuth(apiBaseUrl);
+
+  if (auth.isLoading) {
+    return <p>Loading...</p>;
+  }
+
+  if (!auth.session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (needsCompanyOnboarding(auth.session)) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  if (!canViewAdminSignals(auth.session)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Outlet />;
+};
+
 const RootLayout = () => <Outlet />;
 
 const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
@@ -86,6 +115,35 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
         path="/dashboard"
         element={<ProtectedDashboard {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
       />
+      <Route
+        path="/dashboard/admin"
+        element={<ProtectedAdminDashboard {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+      >
+        <Route
+          path="provisioning-runs"
+          element={<ProvisioningRunsListPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="provisioning-runs/:id"
+          element={<ProvisioningRunDetailPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="application-errors"
+          element={<ApplicationErrorsListPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="application-errors/:id"
+          element={<ApplicationErrorDetailPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="audit-events"
+          element={<AuditEventsListPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="audit-events/:id"
+          element={<AuditEventDetailPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+      </Route>
       <Route
         path="/onboarding"
         element={<ProtectedOnboarding {...(apiBaseUrl ? { apiBaseUrl } : {})} />}

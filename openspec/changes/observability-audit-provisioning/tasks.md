@@ -70,12 +70,12 @@ Tracker branch `feature/observability-audit-provisioning` is a draft/no-merge in
 
 ## Phase 5: Admin Web Workspace (PR 5)
 
-- [ ] 5.1 [RED] extend `app.dashboard-shell.test.tsx`: admin sees screens, company user redirected
-- [ ] 5.2 [GREEN] add 3 list + 3 detail screens under `apps/web/src/features/dashboard/presentation/`
-- [ ] 5.3 [GREEN] add 3 query hooks + 3 client fns (TanStack Query, `enabled: isPlatformAdmin`)
-- [ ] 5.4 [GREEN] add types under `features/dashboard/domain/`; HttpClient calls in `infrastructure/`
-- [ ] 5.5 [GREEN] add `/dashboard/admin/*` routes in `apps/web/src/app/app.tsx` guarded by `canViewAdminSignals`
-- [ ] 5.6 [REFACTOR] remove any retry/delete affordances; verify empty-state copy per dashboard-shell spec
+- [x] 5.1 [RED] extend `app.dashboard-shell.test.tsx`: admin sees screens, company user redirected
+- [x] 5.2 [GREEN] add 3 list + 3 detail screens under `apps/web/src/features/dashboard/presentation/`
+- [x] 5.3 [GREEN] add 3 query hooks + 3 client fns (TanStack Query, `enabled: isPlatformAdmin`)
+- [x] 5.4 [GREEN] add types under `features/dashboard/domain/`; HttpClient calls in `infrastructure/`
+- [x] 5.5 [GREEN] add `/dashboard/admin/*` routes in `apps/web/src/app/app.tsx` guarded by `canViewAdminSignals`
+- [x] 5.6 [REFACTOR] remove any retry/delete affordances; verify empty-state copy per dashboard-shell spec
 
 ## Phase 6: Verification
 

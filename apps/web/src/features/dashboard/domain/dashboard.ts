@@ -25,6 +25,16 @@ export type DashboardNotification = {
   createdAt: string;
 };
 
+export type AdminWorkspaceLink = {
+  id:
+    | 'provisioning-runs'
+    | 'application-errors'
+    | 'audit-events';
+  label: string;
+  href: string;
+  description: string;
+};
+
 const baseModules: DashboardModule[] = [
   { id: 'crm', label: 'CRM' },
   { id: 'sales', label: 'Sales' },
@@ -34,6 +44,27 @@ const baseModules: DashboardModule[] = [
 const platformAdminModules: DashboardModule[] = [
   { id: 'platform-overview', label: 'Platform overview' },
   { id: 'notifications', label: 'Notifications' },
+];
+
+export const adminWorkspaceLinks: AdminWorkspaceLink[] = [
+  {
+    id: 'provisioning-runs',
+    label: 'Provisioning runs',
+    href: '/dashboard/admin/provisioning-runs',
+    description: 'Inspect onboarding run status, attempts, and recorded steps.',
+  },
+  {
+    id: 'application-errors',
+    label: 'Application errors',
+    href: '/dashboard/admin/application-errors',
+    description: 'Inspect sanitized technical failures linked to correlation identifiers.',
+  },
+  {
+    id: 'audit-events',
+    label: 'Audit events',
+    href: '/dashboard/admin/audit-events',
+    description: 'Inspect structured audit history for platform activity.',
+  },
 ];
 
 export const canViewAdminSignals = (session: AuthSession) =>
