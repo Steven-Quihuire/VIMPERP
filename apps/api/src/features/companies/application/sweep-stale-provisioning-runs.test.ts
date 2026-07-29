@@ -23,7 +23,7 @@ describe('createSweepStaleProvisioningRuns', () => {
       startRun: vi.fn(),
       succeedRun: vi.fn(),
       failRun: vi.fn(),
-      sweepStaleRuns: vi.fn(async (olderThan) => {
+      sweepStaleRuns: vi.fn((olderThan: Date) => {
         let updated = 0;
 
         for (const run of runs) {
@@ -33,7 +33,7 @@ describe('createSweepStaleProvisioningRuns', () => {
           }
         }
 
-        return updated;
+        return Promise.resolve(updated);
       }),
     };
     const sweep = createSweepStaleProvisioningRuns({

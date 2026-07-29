@@ -3,10 +3,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { startProvisioningSweepWorker } from './main';
 
 describe('startProvisioningSweepWorker', () => {
-  it('schedules the sweep worker with the configured interval and unreferences the timer', async () => {
+  it('schedules the sweep worker with the configured interval and unreferences the timer', () => {
     const unref = vi.fn();
     const run = vi.fn().mockResolvedValue(1);
-    const schedule = vi.fn().mockImplementation((callback: () => void, _intervalMs: number) => {
+    const schedule = vi.fn().mockImplementation((callback: () => void, intervalMs: number) => {
+      expect(intervalMs).toBe(5 * 60 * 1000);
       void callback();
       return { unref };
     });

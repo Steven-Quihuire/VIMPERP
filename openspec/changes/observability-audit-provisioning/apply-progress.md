@@ -4,13 +4,15 @@
 observability-audit-provisioning
 
 ## Work Unit
-PR 5 / Admin Web Workspace (`pr-5/admin-web` -> `pr-4/admin-api`)
+PR 6 / Final Verification (`pr-6/final-verification` -> `pr-5/admin-web`)
 
 ## Previous Progress Merged
 - Prior batch created RED scaffolding only for `0003_company_services.test.ts` and stopped because Docker/Postgres was unavailable.
 - Baseline PR 1 implementation completed tasks 1.1-1.7 and passed the focused migration suite plus runtime `drizzle-kit migrate`.
 - PR 2 completed the shared observability foundation: sanitizer, correlation/request context propagation, and error middleware recorder integration.
 - PR 3 completed provisioning orchestration, stale-run sweeping, dual-write service persistence, and JSONB audit runtime writes.
+- PR 4 completed the six platform-admin observability API routes plus filtered list/detail queries.
+- PR 5 completed the platform-admin dashboard workspaces plus prior browser smoke for admin access and company-user redirects.
 
 ## Completed Tasks
 - [x] 1.1 `0003_company_services.test.ts`
@@ -47,11 +49,17 @@ PR 5 / Admin Web Workspace (`pr-5/admin-web` -> `pr-4/admin-api`)
 - [x] 5.4 admin observability domain DTOs + typed `HttpClient` adapters under `features/dashboard/{domain,infrastructure}`
 - [x] 5.5 `/dashboard/admin/*` guarded routes in `apps/web/src/app/app.tsx`
 - [x] 5.6 empty-state MVP copy verified; no retry/delete affordances rendered
+- [x] 6.1 `pnpm test` full verification suite green
+- [x] 6.2 `pnpm --filter api test:coverage` verification coverage gate green
+- [x] 6.3 `pnpm build` compile verification green after removing the TS1343 migration-helper blocker
+- [x] 6.4 manual smoke verified onboarding observability rows plus admin UI/API access controls
 
 ## Correction Batch
 - [x] R3-001 Added RED coverage for malformed and non-array legacy `company_profiles.services`, then made `0003_company_services.sql` fall back to an empty array when parsing fails or the parsed JSON is not an array.
 - [x] R3-002 Added RED coverage for malformed legacy `audit_events.details`, then made `0004_audit_events.sql` preserve invalid raw text as `{"legacyRaw": <text>}` instead of aborting.
 - [x] R3-003 Replaced malformed legacy `audit_events.details` raw-text preservation with a safe JSONB marker so malformed secrets are not exposed after migration.
+- [x] R6-001 Added a RED build-config regression test for migration test helpers, then removed the CommonJS-incompatible `import.meta` usage from `migration-test-helpers.ts` and excluded `src/**/__tests__/**/*.ts` from the production API build.
+- [x] R6-002 Cleared the final verification lint gate by tightening API test typings, removing async-without-await mock wrappers, narrowing sanitized error status/code handling, and including root-level API `*.test.ts` files in `apps/api/tsconfig.json` so the regression test remains lintable.
 
 ## TDD Cycle Evidence
 | Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
@@ -79,6 +87,8 @@ PR 5 / Admin Web Workspace (`pr-5/admin-web` -> `pr-4/admin-api`)
 | 5.4 | `apps/web/src/app/app.dashboard-shell.test.tsx` + `pnpm --filter web typecheck` | Integration + Typecheck | ✅ Same baseline rerun before edits: exit 0, `4 passed` | ✅ RED required missing admin DTOs and typed clients before the routes could compile or fetch | ✅ GREEN after adding domain DTOs and typed `HttpClient` clients for the six PR4 endpoints; focused test exit 0, `8 passed`; typecheck exit 0 | ✅ Covered provisioning runs, application errors, and audit events with distinct summary/detail payloads | ✅ Kept dependency direction clean: domain types, infrastructure clients, presentation hooks/screens |
 | 5.5 | `apps/web/src/app/app.dashboard-shell.test.tsx` | Integration | ✅ Same baseline rerun before edits: exit 0, `4 passed` | ✅ RED route assertions proved `/dashboard/admin/*` was unmatched and company users could not yet be redirected | ✅ GREEN after `app.tsx` added six guarded routes behind `ProtectedAdminDashboard`; exit 0, `8 passed` | ✅ Covered platform-admin access and company-user redirect through the real router tree | ✅ Added a focused admin-only route guard instead of duplicating fetch logic inside every screen |
 | 5.6 | `apps/web/src/app/app.dashboard-shell.test.tsx` | Integration | ✅ Safety net before refactor assertions: exit 0, `7 passed` | ✅ Added empty-state approval coverage first, asserting MVP copy and absence of retry/delete affordances across all three workspaces | ✅ Focused rerun stayed green with the new approval coverage; exit 0, `8 passed` | ✅ Empty-state tests complement the non-empty list/detail scenarios in the same file | ✅ No behavioral refactor beyond shared empty-state rendering; MVP stays append-only/read-only |
+| 6.3 / R6-001 | `apps/api/tsconfig.build.test.ts` | Unit + Build | ✅ Safety-net reruns before edits: migration helpers still passed via `pnpm --filter api test src/db/migrations/__tests__/0003_company_services.test.ts src/db/migrations/__tests__/0004_audit_events.test.ts src/db/migrations/__tests__/0005_observability.test.ts` -> exit 0, `3 passed` files / `9 passed` tests | ✅ Wrote `tsconfig.build.test.ts` first; RED: `pnpm --filter api test tsconfig.build.test.ts` -> exit 1, `1 failed` because `src/**/__tests__/**/*.ts` was missing from the build exclude list | ✅ GREEN after updating `apps/api/tsconfig.build.json` and replacing `import.meta` with `__dirname`; focused reruns passed (`pnpm --filter api test tsconfig.build.test.ts` -> exit 0, `1 passed`, migration-helper suite -> exit 0, `3 passed` files / `9 passed` tests), `pnpm --filter api typecheck` -> exit 0, and `pnpm build` -> exit 0 | ✅ Structural regression coverage checks both the existing `*.test.ts` exclusion and the new `__tests__` exclusion; acceptance proof also exercises the CommonJS helper path through typecheck/build | ✅ Refactored `migration-test-helpers.ts` to use the native CommonJS `__dirname` path resolution, matching the repo's Node/TS module settings without changing migration test behavior |
+| 6.x / R6-002 | `apps/api/src/shared/infrastructure/observability/error-sanitizer.test.ts` | Unit + Lint | ✅ Safety-net rerun before edits: `pnpm --filter api test src/features/companies/application/create-company.test.ts src/features/companies/application/sweep-stale-provisioning-runs.test.ts src/features/companies/infrastructure/drizzle-company.gateway.test.ts src/features/companies/infrastructure/provisioning.recorder.test.ts src/main.test.ts src/shared/infrastructure/observability/error-sanitizer.test.ts src/shared/presentation/error.middleware.test.ts` -> exit 0, `7 passed` files / `23 passed` tests | ✅ Added failing invalid-status regression first; RED: `pnpm --filter api test src/shared/infrastructure/observability/error-sanitizer.test.ts` -> exit 1, `1 failed | 6 passed` because `sanitizeApplicationError()` stringified an object status as `[object Object]` | ✅ GREEN after minimal source/test typing fixes plus `apps/api/tsconfig.json` include update; focused reruns passed (`pnpm --filter api test src/features/companies/application/create-company.test.ts src/features/companies/application/sweep-stale-provisioning-runs.test.ts src/features/companies/infrastructure/drizzle-company.gateway.test.ts src/features/companies/infrastructure/provisioning.recorder.test.ts src/main.test.ts src/shared/infrastructure/observability/error-sanitizer.test.ts src/shared/presentation/error.middleware.test.ts tsconfig.build.test.ts` -> exit 0, `8 passed` files / `25 passed` tests), `pnpm --filter api typecheck` -> exit 0, `pnpm build` -> exit 0, and `pnpm lint` -> exit 0 | ✅ Existing sanitized-message/fingerprint paths plus the new invalid-status case prove both the normal and defensive status branches | ✅ Refactored only typings/control-flow: removed async-without-await test doubles, narrowed unknown error/code access, and kept observable behavior unchanged outside the new defensive status fallback |
 
 ## Work Unit Evidence — PR 2
 | Evidence | Value |
@@ -109,8 +119,18 @@ PR 5 / Admin Web Workspace (`pr-5/admin-web` -> `pr-4/admin-api`)
 | Typecheck command and exact result | `pnpm --filter web typecheck` -> exit 0 |
 | Rollback boundary | Revert `apps/web/src/app/app.tsx`, `apps/web/src/app/app.dashboard-shell.test.tsx`, `apps/web/src/features/dashboard/domain/dashboard.ts`, the new admin DTO files under `apps/web/src/features/dashboard/domain/`, the new typed admin clients under `apps/web/src/features/dashboard/infrastructure/`, and the new admin presentation files under `apps/web/src/features/dashboard/presentation/`; scope is limited to PR5 admin observability workspace routes, hooks, screens, and focused tests |
 
+## Work Unit Evidence — PR 6 Final Verification
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `pnpm test` -> exit 0. Root smoke `sum.test.ts` passed (`1/1`), Turbo workspace tests passed for `api` and `web`; aggregate result `23 passed` files / `94 passed` tests, including API migration suites `0003`, `0004`, and `0005`. |
+| Runtime harness command/scenario and exact result | `docker compose up -d postgres && DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/vimcore pnpm --filter api exec drizzle-kit migrate && docker compose exec -T postgres psql -U postgres -d vimcore -c 'TRUNCATE TABLE provisioning_steps, application_errors, provisioning_runs, sessions, memberships, theme_preferences, notifications, audit_events, branches, company_services, company_profiles, companies, users RESTART IDENTITY CASCADE;' && DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/vimcore pnpm --filter api exec tsx src/testing/e2e-state.ts reset-and-seed-owner && DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/vimcore HOST=127.0.0.1 PORT=3000 NODE_ENV=development SEED_ADMIN_ENABLED=true pnpm --filter api exec tsx src/main.ts && VITE_API_BASE_URL=/api VITE_PROXY_TARGET=http://127.0.0.1:3000 pnpm --filter web exec vite --host 127.0.0.1 --port 4173` with curl + Playwright smoke -> exit 0. Scenario results: owner login `204`, first onboarding `201`, duplicate-owner onboarding `500`; DB inspection confirmed `success-run-count:1`, `fail-run-count:1`, `fail-step-count:1`, `fail-error-count:1` for `corr-pr6-fail`; owner API access to `/admin/provisioning-runs` returned `403`; browser smoke redirected the owner from `/dashboard/admin/provisioning-runs` back to `/dashboard`, and platform-admin login (`admin`/`admin`) rendered `Provisioning runs`, `Application errors`, and `Audit events` headings. |
+| Coverage command and exact result | `pnpm --filter api test:coverage` -> exit 0. Coverage report: `All files 92.7% lines / 83.33% branches`; critical observability paths remained above the `80%` gate (`admin/application 100%`, `admin/presentation 91.08%`, `companies/application 100%`, `companies/presentation 94.87%`, `identity/application 82.69%`, `identity/presentation 92.8%`). |
+| Build command and exact result | `pnpm build` -> exit 0. `api:build` completed with `tsc -p tsconfig.build.json`; `web:build` completed with `tsc --noEmit && vite build`. |
+| Lint command and exact result | `pnpm lint` -> exit 0 after clearing 14 API ESLint errors. Classification: the original 14 failures were pre-existing relative to `pr-6/final-verification` because `git log --oneline --decorate -1` showed `HEAD -> pr-6/final-verification, pr-5/admin-web` at the same commit `ec8867e` and none of the failing files were in the PR6 dirty-path list before remediation; one new parser failure then surfaced only because root lint also checks the newly added `apps/api/tsconfig.build.test.ts`, resolved by including root-level `*.test.ts` in `apps/api/tsconfig.json`. |
+| Rollback boundary | Revert `apps/api/src/db/migrations/__tests__/migration-test-helpers.ts`, `apps/api/tsconfig.build.json`, `apps/api/tsconfig.build.test.ts`, and the PR6 task/evidence artifact updates; scope is limited to the migration-helper CommonJS path fix plus keeping test-only `__tests__` files out of the production API build. |
+
 ## Remaining Tasks
-- [ ] Phase 6 verification tasks 6.1-6.4
+- None.
 
 ## Notes
 - `create-company.ts` now opens a durable provisioning run before the atomic gateway transaction and finalizes it afterward, so rollback-proof observability stays outside `db.transaction`.
@@ -129,7 +149,30 @@ PR 5 / Admin Web Workspace (`pr-5/admin-web` -> `pr-4/admin-api`)
 - Styling investigation result: this is not a broken Tailwind import. `apps/web/src/main.tsx` imports no global stylesheet, `apps/web/src/**/*.css` is empty, and the repo has no `tailwind.config.*`, so the Sign in screen is currently raw semantic HTML because no styling pipeline/design layer is wired yet. PR5 keeps the new admin workspace within the same semantic-HTML frontend scope instead of introducing an unplanned design system.
 
 ## Typecheck Note
-- `pnpm --filter api typecheck` remains blocked only by the pre-existing repository issue in `apps/api/src/db/migrations/__tests__/migration-test-helpers.ts`: `TS1343 The 'import.meta' meta-property is only allowed when the '--module' option is ...`. The temporary `AdminGateway` stub mismatch in `apps/api/src/features/identity/presentation/auth.route.test.ts` was corrected as part of PR 4, and no PR 4 source files currently fail typecheck.
+- `pnpm --filter api typecheck` now passes after the migration helper switched from `import.meta` to `__dirname`, matching the repo's CommonJS TypeScript configuration. The temporary `AdminGateway` stub mismatch in `apps/api/src/features/identity/presentation/auth.route.test.ts` remains resolved from PR 4.
+
+## Final Verification Notes
+- Phase 6 verification was rerun with Docker/Postgres available. Tasks `6.1`, `6.2`, `6.3`, and `6.4` are complete based on green suite, coverage, build, and runtime smoke evidence.
+- The pre-existing `TS1343` blocker in `apps/api/src/db/migrations/__tests__/migration-test-helpers.ts` is now corrected: the helper uses CommonJS-compatible path resolution and the production API build excludes `src/**/__tests__/**/*.ts`.
+- Root `pnpm lint` is now green. The original 14 API ESLint failures were pre-existing relative to PR6 scope, but they were still corrected because final verification treats lint as a formal quality gate when safe.
+- Final verification is now ready for `sdd-verify` from this branch because Phase 6 tasks `6.1`-`6.4` are complete and the lint gate is green.
+
+## Correction Evidence: review-pr6-lint-gate
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | Safety net: `pnpm --filter api test src/features/companies/application/create-company.test.ts src/features/companies/application/sweep-stale-provisioning-runs.test.ts src/features/companies/infrastructure/drizzle-company.gateway.test.ts src/features/companies/infrastructure/provisioning.recorder.test.ts src/main.test.ts src/shared/infrastructure/observability/error-sanitizer.test.ts src/shared/presentation/error.middleware.test.ts` -> exit 0, `7 passed` files / `23 passed` tests. RED: `pnpm --filter api test src/shared/infrastructure/observability/error-sanitizer.test.ts` -> exit 1, `1 failed | 6 passed`. GREEN: `pnpm --filter api test src/features/companies/application/create-company.test.ts src/features/companies/application/sweep-stale-provisioning-runs.test.ts src/features/companies/infrastructure/drizzle-company.gateway.test.ts src/features/companies/infrastructure/provisioning.recorder.test.ts src/main.test.ts src/shared/infrastructure/observability/error-sanitizer.test.ts src/shared/presentation/error.middleware.test.ts tsconfig.build.test.ts` -> exit 0, `8 passed` files / `25 passed` tests. |
+| Runtime harness command/scenario and exact result | `pnpm build` -> exit 0. Scenario proves the API TypeScript build and cached web production build still complete after the lint-only remediation batch. |
+| Typecheck command and exact result | `pnpm --filter api typecheck` -> exit 0. |
+| Lint command and exact result | `pnpm lint` -> exit 0. Root lint no longer reports the 14 API ESLint errors; the only new failure encountered during remediation was the PR6-introduced parser complaint for `apps/api/tsconfig.build.test.ts`, resolved by including root-level `*.test.ts` in `apps/api/tsconfig.json`. |
+| Rollback boundary | Revert `apps/api/src/features/companies/application/create-company.test.ts`, `apps/api/src/features/companies/application/sweep-stale-provisioning-runs.test.ts`, `apps/api/src/features/companies/infrastructure/drizzle-company.gateway.test.ts`, `apps/api/src/features/companies/infrastructure/provisioning.recorder.test.ts`, `apps/api/src/main.test.ts`, `apps/api/src/main.ts`, `apps/api/src/shared/infrastructure/observability/error-sanitizer.test.ts`, `apps/api/src/shared/infrastructure/observability/error-sanitizer.ts`, `apps/api/src/shared/presentation/error.middleware.test.ts`, `apps/api/src/shared/presentation/error.middleware.ts`, `apps/api/tsconfig.json`, and this evidence section; scope is limited to PR6 lint-gate remediation and does not change product features. |
+
+## Correction Evidence: review-pr6-ts1343-build-blocker
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | Safety net: `pnpm --filter api test src/db/migrations/__tests__/0003_company_services.test.ts src/db/migrations/__tests__/0004_audit_events.test.ts src/db/migrations/__tests__/0005_observability.test.ts` -> exit 0, `3 passed` files / `9 passed` tests. RED: `pnpm --filter api test tsconfig.build.test.ts` -> exit 1, `1 failed`. GREEN: `pnpm --filter api test tsconfig.build.test.ts` -> exit 0, `1 passed`; post-refactor migration suite rerun -> exit 0, `3 passed` files / `9 passed` tests. |
+| Runtime harness command/scenario and exact result | `pnpm build` -> exit 0. Scenario proves both workspace builds complete end-to-end after the API helper/path correction, with `api:build` running `tsc -p tsconfig.build.json` and `web:build` replaying a successful cached production build. |
+| Typecheck command and exact result | `pnpm --filter api typecheck` -> exit 0. |
+| Rollback boundary | Revert `apps/api/src/db/migrations/__tests__/migration-test-helpers.ts`, `apps/api/tsconfig.build.json`, `apps/api/tsconfig.build.test.ts`, `openspec/changes/observability-audit-provisioning/tasks.md`, and this evidence/update section; correction scope only changes the migration-helper build compatibility path and production build exclusions for test-only `__tests__` sources. |
 
 ## Correction Evidence: review-f144c45cfc6af3ed
 | Evidence | Value |

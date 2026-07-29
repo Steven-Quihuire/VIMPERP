@@ -53,13 +53,14 @@ export const createErrorMiddleware = ({
     }).requestContext;
     const requestId = requestContext?.requestId ?? String(response.getHeader('x-request-id') ?? 'unknown');
     const correlationId = requestContext?.correlationId ?? requestId;
+    const errorCode =
+      typeof error === 'object' && error !== null && 'code' in error
+        ? (error as Record<'code', unknown>).code
+        : undefined;
 
     const sanitizedError = sanitizeApplicationError({
       context: {
-        code:
-          typeof error === 'object' && error !== null && 'code' in error
-            ? error.code
-            : undefined,
+        code: errorCode,
         method: request.method,
         process: 'http-request',
         route: request.path,

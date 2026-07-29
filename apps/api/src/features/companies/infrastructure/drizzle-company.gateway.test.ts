@@ -18,9 +18,9 @@ const createFakeDb = () => {
 
   const tx = {
     insert: (table: unknown) => ({
-      values: async (values: unknown) => {
+      values: (values: unknown) => {
         writes.push({ table, values });
-        return [];
+        return Promise.resolve([]);
       },
     }),
   };

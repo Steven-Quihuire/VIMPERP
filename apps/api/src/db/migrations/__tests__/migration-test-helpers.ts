@@ -1,15 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { Pool } from 'pg';
 
 const defaultDatabaseUrl = 'postgres://postgres:postgres@127.0.0.1:5432/vimcore';
 
-const currentFile = fileURLToPath(import.meta.url);
-const currentDir = path.dirname(currentFile);
-const migrationsDir = path.resolve(currentDir, '..');
+const migrationsDir = path.resolve(__dirname, '..');
 
 const toConnectionString = (databaseName: string) => {
   const databaseUrl = new URL(process.env.DATABASE_URL ?? defaultDatabaseUrl);

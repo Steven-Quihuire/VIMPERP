@@ -4,6 +4,7 @@ import type { Logger } from 'pino';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createErrorMiddleware } from './error.middleware';
+import type { ApplicationErrorRecorder } from './error.middleware';
 import {
   createRequestContextMiddleware,
   type RequestContext,
@@ -30,7 +31,7 @@ const createMetrics = (): RequestMetrics => ({
 
 describe('createErrorMiddleware', () => {
   it('records a sanitized 500 row without breaking the request flow', async () => {
-    const record = vi.fn().mockResolvedValue(undefined);
+    const record = vi.fn<ApplicationErrorRecorder['record']>().mockResolvedValue(undefined);
     const logger = { info: vi.fn() } as unknown as Logger;
     const metrics = createMetrics();
     const app = express();
@@ -88,13 +89,14 @@ describe('createErrorMiddleware', () => {
       }),
     );
     const recordedError = record.mock.calls[0]?.[0];
+
     expect(recordedError?.message).toContain('[REDACTED]');
     expect(recordedError?.message).not.toContain('super-secret');
     expect(recordedError?.stack).not.toContain('abc123');
   });
 
   it('swallows recorder failures and still returns the 500 response', async () => {
-    const record = vi.fn().mockRejectedValue(new Error('write failed'));
+    const record = vi.fn<ApplicationErrorRecorder['record']>().mockRejectedValue(new Error('write failed'));
     const logger = { info: vi.fn() } as unknown as Logger;
     const metrics = createMetrics();
     const app = express();
@@ -119,7 +121,7 @@ describe('createErrorMiddleware', () => {
   });
 
   it('swallows synchronous recorder failures and still returns the 500 response', async () => {
-    const record = vi.fn(() => {
+    const record = vi.fn<ApplicationErrorRecorder['record']>(() => {
       throw new Error('write failed');
     });
     const logger = { info: vi.fn() } as unknown as Logger;

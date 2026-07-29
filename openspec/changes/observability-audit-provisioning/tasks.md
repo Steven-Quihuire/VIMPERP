@@ -79,7 +79,7 @@ Tracker branch `feature/observability-audit-provisioning` is a draft/no-merge in
 
 ## Phase 6: Verification
 
-- [ ] 6.1 run `pnpm test` — full unit + route + migration suite green
-- [ ] 6.2 run `pnpm --filter api test:coverage` — verify ≥80% on new modules
-- [ ] 6.3 run `pnpm build` — both apps compile clean
-- [ ] 6.4 manual smoke: failing onboarding leaves run+error rows; admin screens render and 403 for company users
+- [x] 6.1 run `pnpm test` — full unit + route + migration suite green
+- [x] 6.2 run `pnpm --filter api test:coverage` — verify ≥80% on new modules
+- [x] 6.3 run `pnpm build` — both apps compile clean
+- [x] 6.4 manual smoke: failing onboarding leaves run+error rows; admin screens render and 403 for company users

@@ -19,9 +19,9 @@ const createFakeDb = ({ sweepCount = 0 }: { sweepCount?: number } = {}) => {
 
   const db = {
     insert: (table: unknown) => ({
-      values: async (values: unknown) => {
+      values: (values: unknown) => {
         inserts.push({ table, values });
-        return [];
+        return Promise.resolve([]);
       },
     }),
     update: (table: unknown) => ({

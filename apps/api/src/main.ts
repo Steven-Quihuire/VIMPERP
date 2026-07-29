@@ -13,7 +13,7 @@ export const startProvisioningSweepWorker = ({
   schedule?: typeof setInterval;
 }) => {
   const timer = schedule(() => {
-    void run().catch((error) => {
+    void run().catch((error: unknown) => {
       logger.error({ err: error }, 'Provisioning sweep failed');
     });
   }, sweepIntervalMs);

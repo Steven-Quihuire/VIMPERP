@@ -156,6 +156,10 @@ const sanitizeContext = (context: Record<string, unknown> | undefined, code: str
   return sanitizedContext;
 };
 
+const getErrorStatus = (statusCode: unknown) => {
+  return typeof statusCode === 'number' ? String(statusCode) : '500';
+};
+
 export const sanitizeApplicationError = ({
   error,
   requestContext,
@@ -187,6 +191,6 @@ export const sanitizeApplicationError = ({
     message,
     requestId: requestContext.requestId,
     stack: stack ? sanitizeText(stack, STACK_MAX_LENGTH) : null,
-    status: String(context?.statusCode ?? 500),
+    status: getErrorStatus(context?.statusCode),
   };
 };

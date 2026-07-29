@@ -174,22 +174,26 @@ describe('createCreateCompany', () => {
 
     await expect(createCompany(buildInput())).rejects.toBe(gatewayError);
 
-    expect(recorder.failRun).toHaveBeenCalledWith({
-      errorSummary: expect.stringContaining('password=[REDACTED]'),
-      runId: 'run-1',
-      steps: [
-        {
-          detail: { message: expect.stringContaining('password=[REDACTED]') },
-          name: 'company-creation',
-          status: 'failed',
-        },
-      ],
-    });
     const failRunInput = vi.mocked(recorder.failRun).mock.calls[0]?.[0];
 
+    expect(recorder.failRun).toHaveBeenCalledTimes(1);
+    expect(failRunInput?.runId).toBe('run-1');
     expect(failRunInput?.errorSummary).toBeDefined();
+    expect(failRunInput?.errorSummary).toContain('password=[REDACTED]');
     expect(failRunInput?.errorSummary).not.toContain('super-secret');
     expect(failRunInput?.errorSummary.length).toBeLessThanOrEqual(500);
+    expect(failRunInput?.steps).toHaveLength(1);
+    expect(failRunInput?.steps[0]).toMatchObject({
+      name: 'company-creation',
+      status: 'failed',
+    });
+    const detailMessage =
+      typeof failRunInput?.steps[0]?.detail?.message === 'string'
+        ? failRunInput.steps[0].detail.message
+        : undefined;
+
+    expect(detailMessage).toBeDefined();
+    expect(detailMessage).toContain('password=[REDACTED]');
   });
 
   it('falls back to a generic error summary when the gateway throws a non-Error value', async () => {

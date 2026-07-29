@@ -131,6 +131,24 @@ describe('sanitizeApplicationError', () => {
     expect(sanitized.context.code).toBe('INTERNAL_SERVER_ERROR');
   });
 
+  it('defaults the stored status to 500 when the provided status code is not numeric', () => {
+    const sanitized = sanitizeApplicationError({
+      error: new Error('Provisioning failed'),
+      requestContext: {
+        correlationId: 'corr-1',
+        requestId: 'req-1',
+      },
+      context: {
+        process: 'company-onboarding',
+        route: '/companies',
+        statusCode: { value: 500 },
+      },
+    });
+
+    expect(sanitized.status).toBe('500');
+    expect(sanitized.context.statusCode).toBeUndefined();
+  });
+
   it('builds the same fingerprint for equivalent redacted messages and truncates stored text', () => {
     const baseInput = {
       context: {
