@@ -1,13 +1,17 @@
 import { sql } from 'drizzle-orm';
 import {
+  boolean,
   index,
   integer,
   jsonb,
+  numeric,
+  type AnyPgColumn,
   pgEnum,
   pgTable,
   text,
   timestamp,
   uniqueIndex,
+  uuid,
 } from 'drizzle-orm/pg-core';
 
 export const authRoleEnum = pgEnum('auth_role', [
@@ -28,6 +32,24 @@ export const provisioningStepStatusEnum = pgEnum('provisioning_step_status', [
   'succeeded',
   'failed',
   'skipped',
+]);
+
+export const itemTypeEnum = pgEnum('item_type', ['product', 'service']);
+
+export const itemUnitEnum = pgEnum('item_unit', [
+  'unit',
+  'hour',
+  'kg',
+  'liter',
+  'meter',
+  'box',
+  'service',
+]);
+
+export const itemTrackBatchModeEnum = pgEnum('item_track_batch_mode', [
+  'none',
+  'batch',
+  'serial',
 ]);
 
 export const usersTable = pgTable('users', {
@@ -72,6 +94,40 @@ export const companyServicesTable = pgTable('company_services', {
   name: text('name').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
 }, (table) => [uniqueIndex('company_services_company_name_idx').on(table.companyId, table.name)]);
+
+export const itemCategoriesTable = pgTable('item_categories', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  companyId: text('company_id').notNull().references(() => companiesTable.id),
+  parentId: uuid('parent_id').references((): AnyPgColumn => itemCategoriesTable.id),
+  name: text('name').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex('item_categories_company_parent_name_idx').on(
+    table.companyId,
+    table.parentId,
+    table.name,
+  ),
+]);
+
+export const itemsTable = pgTable('items', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  companyId: text('company_id').notNull().references(() => companiesTable.id),
+  categoryId: uuid('category_id').references(() => itemCategoriesTable.id),
+  sku: text('sku'),
+  name: text('name').notNull(),
+  type: itemTypeEnum('type').notNull().default('product'),
+  unit: itemUnitEnum('unit').notNull().default('unit'),
+  unitPrice: numeric('unit_price', { precision: 12, scale: 2 }).notNull().default('0'),
+  tracksStock: boolean('tracks_stock').notNull().default(false),
+  trackBatchMode: itemTrackBatchModeEnum('track_batch_mode').notNull().default('none'),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex('items_company_sku_idx')
+    .on(table.companyId, table.sku)
+    .where(sql`${table.sku} IS NOT NULL`),
+]);
 
 export const branchesTable = pgTable('branches', {
   id: text('id').primaryKey(),

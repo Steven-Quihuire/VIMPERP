@@ -43,6 +43,13 @@
       "when": 1785260056085,
       "tag": "0005_observability",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785446196365,
+      "tag": "0006_item_catalog",
+      "breakpoints": true
     }
   ]
 }

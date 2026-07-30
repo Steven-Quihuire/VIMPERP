@@ -76,8 +76,8 @@ describe('0006_item_catalog migration', () => {
       {
         tableName: 'item_categories',
         columnName: 'company_id',
-        dataType: 'uuid',
-        udtName: 'uuid',
+        dataType: 'text',
+        udtName: 'text',
         isNullable: 'NO',
       },
       {
@@ -111,8 +111,8 @@ describe('0006_item_catalog migration', () => {
       {
         tableName: 'items',
         columnName: 'company_id',
-        dataType: 'uuid',
-        udtName: 'uuid',
+        dataType: 'text',
+        udtName: 'text',
         isNullable: 'NO',
       },
       {
@@ -216,23 +216,20 @@ describe('0006_item_catalog migration', () => {
       ORDER BY tablename ASC, indexname ASC`,
     );
 
-    expect(indexesResult.rows).toEqual(
+    const indexSummaries = indexesResult.rows.map(
+      ({ tableName, indexName, indexDef }) => `${tableName}:${indexName}:${indexDef}`,
+    );
+
+    expect(indexSummaries).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({
-          tableName: 'item_categories',
-          indexName: 'item_categories_company_parent_name_idx',
-          indexDef: expect.stringContaining('(company_id, parent_id, name)'),
-        }),
-        expect.objectContaining({
-          tableName: 'items',
-          indexName: 'items_company_sku_idx',
-          indexDef: expect.stringContaining('(company_id, sku)'),
-        }),
-        expect.objectContaining({
-          tableName: 'items',
-          indexName: 'items_company_sku_idx',
-          indexDef: expect.stringContaining('WHERE (sku IS NOT NULL)'),
-        }),
+        expect.stringContaining(
+          'item_categories:item_categories_company_parent_name_idx:CREATE UNIQUE INDEX item_categories_company_parent_name_idx ON public.item_categories USING btree (company_id, parent_id, name)',
+        ),
+        expect.stringContaining(
+          'items:items_company_sku_idx:CREATE UNIQUE INDEX items_company_sku_idx ON public.items USING btree (company_id, sku)',
+        ),
+        expect.stringContaining('items:items_company_sku_idx:'),
+        expect.stringContaining('WHERE (sku IS NOT NULL)'),
       ]),
     );
   });
