@@ -98,12 +98,20 @@ const createFakeDb = ({
         where: () => {
           writes.push({ kind: 'update', table, values: cloneRow(values) });
 
-          if (table === itemsTable && state.items.length > 0) {
-            Object.assign(state.items[0], values);
+          if (table === itemsTable) {
+            const firstItem = state.items[0];
+
+            if (firstItem) {
+              Object.assign(firstItem, values);
+            }
           }
 
-          if (table === itemCategoriesTable && state.categories.length > 0) {
-            Object.assign(state.categories[0], values);
+          if (table === itemCategoriesTable) {
+            const firstCategory = state.categories[0];
+
+            if (firstCategory) {
+              Object.assign(firstCategory, values);
+            }
           }
 
           return Promise.resolve([]);

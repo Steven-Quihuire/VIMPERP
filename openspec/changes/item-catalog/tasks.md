@@ -34,9 +34,9 @@ Chain strategy: pending
 
 ## Phase 2: Domain & Infrastructure (PR 2)
 
-- [ ] 2.1 Create `features/items/domain/item.ts` — `ItemCatalogGateway`+`CategoryGateway` ports, 3 enum arrays, 5 typed errors with `code`.
-- [ ] 2.2 Create `features/items/infrastructure/drizzle-item.gateway.ts` — implements both ports; atomic tx + `randomUUID` + `now()` + audit inserts.
-- [ ] 2.3 RED then GREEN: `drizzle-item.gateway.test.ts` (fake `AppDb` tx mock) — atomic write order, audit shape, `softDeleteItem` sets `deletedAt`, `listItems` excludes deleted.
+- [x] 2.1 Create `features/items/domain/item.ts` — `ItemCatalogGateway`+`CategoryGateway` ports, 3 enum arrays, 5 typed errors with `code`.
+- [x] 2.2 Create `features/items/infrastructure/drizzle-item.gateway.ts` — implements both ports; atomic tx + `randomUUID` + `now()` + audit inserts.
+- [x] 2.3 RED then GREEN: `drizzle-item.gateway.test.ts` (fake `AppDb` tx mock) — atomic write order, audit shape, `softDeleteItem` sets `deletedAt`, `listItems` excludes deleted.
 
 ## Phase 3: Application Use Cases (PR 3)
 
