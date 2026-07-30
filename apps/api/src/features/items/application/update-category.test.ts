@@ -34,16 +34,16 @@ const createGateway = ({
     getItemById: vi.fn(),
     listItems: vi.fn(),
     createCategory: vi.fn(),
-    getCategoryById: vi.fn().mockImplementation(async ({ categoryId }: { categoryId: string }) => {
+    getCategoryById: vi.fn().mockImplementation(({ categoryId }: { categoryId: string }) => {
       if (current?.id === categoryId) {
-        return current;
+        return Promise.resolve(current);
       }
 
       if (parent?.id === categoryId) {
-        return parent;
+        return Promise.resolve(parent);
       }
 
-      return null;
+      return Promise.resolve(null);
     }),
     listCategories: vi.fn(),
     getDescendantIds: vi.fn().mockResolvedValue(descendants),

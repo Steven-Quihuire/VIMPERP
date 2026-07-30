@@ -9,11 +9,11 @@
 | Chained PRs recommended | Yes |
 | Suggested split | PR 1 → PR 2 → PR 3 → PR 4 |
 | Delivery strategy | auto-chain |
-| Chain strategy | pending |
+| Chain strategy | stacked-to-main |
 
 Decision needed before apply: No
 Chained PRs recommended: Yes
-Chain strategy: pending
+Chain strategy: stacked-to-main
 400-line budget risk: High
 
 ### Suggested Work Units
@@ -40,13 +40,13 @@ Chain strategy: pending
 
 ## Phase 3: Application Use Cases (PR 3)
 
-- [ ] 3.1 RED then GREEN: `create-item.{test,}.ts` — R1; service forces `tracksStock=false`; normalize.
-- [ ] 3.2 RED then GREEN: `update-item.{test,}.ts` — R4; rejects `type` change.
-- [ ] 3.3 RED then GREEN: `soft-delete-item.{test,}.ts` — R5; defense-in-depth rejects `company-user`.
-- [ ] 3.4 RED then GREEN: `get-item.{test,}.ts` — R3.
-- [ ] 3.5 RED then GREEN: `list-items.{test,}.ts` — R2; cursor pagination.
+- [x] 3.1 RED then GREEN: `create-item.{test,}.ts` — R1; service forces `tracksStock=false`; normalize.
+- [x] 3.2 RED then GREEN: `update-item.{test,}.ts` — R4; rejects `type` change.
+- [x] 3.3 RED then GREEN: `soft-delete-item.{test,}.ts` — R5; defense-in-depth rejects `company-user`.
+- [x] 3.4 RED then GREEN: `get-item.{test,}.ts` — R3.
+- [x] 3.5 RED then GREEN: `list-items.{test,}.ts` — R2; cursor pagination.
 - [ ] 3.6 RED then GREEN: `create-category`+`update-category`+`list-categories` {test,}.ts — R6; cycle via `gateway.getDescendantIds`.
-- [ ] 3.7 `pnpm --filter api test -- features/items/application` exits 0.
+- [x] 3.7 `pnpm --filter api test -- features/items/application` exits 0.
 
 ## Phase 4: Presentation & Wiring (PR 4)
 
