@@ -26,6 +26,7 @@ class AtomicOnlyAuthGateway implements AuthIdentityGateway {
   }
 
   async createUser() {
+    await Promise.resolve();
     this.calls.push('createUser');
     throw new Error('register must not create user separately');
   }
@@ -39,6 +40,7 @@ class AtomicOnlyAuthGateway implements AuthIdentityGateway {
   }
 
   async createSession() {
+    await Promise.resolve();
     this.calls.push('createSession');
     throw new Error('register must not create session separately');
   }

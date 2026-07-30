@@ -272,11 +272,8 @@ describe('company onboarding routes', () => {
       });
 
     expect(response.status).toBe(400);
-    expect(response.body).toEqual({
-      error: expect.objectContaining({
-        code: 'BAD_REQUEST',
-      }),
-    });
+    expect(response.status).toBe(400);
+    expect((response.body as { error: { code: string } }).error.code).toBe('BAD_REQUEST');
   });
 
   it('updates palette preferences for authenticated users', async () => {

@@ -202,7 +202,7 @@ describe('auth routes', () => {
     expect(meResponse.status).toBe(200);
     expect(meResponse.body).toEqual({
       user: {
-        id: expect.any(String),
+        id: expect.any(String) as string,
         email: 'owner@vimcore.test',
         username: 'owner',
       },

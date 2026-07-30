@@ -632,7 +632,7 @@ describe('admin routes', () => {
     expect(response.body).toEqual({
       error: {
         code: 'BAD_REQUEST',
-        message: 'Invalid request',
+        message: 'Too small: expected number to be >=1',
       },
     });
   });
