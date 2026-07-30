@@ -52,6 +52,19 @@ import {
   createRequireRole,
 } from '../features/identity/presentation/auth.middleware';
 import { createAuthRouter } from '../features/identity/presentation/auth.router';
+import { createCreateCategoryUseCase } from '../features/items/application/create-category';
+import { createCreateItemUseCase } from '../features/items/application/create-item';
+import { createGetItemUseCase } from '../features/items/application/get-item';
+import { createListItemsUseCase } from '../features/items/application/list-items';
+import { createSoftDeleteItemUseCase } from '../features/items/application/soft-delete-item';
+import { createUpdateCategoryUseCase } from '../features/items/application/update-category';
+import { createUpdateItemUseCase } from '../features/items/application/update-item';
+import type {
+  CategoryGateway,
+  ItemCatalogGateway,
+} from '../features/items/domain/item';
+import { createDrizzleItemGateway } from '../features/items/infrastructure/drizzle-item.gateway';
+import { createItemRouter } from '../features/items/presentation/item.router';
 import { createGetHealth } from '../features/sample-health/application/get-health';
 import type { HealthGateway } from '../features/sample-health/domain/health';
 import { createDrizzleHealthGateway } from '../features/sample-health/infrastructure/drizzle-health.gateway';
@@ -77,6 +90,7 @@ type CreateAppInput = {
   companyOnboardingGateway?: CompanyOnboardingGateway;
   provisioningRecorder?: ProvisioningRecorder & ApplicationErrorRecorder;
   adminGateway?: AdminGateway;
+  itemGateway?: ItemCatalogGateway & CategoryGateway;
   nodeEnv?: 'development' | 'test' | 'production';
   seedAdminEnabled?: boolean;
   sessionCookieName?: string;
@@ -100,6 +114,7 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
   const provisioningRecorder =
     input.provisioningRecorder ?? createDrizzleProvisioningRecorder(db);
   const adminGateway = input.adminGateway ?? createDrizzleAdminGateway(db);
+  const itemGateway = input.itemGateway ?? createDrizzleItemGateway(db);
   const nodeEnv = input.nodeEnv ?? 'development';
   const seedAdminEnabled = nodeEnv !== 'production' && (input.seedAdminEnabled ?? false);
   const sessionCookieName = input.sessionCookieName ?? 'vimcore_session';
@@ -112,6 +127,7 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
   });
   const requireAuth = createRequireAuth(resolveAuthSession, sessionCookieName);
   const requirePlatformAdmin = createRequireRole('platform-admin');
+  const requireCompanyOwner = createRequireRole('company-owner');
   const sweepStaleProvisioningRuns = createSweepStaleProvisioningRuns({
     recorder: provisioningRecorder,
     ...(input.provisioningStaleTimeoutMs !== undefined
@@ -167,6 +183,22 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       getCurrentCompanySummary: createGetCurrentCompanySummary(companyOnboardingGateway),
       getThemePreference: createGetThemePreference(companyOnboardingGateway),
       updateThemePreference: createUpdateThemePreference(companyOnboardingGateway),
+    }),
+  );
+  app.use(
+    createItemRouter({
+      requireAuth,
+      requireOwner: requireCompanyOwner,
+      createItem: createCreateItemUseCase({ itemGateway }),
+      updateItem: createUpdateItemUseCase({ itemGateway }),
+      softDeleteItem: createSoftDeleteItemUseCase({ itemGateway }),
+      getItem: createGetItemUseCase({ itemGateway }),
+      listItems: createListItemsUseCase({ itemGateway }),
+      createCategory: createCreateCategoryUseCase({ itemGateway }),
+      updateCategory: createUpdateCategoryUseCase({ itemGateway }),
+      getCategoryById: async (input) => {
+        return await itemGateway.getCategoryById(input);
+      },
     }),
   );
   app.use(createErrorMiddleware({ recorder: provisioningRecorder }));

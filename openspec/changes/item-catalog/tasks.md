@@ -50,8 +50,8 @@ Chain strategy: stacked-to-main
 
 ## Phase 4: Presentation & Wiring (PR 4)
 
-- [ ] 4.1 Extend `apps/api/src/shared/presentation/error.middleware.ts` — `ItemNotFoundError`/`CategoryNotFoundError` → 404, `ItemSkuConflictError`/`CategoryCycleError`/`ItemTypeImmutableError` → 409.
-- [ ] 4.2 Create `apps/api/src/features/items/presentation/item.router.ts` — Zod `.strict()` bodies, `requireAuth` everywhere, `requireRole(['company-owner'])` only on DELETE; 8 routes.
-- [ ] 4.3 RED then GREEN: `item.route.test.ts` (supertest + `InMemoryItemGateway` + `InMemoryAuthGateway`) — R7 isolation, R5 RBAC 403, R9 USD strict-reject, CRUD happy paths.
-- [ ] 4.4 Wire `itemGateway` + 7 use cases + `createItemRouter` in `apps/api/src/app/create-app.ts`; mount after company router.
-- [ ] 4.5 Run `pnpm typecheck && pnpm lint && pnpm --filter api test` — full suite green.
+- [x] 4.1 Extend `apps/api/src/shared/presentation/error.middleware.ts` — `ItemNotFoundError`/`CategoryNotFoundError` → 404, `ItemSkuConflictError`/`CategoryCycleError`/`ItemTypeImmutableError` → 409.
+- [x] 4.2 Create `apps/api/src/features/items/presentation/item.router.ts` — Zod `.strict()` bodies, `requireAuth` everywhere, `requireRole(['company-owner'])` only on DELETE; 8 routes.
+- [x] 4.3 RED then GREEN: `item.route.test.ts` (supertest + `InMemoryItemGateway` + `InMemoryAuthGateway`) — R7 isolation, R5 RBAC 403, R9 USD strict-reject, CRUD happy paths.
+- [x] 4.4 Wire `itemGateway` + 7 use cases + `createItemRouter` in `apps/api/src/app/create-app.ts`; mount after company router.
+- [x] 4.5 Run `pnpm typecheck && pnpm lint && pnpm --filter api test` — full suite green.

@@ -2,6 +2,13 @@ import type { ErrorRequestHandler } from 'express';
 import { ZodError } from 'zod';
 
 import {
+  CategoryCycleError,
+  CategoryNotFoundError,
+  ItemNotFoundError,
+  ItemSkuConflictError,
+  ItemTypeImmutableError,
+} from '../../features/items/domain/item';
+import {
   DuplicateIdentityError,
   ForbiddenError,
   InvalidSessionError,
@@ -46,6 +53,20 @@ export const createErrorMiddleware = ({
 
     if (error instanceof DuplicateIdentityError) {
       response.status(409).json(toResponseBody('AUTH_CONFLICT', error.message));
+      return;
+    }
+
+    if (error instanceof ItemNotFoundError || error instanceof CategoryNotFoundError) {
+      response.status(404).json(toResponseBody('NOT_FOUND', error.message));
+      return;
+    }
+
+    if (
+      error instanceof ItemSkuConflictError ||
+      error instanceof ItemTypeImmutableError ||
+      error instanceof CategoryCycleError
+    ) {
+      response.status(409).json(toResponseBody('CONFLICT', error.message));
       return;
     }
 
