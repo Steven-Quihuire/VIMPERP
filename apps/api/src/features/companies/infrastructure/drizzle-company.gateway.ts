@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { eq } from 'drizzle-orm';
+import { and, eq, isNotNull } from 'drizzle-orm';
 
 import type { AppDb } from '../../../shared/infrastructure/db/client';
 import {
@@ -142,6 +142,21 @@ export const createDrizzleCompanyOnboardingGateway = (
         paletteId: input.paletteId,
       };
     });
+  },
+  getCurrentCompanySummary: async (userId) => {
+    const [company] = await db
+      .select({
+        companyId: companiesTable.id,
+        name: companiesTable.name,
+      })
+      .from(membershipsTable)
+      .innerJoin(companiesTable, eq(membershipsTable.companyId, companiesTable.id))
+      .where(
+        and(eq(membershipsTable.userId, userId), isNotNull(membershipsTable.companyId)),
+      )
+      .limit(1);
+
+    return company ?? null;
   },
   getThemePreference: async (userId) => {
     const [preference] = await db

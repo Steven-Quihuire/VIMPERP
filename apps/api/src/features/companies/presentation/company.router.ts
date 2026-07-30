@@ -37,6 +37,11 @@ const themePreferenceSchema = z.object({
   paletteId: paletteSchema,
 });
 
+const currentCompanySummarySchema = z.object({
+  companyId: z.string().min(1),
+  name: z.string().min(1),
+});
+
 type AuthenticatedResponseLocals = {
   auth: AuthSession;
   requestContext?: {
@@ -48,6 +53,7 @@ type AuthenticatedResponseLocals = {
 export const createCompanyRouter = ({
   requireAuth,
   createCompany,
+  getCurrentCompanySummary,
   getThemePreference,
   updateThemePreference,
 }: {
@@ -71,6 +77,10 @@ export const createCompanyRouter = ({
     paletteId: PaletteId;
     branches: Array<{ name: string; locale?: string | undefined }>;
   }) => Promise<{ companyId: string; paletteId: PaletteId }>;
+  getCurrentCompanySummary: (userId: string) => Promise<{
+    companyId: string;
+    name: string;
+  } | null>;
   getThemePreference: (userId: string) => Promise<{ paletteId: PaletteId }>;
   updateThemePreference: (input: {
     userId: string;
@@ -92,6 +102,17 @@ export const createCompanyRouter = ({
       });
 
       response.status(201).json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get('/me/company', requireAuth, async (_request, response, next) => {
+    try {
+      const auth = (response.locals as AuthenticatedResponseLocals).auth;
+      const company = await getCurrentCompanySummary(auth.user.id);
+
+      response.status(200).json(company ? currentCompanySummarySchema.parse(company) : null);
     } catch (error) {
       next(error);
     }

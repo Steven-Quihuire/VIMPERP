@@ -21,8 +21,15 @@ export type LoginInput = {
   password: string;
 };
 
+export type RegisterInput = {
+  email: string;
+  username: string;
+  password: string;
+};
+
 export type AuthRepository = {
   login: (input: LoginInput) => Promise<void>;
+  register: (input: RegisterInput) => Promise<void>;
   getMe: () => Promise<AuthSession>;
   logout: () => Promise<void>;
 };

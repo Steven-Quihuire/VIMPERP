@@ -31,6 +31,11 @@ export type ThemePreference = {
   paletteId: PaletteId;
 };
 
+export type CurrentCompanySummary = {
+  companyId: string;
+  name: string;
+};
+
 export type CreateCompanyResult = {
   companyId: string;
   paletteId: PaletteId;
@@ -65,6 +70,7 @@ export type ProvisioningRecorder = {
 
 export type CompanyOnboardingGateway = {
   createCompany: (input: CreateCompanyInput) => Promise<CreateCompanyResult>;
+  getCurrentCompanySummary: (userId: string) => Promise<CurrentCompanySummary | null>;
   getThemePreference: (userId: string) => Promise<ThemePreference | null>;
   saveThemePreference: (input: {
     userId: string;

@@ -2,6 +2,7 @@ import type { ErrorRequestHandler } from 'express';
 import { ZodError } from 'zod';
 
 import {
+  DuplicateIdentityError,
   ForbiddenError,
   InvalidSessionError,
   UnauthorizedError,
@@ -43,8 +44,19 @@ export const createErrorMiddleware = ({
       return;
     }
 
+    if (error instanceof DuplicateIdentityError) {
+      response.status(409).json(toResponseBody('AUTH_CONFLICT', error.message));
+      return;
+    }
+
     if (error instanceof ZodError) {
-      response.status(400).json(toResponseBody('BAD_REQUEST', 'Invalid request'));
+      const firstIssue = error.issues[0];
+      const message =
+        typeof firstIssue?.message === 'string' && firstIssue.message.length > 0
+          ? firstIssue.message
+          : 'Invalid request';
+
+      response.status(400).json(toResponseBody('BAD_REQUEST', message));
       return;
     }
 

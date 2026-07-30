@@ -355,6 +355,12 @@ describe('App dashboard shell', () => {
         return Promise.resolve(createJsonResponse({ paletteId: 'forest' }, 200));
       }
 
+      if (url.endsWith('/me/company')) {
+        return Promise.resolve(
+          createJsonResponse({ companyId: 'company-1', name: 'Northwind' }, 200),
+        );
+      }
+
       throw new Error(`unexpected request: ${url}`);
     });
 
@@ -476,6 +482,12 @@ describe('App dashboard shell', () => {
         return Promise.resolve(createJsonResponse({ paletteId: 'ocean' }, 200));
       }
 
+      if (url.endsWith('/me/company')) {
+        return Promise.resolve(
+          createJsonResponse({ companyId: 'company-1', name: 'Northwind' }, 200),
+        );
+      }
+
       throw new Error(`unexpected request: ${url}`);
     });
 
@@ -484,17 +496,23 @@ describe('App dashboard shell', () => {
     render(<App initialEntries={['/dashboard']} />);
 
     expect(await screen.findByRole('heading', { name: 'ERP dashboard' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'CRM' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Sales' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Inventory' })).toBeInTheDocument();
+    expect(screen.getAllByText('Northwind')).not.toHaveLength(0);
+    expect(
+      screen.getAllByRole('link', { name: 'Inicio' }).find((element) =>
+        element.getAttribute('href') === '/dashboard'
+      ),
+    ).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Open CRM module' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open Sales module' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open Inventory module' })).toBeInTheDocument();
     expect(screen.queryByText('Platform overview')).not.toBeInTheDocument();
 
     expect(fetchMock).not.toHaveBeenCalledWith(
-      'http://localhost:3000/admin/companies/summary',
+      '/api/admin/companies/summary',
       expect.anything(),
     );
     expect(fetchMock).not.toHaveBeenCalledWith(
-      'http://localhost:3000/admin/notifications',
+      '/api/admin/notifications',
       expect.anything(),
     );
   });
@@ -631,6 +649,12 @@ describe('App dashboard shell', () => {
 
       if (url.endsWith('/me/preferences')) {
         return Promise.resolve(createJsonResponse({ paletteId: 'forest' }, 200));
+      }
+
+      if (url.endsWith('/me/company')) {
+        return Promise.resolve(
+          createJsonResponse({ companyId: 'company-1', name: 'Northwind' }, 200),
+        );
       }
 
       throw new Error(`unexpected request: ${url}`);

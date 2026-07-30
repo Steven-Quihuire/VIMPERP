@@ -9,6 +9,7 @@ import {
 } from 'react-router-dom';
 
 import { LoginPage } from '../features/auth/presentation/login-page';
+import { RegisterPage } from '../features/auth/presentation/register-page';
 import { useAuth } from '../features/auth/presentation/use-auth';
 import { canViewAdminSignals } from '../features/dashboard/domain/dashboard';
 import { ApplicationErrorDetailPage } from '../features/dashboard/presentation/application-error-detail-page';
@@ -16,6 +17,9 @@ import { ApplicationErrorsListPage } from '../features/dashboard/presentation/ap
 import { AuditEventDetailPage } from '../features/dashboard/presentation/audit-event-detail-page';
 import { AuditEventsListPage } from '../features/dashboard/presentation/audit-events-list-page';
 import { DashboardPage } from '../features/dashboard/presentation/dashboard-page';
+import { DashboardProfileSettingsPage } from '../features/dashboard/presentation/dashboard-profile-settings-page';
+import { DashboardShell } from '../features/dashboard/presentation/dashboard-shell';
+import { DashboardThemeSettingsPage } from '../features/dashboard/presentation/dashboard-theme-settings-page';
 import { ProvisioningRunDetailPage } from '../features/dashboard/presentation/provisioning-run-detail-page';
 import { ProvisioningRunsListPage } from '../features/dashboard/presentation/provisioning-runs-list-page';
 import { DesktopGate } from '../features/desktop-access/presentation/desktop-gate';
@@ -23,7 +27,7 @@ import { needsCompanyOnboarding } from '../features/onboarding/domain/onboarding
 import { OnboardingPage } from '../features/onboarding/presentation/onboarding-page';
 import { ThemeProvider } from '../features/theme/presentation/theme-provider';
 
-const ProtectedDashboard = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+const ProtectedDashboardShell = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
   if (auth.isLoading) {
@@ -37,6 +41,16 @@ const ProtectedDashboard = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   if (needsCompanyOnboarding(auth.session)) {
     return <Navigate to="/onboarding" replace />;
   }
+
+  return <DashboardShell session={auth.session} {...(apiBaseUrl ? { apiBaseUrl } : {})} />;
+};
+
+const ProtectedDashboard = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+  const auth = useAuth(apiBaseUrl);
+
+  if (auth.isLoading) return <p>Loading...</p>;
+  if (!auth.session) return <Navigate to="/login" replace />;
+  if (needsCompanyOnboarding(auth.session)) return <Navigate to="/onboarding" replace />;
 
   return (
     <DashboardPage
@@ -54,6 +68,16 @@ const LoginRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   }
 
   return <LoginPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />;
+};
+
+const RegisterRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+  const auth = useAuth(apiBaseUrl);
+
+  if (auth.isSuccess && auth.session) {
+    return <Navigate to={needsCompanyOnboarding(auth.session) ? '/onboarding' : '/dashboard'} replace />;
+  }
+
+  return <RegisterPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />;
 };
 
 const ProtectedOnboarding = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
@@ -112,13 +136,20 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
         element={<LoginRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
       />
       <Route
-        path="/dashboard"
-        element={<ProtectedDashboard {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        path="/register"
+        element={<RegisterRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
       />
-      <Route
-        path="/dashboard/admin"
-        element={<ProtectedAdminDashboard {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
-      >
+      <Route path="/dashboard" element={<ProtectedDashboardShell {...(apiBaseUrl ? { apiBaseUrl } : {})} />}>
+        <Route index element={<ProtectedDashboard {...(apiBaseUrl ? { apiBaseUrl } : {})} />} />
+        <Route
+          path="settings/profile"
+          element={<DashboardProfileSettingsPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="settings/theme"
+          element={<DashboardThemeSettingsPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route path="admin" element={<ProtectedAdminDashboard {...(apiBaseUrl ? { apiBaseUrl } : {})} />}>
         <Route
           path="provisioning-runs"
           element={<ProvisioningRunsListPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
@@ -143,6 +174,7 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
           path="audit-events/:id"
           element={<AuditEventDetailPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
         />
+        </Route>
       </Route>
       <Route
         path="/onboarding"

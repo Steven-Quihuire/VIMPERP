@@ -50,6 +50,17 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
     return await Promise.resolve(this.usersById.get(userId) ?? null);
   }
 
+  async createUser(user: AuthUser) {
+    this.addUser(user);
+    await Promise.resolve();
+  }
+
+  async createUserWithSession(user: AuthUser, session: AuthSessionRecord) {
+    this.addUser(user);
+    this.sessions.set(session.token, session);
+    await Promise.resolve();
+  }
+
   async createSession(session: AuthSessionRecord) {
     this.sessions.set(session.token, session);
     await Promise.resolve();

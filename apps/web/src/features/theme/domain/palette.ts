@@ -15,39 +15,39 @@ export const defaultPaletteId: PaletteId = 'ocean';
 
 export const paletteTokens: Record<PaletteId, PaletteTokens> = {
   ocean: {
-    surface: '#e0f2fe',
-    background: '#f8fbff',
-    border: '#7dd3fc',
-    accent: '#0284c7',
-    text: '#082f49',
+    surface: '#f5f5f5',
+    background: '#ffffff',
+    border: '#e5e5e5',
+    accent: '#171717',
+    text: '#171717',
   },
   forest: {
-    surface: '#dcfce7',
-    background: '#f6fff8',
-    border: '#86efac',
-    accent: '#15803d',
-    text: '#14532d',
+    surface: '#e7f6eb',
+    background: '#f5fcf6',
+    border: '#bddac5',
+    accent: '#2f8f57',
+    text: '#163525',
   },
   violet: {
-    surface: '#f3e8ff',
+    surface: '#f4eaff',
     background: '#fcf8ff',
-    border: '#d8b4fe',
-    accent: '#7c3aed',
-    text: '#4c1d95',
+    border: '#dec8ff',
+    accent: '#9b5de5',
+    text: '#40235f',
   },
   sunset: {
-    surface: '#ffedd5',
-    background: '#fff8f1',
-    border: '#fdba74',
-    accent: '#ea580c',
-    text: '#7c2d12',
+    surface: '#ffeddc',
+    background: '#fff7f1',
+    border: '#f3c8a5',
+    accent: '#ef7d32',
+    text: '#6c3317',
   },
   midnight: {
-    surface: '#e2e8f0',
-    background: '#f8fafc',
-    border: '#94a3b8',
-    accent: '#334155',
-    text: '#0f172a',
+    surface: '#e7edf7',
+    background: '#f3f6fb',
+    border: '#c2cede',
+    accent: '#39587c',
+    text: '#1b2840',
   },
 };
 
@@ -64,6 +64,21 @@ export const applyPaletteToDocument = (paletteId: PaletteId) => {
   const tokens = paletteTokens[paletteId];
 
   htmlElement.dataset.palette = paletteId;
+  htmlElement.style.setProperty('--background', tokens.background);
+  htmlElement.style.setProperty('--card', tokens.background);
+  htmlElement.style.setProperty('--popover', tokens.background);
+  htmlElement.style.setProperty('--foreground', tokens.text);
+  htmlElement.style.setProperty('--card-foreground', tokens.text);
+  htmlElement.style.setProperty('--popover-foreground', tokens.text);
+  htmlElement.style.setProperty('--border', tokens.border);
+  htmlElement.style.setProperty('--input', tokens.border);
+  htmlElement.style.setProperty('--ring', tokens.accent);
+  htmlElement.style.setProperty('--accent', tokens.surface);
+  htmlElement.style.setProperty('--accent-foreground', tokens.text);
+  htmlElement.style.setProperty('--primary', tokens.accent);
+  htmlElement.style.setProperty('--primary-foreground', '#ffffff');
+  htmlElement.style.setProperty('--muted', tokens.surface);
+  htmlElement.style.setProperty('--muted-foreground', tokens.text);
   htmlElement.style.setProperty('--color-surface', tokens.surface);
   htmlElement.style.setProperty('--color-background', tokens.background);
   htmlElement.style.setProperty('--color-border', tokens.border);

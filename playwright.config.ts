@@ -1,6 +1,13 @@
+import { existsSync } from 'node:fs';
+
 import { defineConfig } from '@playwright/test';
 
 const databaseUrl = 'postgres://postgres:postgres@127.0.0.1:5432/vimcore';
+const executablePath =
+  process.env.PLAYWRIGHT_EXECUTABLE_PATH ??
+  ['/usr/bin/chromium', '/usr/bin/chromium-browser', '/opt/google/chrome/chrome'].find(
+    (path) => existsSync(path),
+  );
 const startPostgres = process.env.CI
   ? ''
   : 'docker compose up -d postgres && sleep 5 && ';
@@ -13,6 +20,7 @@ export default defineConfig({
   workers: 1,
   use: {
     baseURL: 'http://127.0.0.1:4173',
+    ...(executablePath ? { launchOptions: { executablePath } } : {}),
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },

@@ -7,6 +7,6 @@ describe('App', () => {
   it('renders login by default', async () => {
     render(<App initialEntries={['/login']} />);
 
-    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument();
   });
 });

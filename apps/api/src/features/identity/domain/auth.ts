@@ -34,6 +34,11 @@ export type AuthSession = {
 export type AuthIdentityGateway = {
   findUserByIdentifier: (identifier: string) => Promise<AuthUser | null>;
   findUserById: (userId: string) => Promise<AuthUser | null>;
+  createUser: (user: AuthUser) => Promise<void>;
+  createUserWithSession: (
+    user: AuthUser,
+    session: AuthSessionRecord,
+  ) => Promise<void>;
   createSession: (session: AuthSessionRecord) => Promise<void>;
   findSession: (token: string) => Promise<AuthSessionRecord | null>;
   deleteSession: (token: string) => Promise<void>;
@@ -69,6 +74,14 @@ export class ForbiddenError extends Error {
   readonly code = 'FORBIDDEN';
 
   constructor(message = 'Forbidden') {
+    super(message);
+  }
+}
+
+export class DuplicateIdentityError extends Error {
+  readonly code = 'AUTH_CONFLICT';
+
+  constructor(message = 'Email or username already registered') {
     super(message);
   }
 }

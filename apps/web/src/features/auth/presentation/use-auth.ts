@@ -6,7 +6,7 @@ import {
 
 import { createAuthRepository } from '../infrastructure/auth-client';
 import { useAuthStore } from '../infrastructure/auth-store';
-import type { AuthSession, LoginInput } from '../domain/auth';
+import type { AuthSession, LoginInput, RegisterInput } from '../domain/auth';
 
 export const authQueryKey = ['auth', 'me'] as const;
 
@@ -47,6 +47,25 @@ export const useLogin = (apiBaseUrl?: string) => {
   return useMutation({
     mutationFn: async (input: LoginInput) => {
       await repository.login(input);
+      const session = await repository.getMe();
+
+      return session;
+    },
+    onSuccess: (session: AuthSession) => {
+      setSession(session);
+      queryClient.setQueryData(authQueryKey, session);
+    },
+  });
+};
+
+export const useRegister = (apiBaseUrl?: string) => {
+  const repository = createAuthRepository(apiBaseUrl);
+  const queryClient = useQueryClient();
+  const setSession = useAuthStore((state) => state.setSession);
+
+  return useMutation({
+    mutationFn: async (input: RegisterInput) => {
+      await repository.register(input);
       const session = await repository.getMe();
 
       return session;

@@ -6,7 +6,19 @@ import {
   sessionsTable,
   usersTable,
 } from '../../../shared/infrastructure/db/schema';
-import type { AuthIdentityGateway } from '../domain/auth';
+import {
+  DuplicateIdentityError,
+  type AuthIdentityGateway,
+} from '../domain/auth';
+
+const isUniqueViolation = (error: unknown) => {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: unknown }).code === '23505'
+  );
+};
 
 export const createDrizzleAuthIdentityGateway = (
   db: AppDb,
@@ -33,6 +45,31 @@ export const createDrizzleAuthIdentityGateway = (
       .limit(1);
 
     return user ?? null;
+  },
+  createUser: async (user) => {
+    try {
+      await db.insert(usersTable).values(user);
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new DuplicateIdentityError();
+      }
+
+      throw error;
+    }
+  },
+  createUserWithSession: async (user, session) => {
+    try {
+      await db.transaction(async (tx) => {
+        await tx.insert(usersTable).values(user);
+        await tx.insert(sessionsTable).values(session);
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new DuplicateIdentityError();
+      }
+
+      throw error;
+    }
   },
   createSession: async (session) => {
     await db.insert(sessionsTable).values(session);

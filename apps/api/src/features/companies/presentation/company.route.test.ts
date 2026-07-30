@@ -5,6 +5,7 @@ import { createApp } from '../../../app/create-app';
 import type { ApplicationErrorRecorder } from '../../../shared/presentation/error.middleware';
 import type {
   CompanyOnboardingGateway,
+  CurrentCompanySummary,
   CreateCompanyInput,
   PaletteId,
   ProvisioningRecorder,
@@ -44,6 +45,17 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
     return await Promise.resolve(this.usersById.get(userId) ?? null);
   }
 
+  async createUser(user: AuthUser) {
+    this.addUser(user);
+    await Promise.resolve();
+  }
+
+  async createUserWithSession(user: AuthUser, session: AuthSessionRecord) {
+    this.addUser(user);
+    this.sessions.set(session.token, session);
+    await Promise.resolve();
+  }
+
   async createSession(session: AuthSessionRecord) {
     this.sessions.set(session.token, session);
     await Promise.resolve();
@@ -80,6 +92,19 @@ class InMemoryCompanyGateway implements CompanyOnboardingGateway {
     return await Promise.resolve({
       companyId,
       paletteId: input.paletteId,
+    });
+  }
+
+  async getCurrentCompanySummary(userId: string): Promise<CurrentCompanySummary | null> {
+    const company = this.companies.find((entry) => entry.ownerUserId === userId);
+
+    if (!company) {
+      return await Promise.resolve(null);
+    }
+
+    return await Promise.resolve({
+      companyId: company.companyId,
+      name: company.name,
     });
   }
 
@@ -206,6 +231,16 @@ describe('company onboarding routes', () => {
 
     expect(preferencesResponse.status).toBe(200);
     expect(preferencesResponse.body).toEqual({ paletteId: 'ocean' });
+
+    const currentCompanyResponse = await request(app)
+      .get('/me/company')
+      .set('Cookie', sessionCookie);
+
+    expect(currentCompanyResponse.status).toBe(200);
+    expect(currentCompanyResponse.body).toEqual({
+      companyId: createdCompany.companyId,
+      name: 'Vimcore Labs',
+    });
     expect(companyGateway.companies).toHaveLength(1);
     expect(companyGateway.notifications).toEqual([
       { companyId: createdCompany.companyId, targetRole: 'platform-admin' },
@@ -238,10 +273,9 @@ describe('company onboarding routes', () => {
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
-      error: {
+      error: expect.objectContaining({
         code: 'BAD_REQUEST',
-        message: 'Invalid request',
-      },
+      }),
     });
   });
 
@@ -281,5 +315,16 @@ describe('company onboarding routes', () => {
 
     expect(preferencesResponse.status).toBe(200);
     expect(preferencesResponse.body).toEqual({ paletteId: 'forest' });
+  });
+
+  it('returns null for authenticated users without a company membership yet', async () => {
+    const { app, sessionCookie } = await createAuthenticatedApp();
+
+    const response = await request(app)
+      .get('/me/company')
+      .set('Cookie', sessionCookie);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toBeNull();
   });
 });

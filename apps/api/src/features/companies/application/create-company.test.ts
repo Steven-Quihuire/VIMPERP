@@ -45,6 +45,7 @@ describe('createCreateCompany', () => {
         companyId: 'company-1',
         paletteId: 'ocean',
       }),
+      getCurrentCompanySummary: vi.fn(),
       getThemePreference: vi.fn(),
       saveThemePreference: vi.fn(),
     };
@@ -99,6 +100,7 @@ describe('createCreateCompany', () => {
         companyId: 'company-1',
         paletteId: 'ocean',
       }),
+      getCurrentCompanySummary: vi.fn(),
       getThemePreference: vi.fn(),
       saveThemePreference: vi.fn(),
     };
@@ -118,6 +120,7 @@ describe('createCreateCompany', () => {
         companyId: 'company-1',
         paletteId: 'ocean',
       }),
+      getCurrentCompanySummary: vi.fn(),
       getThemePreference: vi.fn(),
       saveThemePreference: vi.fn(),
     };
@@ -140,6 +143,7 @@ describe('createCreateCompany', () => {
     const gatewayError = new Error('duplicate legal identifier');
     const gateway: CompanyOnboardingGateway = {
       createCompany: vi.fn().mockRejectedValue(gatewayError),
+      getCurrentCompanySummary: vi.fn(),
       getThemePreference: vi.fn(),
       saveThemePreference: vi.fn(),
     };
@@ -167,6 +171,7 @@ describe('createCreateCompany', () => {
     const gatewayError = new Error(`upstream failed with password=super-secret ${'x'.repeat(800)}`);
     const gateway: CompanyOnboardingGateway = {
       createCompany: vi.fn().mockRejectedValue(gatewayError),
+      getCurrentCompanySummary: vi.fn(),
       getThemePreference: vi.fn(),
       saveThemePreference: vi.fn(),
     };
@@ -200,6 +205,7 @@ describe('createCreateCompany', () => {
     const recorder = createRecorder();
     const gateway: CompanyOnboardingGateway = {
       createCompany: vi.fn().mockRejectedValue('boom'),
+      getCurrentCompanySummary: vi.fn(),
       getThemePreference: vi.fn(),
       saveThemePreference: vi.fn(),
     };

@@ -28,11 +28,11 @@ test.beforeEach(() => {
 test('supports owner onboarding, palette persistence, and admin company visibility', async ({ page }) => {
   await page.goto('/dashboard');
 
-  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
 
-  await page.getByLabel('Email or username').fill('owner');
-  await page.getByLabel('Password').fill('secret123');
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByLabel('Correo o usuario').fill('owner');
+  await page.getByRole('textbox', { name: 'Contraseña' }).fill('secret123');
+  await page.getByRole('button', { name: 'Iniciar sesión' }).click();
 
   await expect(page.getByRole('heading', { name: 'Company onboarding' })).toBeVisible();
 
@@ -59,11 +59,11 @@ test('supports owner onboarding, palette persistence, and admin company visibili
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'forest');
 
   await page.getByRole('button', { name: 'Sign out' }).click();
-  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
 
-  await page.getByLabel('Email or username').fill('admin');
-  await page.getByLabel('Password').fill('admin');
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByLabel('Correo o usuario').fill('admin');
+  await page.getByRole('textbox', { name: 'Contraseña' }).fill('admin');
+  await page.getByRole('button', { name: 'Iniciar sesión' }).click();
 
   await expect(page.getByRole('heading', { name: 'Platform overview' })).toBeVisible();
   await expect(page.getByText('Vimcore Labs registered')).toBeVisible();

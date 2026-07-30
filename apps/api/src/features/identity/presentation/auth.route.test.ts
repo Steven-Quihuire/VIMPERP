@@ -38,6 +38,31 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
     return await Promise.resolve(this.usersById.get(userId) ?? null);
   }
 
+  async createUser(user: AuthUser) {
+    if (
+      this.usersByIdentifier.has(user.email.toLowerCase()) ||
+      this.usersByIdentifier.has(user.username.toLowerCase())
+    ) {
+      throw new Error('duplicate user');
+    }
+
+    this.addUser(user);
+    await Promise.resolve();
+  }
+
+  async createUserWithSession(user: AuthUser, session: AuthSessionRecord) {
+    if (
+      this.usersByIdentifier.has(user.email.toLowerCase()) ||
+      this.usersByIdentifier.has(user.username.toLowerCase())
+    ) {
+      throw new Error('duplicate user');
+    }
+
+    this.addUser(user);
+    this.sessions.set(session.token, session);
+    await Promise.resolve();
+  }
+
   async createSession(session: AuthSessionRecord) {
     this.sessions.set(session.token, session);
     await Promise.resolve();
@@ -149,6 +174,103 @@ const getSessionCookie = (headers: string | string[] | undefined): string => {
 };
 
 describe('auth routes', () => {
+  it('registers a public user, sets a cookie, and returns auth/me without memberships', async () => {
+    const gateway = new InMemoryAuthGateway();
+
+    const app = createApp({
+      adminGateway,
+      authIdentityGateway: gateway,
+      passwordHasher,
+      sessionTokenService,
+      seedAdminEnabled: false,
+      nodeEnv: 'test',
+    });
+
+    const registerResponse = await request(app).post('/auth/register').send({
+      email: ' Owner@Vimcore.Test ',
+      username: ' Owner ',
+      password: 'secret123',
+    });
+
+    expect(registerResponse.status).toBe(201);
+    expect(registerResponse.headers['set-cookie']).toBeTruthy();
+
+    const meResponse = await request(app)
+      .get('/auth/me')
+      .set('Cookie', getSessionCookie(registerResponse.headers['set-cookie']));
+
+    expect(meResponse.status).toBe(200);
+    expect(meResponse.body).toEqual({
+      user: {
+        id: expect.any(String),
+        email: 'owner@vimcore.test',
+        username: 'owner',
+      },
+      memberships: [],
+    });
+  });
+
+  it('returns 409 when registration email or username already exists', async () => {
+    const gateway = new InMemoryAuthGateway();
+
+    gateway.addUser({
+      id: 'user-1',
+      email: 'owner@vimcore.test',
+      username: 'owner',
+      passwordHash: 'hashed:secret123',
+    });
+
+    const app = createApp({
+      adminGateway,
+      authIdentityGateway: gateway,
+      passwordHasher,
+      sessionTokenService,
+      seedAdminEnabled: false,
+      nodeEnv: 'test',
+    });
+
+    const response = await request(app).post('/auth/register').send({
+      email: 'new-owner@vimcore.test',
+      username: 'OWNER',
+      password: 'secret123',
+    });
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      error: {
+        code: 'AUTH_CONFLICT',
+        message: 'Email or username already registered',
+      },
+    });
+  });
+
+  it('returns 400 for invalid registration payloads', async () => {
+    const gateway = new InMemoryAuthGateway();
+
+    const app = createApp({
+      adminGateway,
+      authIdentityGateway: gateway,
+      passwordHasher,
+      sessionTokenService,
+      seedAdminEnabled: false,
+      nodeEnv: 'test',
+    });
+
+    const response = await request(app).post('/auth/register').send({
+      email: 'not-an-email',
+      username: 'x',
+      password: 'short',
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      error: {
+        code: 'BAD_REQUEST',
+        message: 'Ingresa un correo válido.',
+      },
+    });
+  });
+
   it('returns 204 and sets a cookie for valid credentials, then returns auth/me payload', async () => {
     const gateway = new InMemoryAuthGateway();
 

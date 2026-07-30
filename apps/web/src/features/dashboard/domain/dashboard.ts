@@ -5,6 +5,12 @@ export type DashboardModule = {
   label: string;
 };
 
+const dashboardRoleLabels: Record<AuthSession['memberships'][number]['role'], string> = {
+  'platform-admin': 'Administrador de plataforma',
+  'company-owner': 'Responsable de empresa',
+  'company-user': 'Usuario de empresa',
+};
+
 export type DashboardCompanySummary = {
   totalCompanies: number;
   notificationCount: number;
@@ -14,6 +20,11 @@ export type DashboardCompanySummary = {
     name: string;
     createdAt: string;
   }>;
+};
+
+export type DashboardCurrentCompanySummary = {
+  companyId: string;
+  name: string;
 };
 
 export type DashboardNotification = {
@@ -69,6 +80,54 @@ export const adminWorkspaceLinks: AdminWorkspaceLink[] = [
 
 export const canViewAdminSignals = (session: AuthSession) =>
   session.memberships.some((membership) => membership.role === 'platform-admin');
+
+export const getPrimaryMembership = (session: AuthSession) => session.memberships[0] ?? null;
+
+export const getDashboardCompanyLabel = (
+  session: AuthSession,
+  company?: DashboardCurrentCompanySummary | null,
+) => {
+  const primaryMembership = getPrimaryMembership(session);
+
+  if (!primaryMembership) {
+    return 'Sin empresa vinculada';
+  }
+
+  if (primaryMembership.companyId) {
+    return company?.name ?? 'Empresa vinculada';
+  }
+
+  return dashboardRoleLabels[primaryMembership.role];
+};
+
+export const getDashboardCompanyDetail = (
+  session: AuthSession,
+  company?: DashboardCurrentCompanySummary | null,
+) => {
+  const primaryMembership = getPrimaryMembership(session);
+
+  if (!primaryMembership) {
+    return session.user.email;
+  }
+
+  if (primaryMembership.companyId) {
+    return company?.name ? dashboardRoleLabels[primaryMembership.role] : session.user.email;
+  }
+
+  return 'Sin empresa vinculada en esta sesion';
+};
+
+export const getDashboardCurrentSection = (pathname: string) => {
+  if (pathname.startsWith('/dashboard/settings')) {
+    return 'Configuracion';
+  }
+
+  if (pathname.startsWith('/dashboard/admin')) {
+    return 'Administracion';
+  }
+
+  return 'Inicio';
+};
 
 export const getVisibleDashboardModules = (session: AuthSession) => {
   if (canViewAdminSignals(session)) {

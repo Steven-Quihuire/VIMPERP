@@ -25,7 +25,7 @@ export const ThemeProvider = ({
   const session = useAuthStore((state) => state.session);
   const canReadSavedPreference =
     Boolean(session) &&
-    location.pathname === '/dashboard' &&
+    location.pathname.startsWith('/dashboard') &&
     !needsCompanyOnboarding(session);
   const palettePreference = usePalettePreference(apiBaseUrl, canReadSavedPreference);
   const paletteId = session

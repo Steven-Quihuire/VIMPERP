@@ -10,5 +10,5 @@ export const getApiBaseUrl = () => {
     return trimTrailingSlash(configuredBaseUrl);
   }
 
-  return 'http://localhost:3000';
+  return '/api';
 };

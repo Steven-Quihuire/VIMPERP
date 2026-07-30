@@ -24,6 +24,7 @@ import type { AdminGateway } from '../features/admin/domain/admin';
 import { createDrizzleAdminGateway } from '../features/admin/infrastructure/drizzle-admin.gateway';
 import { createAdminRouter } from '../features/admin/presentation/admin.router';
 import { createCreateCompany } from '../features/companies/application/create-company';
+import { createGetCurrentCompanySummary } from '../features/companies/application/get-current-company-summary';
 import { createGetThemePreference } from '../features/companies/application/get-theme-preference';
 import { createSweepStaleProvisioningRuns } from '../features/companies/application/sweep-stale-provisioning-runs';
 import { createUpdateThemePreference } from '../features/companies/application/update-theme-preference';
@@ -36,6 +37,7 @@ import { createDrizzleProvisioningRecorder } from '../features/companies/infrast
 import { createCompanyRouter } from '../features/companies/presentation/company.router';
 import { createLogin } from '../features/identity/application/login';
 import { createLogout } from '../features/identity/application/logout';
+import { createRegister } from '../features/identity/application/register';
 import { createResolveAuthSession } from '../features/identity/application/resolve-auth-session';
 import type {
   AuthIdentityGateway,
@@ -130,6 +132,11 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
         seedAdminSessions,
         seedAdminEnabled,
       }),
+      register: createRegister({
+        authIdentityGateway,
+        passwordHasher,
+        sessionTokenService,
+      }),
       resolveAuthSession,
       logout: createLogout(authIdentityGateway, seedAdminSessions),
       sessionCookieName,
@@ -157,6 +164,7 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
         gateway: companyOnboardingGateway,
         recorder: provisioningRecorder,
       }),
+      getCurrentCompanySummary: createGetCurrentCompanySummary(companyOnboardingGateway),
       getThemePreference: createGetThemePreference(companyOnboardingGateway),
       updateThemePreference: createUpdateThemePreference(companyOnboardingGateway),
     }),

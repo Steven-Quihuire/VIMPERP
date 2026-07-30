@@ -24,7 +24,7 @@ type CreateLoginInput = {
   seedAdminEnabled: boolean;
 };
 
-const defaultSessionLifetimeMs = 1000 * 60 * 60 * 8;
+export const defaultSessionLifetimeMs = 1000 * 60 * 60 * 8;
 
 export const createLogin = ({
   authIdentityGateway,

@@ -68,6 +68,12 @@ describe('App onboarding flow', () => {
         return Promise.resolve(createJsonResponse({ paletteId: 'ocean' }, 200));
       }
 
+      if (url.endsWith('/me/company')) {
+        return Promise.resolve(
+          createJsonResponse({ companyId: 'company-1', name: 'Vimcore Labs' }, 200),
+        );
+      }
+
       throw new Error(`unexpected request: ${url}`);
     });
 
@@ -83,7 +89,7 @@ describe('App onboarding flow', () => {
       await screen.findByText('Complete the account step before continuing.'),
     ).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalledWith(
-      'http://localhost:3000/companies',
+      '/api/companies',
       expect.anything(),
     );
   });
@@ -138,6 +144,12 @@ describe('App onboarding flow', () => {
         return Promise.resolve(createJsonResponse({ paletteId: 'ocean' }, 200));
       }
 
+      if (url.endsWith('/me/company')) {
+        return Promise.resolve(
+          createJsonResponse({ companyId: 'company-1', name: 'Vimcore Labs' }, 200),
+        );
+      }
+
       throw new Error(`unexpected request: ${url}`);
     });
 
@@ -157,7 +169,7 @@ describe('App onboarding flow', () => {
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:3000/companies',
+      '/api/companies',
         expect.objectContaining({ method: 'POST' }),
       );
     });
@@ -211,7 +223,7 @@ describe('App onboarding flow', () => {
     expect(resolveCreateCompany).toBeDefined();
   });
 
-  it('updates palette preferences from the dashboard', async () => {
+  it('updates palette preferences from the theme settings page', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = readUrl(input);
 
@@ -244,19 +256,15 @@ describe('App onboarding flow', () => {
 
     vi.stubGlobal('fetch', fetchMock);
 
-    render(<App initialEntries={['/dashboard']} />);
+    render(<App initialEntries={['/dashboard/settings/theme']} />);
 
-    expect(await screen.findByRole('heading', { name: 'ERP dashboard' })).toBeInTheDocument();
-    expect(await screen.findByDisplayValue('ocean')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Paleta de colores' })).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('Palette preference'), {
-      target: { value: 'forest' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Save palette' }));
+    fireEvent.click(screen.getByRole('button', { name: /Soft Graphite/i }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:3000/me/preferences',
+        '/api/me/preferences',
         expect.objectContaining({ method: 'PATCH' }),
       );
     });
