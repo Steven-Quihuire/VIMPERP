@@ -450,6 +450,54 @@ const createAuthenticatedApp = async ({
 };
 
 describe('item routes', () => {
+  it('lists only categories from the authenticated tenant and rejects anonymous access', async () => {
+    const itemGateway = new InMemoryItemGateway();
+    itemGateway.categories.push(
+      {
+        id: 'category-a1',
+        companyId: 'company-a',
+        parentId: null,
+        name: 'Hardware',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      },
+      {
+        id: 'category-a2',
+        companyId: 'company-a',
+        parentId: 'category-a1',
+        name: 'Peripherals',
+        createdAt: new Date('2026-01-02T00:00:00.000Z'),
+      },
+      {
+        id: 'category-b1',
+        companyId: 'company-b',
+        parentId: null,
+        name: 'Foreign Category',
+        createdAt: new Date('2026-01-03T00:00:00.000Z'),
+      },
+    );
+
+    const { app, ownerSessionCookie } = await createAuthenticatedApp({ itemGateway });
+    const response = await request(app)
+      .get('/item-categories')
+      .set('Cookie', ownerSessionCookie);
+    const anonymousResponse = await request(app).get('/item-categories');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      categories: [
+        expect.objectContaining({ id: 'category-a1', companyId: 'company-a', name: 'Hardware' }),
+        expect.objectContaining({
+          id: 'category-a2',
+          companyId: 'company-a',
+          parentId: 'category-a1',
+          name: 'Peripherals',
+        }),
+      ],
+    });
+    expect(anonymousResponse.status).toBe(401);
+    expect((anonymousResponse.body as { error: { code: string } }).error.code).toBe('UNAUTHORIZED');
+  });
+
   it('creates product and service items and forces service tracksStock to false', async () => {
     const { app, itemGateway, ownerSessionCookie } = await createAuthenticatedApp();
 
