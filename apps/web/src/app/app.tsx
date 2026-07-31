@@ -23,6 +23,7 @@ import { DashboardThemeSettingsPage } from '../features/dashboard/presentation/d
 import { ProvisioningRunDetailPage } from '../features/dashboard/presentation/provisioning-run-detail-page';
 import { ProvisioningRunsListPage } from '../features/dashboard/presentation/provisioning-runs-list-page';
 import { DesktopGate } from '../features/desktop-access/presentation/desktop-gate';
+import { ItemCatalogPage } from '../features/items/presentation/item-catalog-page';
 import { needsCompanyOnboarding } from '../features/onboarding/domain/onboarding';
 import { OnboardingPage } from '../features/onboarding/presentation/onboarding-page';
 import { ThemeProvider } from '../features/theme/presentation/theme-provider';
@@ -58,6 +59,16 @@ const ProtectedDashboard = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
       {...(apiBaseUrl ? { apiBaseUrl } : {})}
     />
   );
+};
+
+const ItemsRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+  const auth = useAuth(apiBaseUrl);
+
+  if (auth.isLoading || !auth.session) {
+    return <p>Loading...</p>;
+  }
+
+  return <ItemCatalogPage session={auth.session} />;
 };
 
 const LoginRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
@@ -141,6 +152,10 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
       />
       <Route path="/dashboard" element={<ProtectedDashboardShell {...(apiBaseUrl ? { apiBaseUrl } : {})} />}>
         <Route index element={<ProtectedDashboard {...(apiBaseUrl ? { apiBaseUrl } : {})} />} />
+        <Route
+          path="items"
+          element={<ItemsRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
         <Route
           path="settings/profile"
           element={<DashboardProfileSettingsPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}

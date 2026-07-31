@@ -9,6 +9,7 @@ import {
   ShieldUser,
   Settings,
   ShieldCheck,
+  Tags,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
@@ -31,7 +32,8 @@ const workspaceItems = [
   { label: 'Inicio', href: '/dashboard', icon: LayoutDashboard, end: true },
   { label: 'Sales', href: '#sales', icon: ClipboardList },
   { label: 'Compras', href: '#purchases', icon: Building2 },
-  { label: 'Inventory', href: '#inventory', icon: Package },
+  { label: 'Items', href: '/dashboard/items', icon: Package },
+  { label: 'Categorías', href: '/dashboard/categories', icon: Tags },
   { label: 'Produccion', href: '#production', icon: Boxes },
   { label: 'Finanzas', href: '#finance', icon: ShieldCheck },
   { label: 'Proyectos', href: '#projects', icon: ClipboardList },

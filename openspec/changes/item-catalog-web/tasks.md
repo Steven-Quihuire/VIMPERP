@@ -50,15 +50,15 @@ Chain strategy: stacked-to-main
 
 ## Phase 3: Items presentation (PR2)
 
-- [ ] 3.1 RED: `presentation/item-form-schema.test.ts` — strips `type` on patch payload; rejects negative price; rejects empty name
-- [ ] 3.2 GREEN: `presentation/item-form-schema.ts` — Zod schema + `toPatchPayload(input)` helper
-- [ ] 3.3 `presentation/item-catalog-store.ts` — Zustand store: `selectedItemId`, `panelMode` (`closed`|`create`|`edit`), `formDraft`; no server data
-- [ ] 3.4 `presentation/item-table.tsx` — `<Table>` from `shared/ui`; row click -> store; USD `$` prefix; delete column hidden for non-owner
-- [ ] 3.5 `presentation/item-form-panel.tsx` — RHF + Zod resolver; `type` disabled on edit; owner-only delete opens `<Dialog>` confirmation
-- [ ] 3.6 `presentation/item-catalog-page.tsx` — split panel; loading skeleton + error state; 409 from category cycle shows user-friendly toast
-- [ ] 3.7 RED+GREEN: presentation tests — table render, row->store, validation blocks invalid submit, RBAC hides delete, 409 surfaced
-- [ ] 3.8 Add `/dashboard/items` route in `apps/web/src/app/app.tsx`; add Items `NavLink` in `features/dashboard/presentation/dashboard-app-sidebar.tsx` (replace `#inventory` placeholder)
-- [ ] 3.9 `pnpm --filter web test` + `pnpm build` green
+- [x] 3.1 RED: `presentation/item-form-schema.test.ts` — strips `type` on patch payload; rejects negative price; rejects empty name
+- [x] 3.2 GREEN: `presentation/item-form-schema.ts` — Zod schema + `toPatchPayload(input)` helper
+- [x] 3.3 `presentation/item-catalog-store.ts` — Zustand store: `selectedItemId`, `panelMode` (`closed`|`create`|`edit`), `formDraft`; no server data
+- [x] 3.4 `presentation/item-table.tsx` — `<Table>` from `shared/ui`; row click -> store; USD `$` prefix; delete column hidden for non-owner
+- [x] 3.5 `presentation/item-form-panel.tsx` — RHF + Zod resolver; `type` disabled on edit; owner-only delete opens `<Dialog>` confirmation
+- [x] 3.6 `presentation/item-catalog-page.tsx` — split panel; loading skeleton + error state; 409 from category cycle shows user-friendly toast
+- [x] 3.7 RED+GREEN: presentation tests — table render, row->store, validation blocks invalid submit, RBAC hides delete, 409 surfaced
+- [x] 3.8 Add `/dashboard/items` route in `apps/web/src/app/app.tsx`; add Items `NavLink` in `features/dashboard/presentation/dashboard-app-sidebar.tsx` (replace `#inventory` placeholder)
+- [x] 3.9 `pnpm --filter web test` + `pnpm build` green
 
 ## Phase 4: Categories presentation (PR3)
 
