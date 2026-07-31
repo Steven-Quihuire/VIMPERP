@@ -23,6 +23,7 @@ import { DashboardThemeSettingsPage } from '../features/dashboard/presentation/d
 import { ProvisioningRunDetailPage } from '../features/dashboard/presentation/provisioning-run-detail-page';
 import { ProvisioningRunsListPage } from '../features/dashboard/presentation/provisioning-runs-list-page';
 import { DesktopGate } from '../features/desktop-access/presentation/desktop-gate';
+import { CategoriesPage } from '../features/items/presentation/categories-page';
 import { ItemCatalogPage } from '../features/items/presentation/item-catalog-page';
 import { needsCompanyOnboarding } from '../features/onboarding/domain/onboarding';
 import { OnboardingPage } from '../features/onboarding/presentation/onboarding-page';
@@ -69,6 +70,16 @@ const ItemsRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   }
 
   return <ItemCatalogPage session={auth.session} />;
+};
+
+const CategoriesRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+  const auth = useAuth(apiBaseUrl);
+
+  if (auth.isLoading || !auth.session) {
+    return <p>Loading...</p>;
+  }
+
+  return <CategoriesPage session={auth.session} />;
 };
 
 const LoginRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
@@ -155,6 +166,10 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
         <Route
           path="items"
           element={<ItemsRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="categories"
+          element={<CategoriesRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
         />
         <Route
           path="settings/profile"

@@ -62,11 +62,11 @@ Chain strategy: stacked-to-main
 
 ## Phase 4: Categories presentation (PR3)
 
-- [ ] 4.1 `presentation/category-tree.tsx` — recursive tree; inline rename; expand/collapse
-- [ ] 4.2 `presentation/categories-page.tsx` — tree + create form; 409 cycle -> user-friendly inline error
-- [ ] 4.3 RED+GREEN: `categories-page.test.tsx` — create renders tree; 409 surfaces error
-- [ ] 4.4 Add `/dashboard/categories` route in `app.tsx`; add Categories `NavLink` in sidebar (replace `#sales` placeholder)
-- [ ] 4.5 `pnpm --filter web test` + `pnpm build` green
+- [x] 4.1 `presentation/categories-page.tsx` — recursive tree view implemented inline with category rows, parent badges, and edit actions
+- [x] 4.2 `presentation/categories-page.tsx` — create/edit form; 409 cycle -> user-friendly inline error
+- [x] 4.3 RED+GREEN: `categories-page.test.tsx` — tree render, create/edit submit, 409 error, empty/loading states
+- [x] 4.4 Add `/dashboard/categories` route in `app.tsx`; existing sidebar Categories `NavLink` remains wired to the real route
+- [x] 4.5 `pnpm --filter web test` + `pnpm --filter web typecheck` + `pnpm --filter web lint` + `pnpm --filter web build` green
 
 ## Notes
 
