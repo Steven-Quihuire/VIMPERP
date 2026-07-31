@@ -453,6 +453,57 @@ describe('App dashboard shell', () => {
     expect(screen.queryByRole('button', { name: /retry|delete/i })).not.toBeInTheDocument();
   });
 
+  it('exposes Items and Categorias catalog links in the company-owner sidebar', async () => {
+    setDesktopBrowser(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0',
+      false,
+    );
+
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = readUrl(input);
+
+      if (url.endsWith('/auth/me')) {
+        return Promise.resolve(
+          createJsonResponse(
+            {
+              user: {
+                id: 'user-1',
+                email: 'owner@vimcore.test',
+                username: 'owner',
+              },
+              memberships: [{ companyId: 'company-1', role: 'company-owner' }],
+            },
+            200,
+          ),
+        );
+      }
+
+      if (url.endsWith('/me/preferences')) {
+        return Promise.resolve(createJsonResponse({ paletteId: 'ocean' }, 200));
+      }
+
+      if (url.endsWith('/me/company')) {
+        return Promise.resolve(
+          createJsonResponse({ companyId: 'company-1', name: 'Northwind' }, 200),
+        );
+      }
+
+      throw new Error(`unexpected request: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App initialEntries={['/dashboard']} />);
+
+    expect(await screen.findByRole('heading', { name: 'ERP dashboard' })).toBeInTheDocument();
+
+    const itemsLink = screen.getByRole('link', { name: 'Items' });
+    expect(itemsLink).toHaveAttribute('href', '/dashboard/items');
+
+    const categoriesLink = screen.getByRole('link', { name: 'Categorías' });
+    expect(categoriesLink).toHaveAttribute('href', '/dashboard/categories');
+  });
+
   it('shows company-owner dashboard modules without requesting admin endpoints', async () => {
     setDesktopBrowser(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0',

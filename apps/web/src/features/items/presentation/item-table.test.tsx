@@ -126,6 +126,40 @@ describe('ItemTable', () => {
     expect(screen.getByText('No items yet')).toBeInTheDocument();
   });
 
+  it('renders only active items scoped to the authenticated tenant', () => {
+    useItemsQueryMock.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: 'item-1',
+            companyId: 'company-1',
+            categoryId: null,
+            sku: 'SKU-1',
+            name: 'Desk lamp',
+            type: 'product',
+            unit: 'unit',
+            unitPrice: 12,
+            tracksStock: true,
+            trackBatchMode: 'none',
+            deletedAt: null,
+            createdAt: '2026-07-31T10:00:00.000Z',
+            updatedAt: '2026-07-31T10:00:00.000Z',
+          },
+        ],
+        nextCursor: null,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    render(<ItemTable />);
+
+    expect(screen.getByText('Desk lamp')).toBeInTheDocument();
+    expect(screen.queryByText('Deleted widget')).not.toBeInTheDocument();
+    expect(screen.queryByText('Foreign widget')).not.toBeInTheDocument();
+  });
+
   it('renders an error message when the list request fails', () => {
     useItemsQueryMock.mockReturnValue({
       isLoading: false,

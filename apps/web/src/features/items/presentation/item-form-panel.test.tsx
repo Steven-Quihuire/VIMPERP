@@ -260,4 +260,77 @@ describe('ItemFormPanel', () => {
     expect(screen.queryByLabelText('Currency')).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Currency' })).not.toBeInTheDocument();
   });
+
+  it('does not render a currency selector field in edit mode either', () => {
+    useItemCatalogStore.setState({ selectedItemId: 'item-1', panelMode: 'edit' });
+
+    render(<ItemFormPanel session={ownerSession} />, { wrapper: createWrapper() });
+
+    expect(screen.queryByLabelText('Currency')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Currency' })).not.toBeInTheDocument();
+  });
+
+  it('submits edit mode through the update mutation', async () => {
+    useItemCatalogStore.setState({ selectedItemId: 'item-1', panelMode: 'edit' });
+
+    const updateMutation = vi.fn().mockResolvedValue({ itemId: 'item-1' });
+    useUpdateItemMutationMock.mockReturnValue({
+      mutateAsync: updateMutation,
+      isPending: false,
+      isError: false,
+      error: null,
+    });
+
+    render(<ItemFormPanel session={ownerSession} />, { wrapper: createWrapper() });
+
+    const nameInput = screen.getByLabelText('Name');
+    fireEvent.change(nameInput, { target: { value: 'Desk lamp pro' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => {
+      expect(updateMutation).toHaveBeenCalledWith({
+        id: 'item-1',
+        input: {
+          name: 'Desk lamp pro',
+          sku: 'SKU-1',
+          unit: 'unit',
+          unitPrice: 12,
+          tracksStock: true,
+          trackBatchMode: 'none',
+          categoryId: null,
+        },
+      });
+    });
+  });
+
+  it('lets a company-user save a new item through the create mutation', async () => {
+    useItemCatalogStore.getState().startCreate();
+
+    const createMutation = vi.fn().mockResolvedValue({ itemId: 'item-2' });
+    useCreateItemMutationMock.mockReturnValue({
+      mutateAsync: createMutation,
+      isPending: false,
+      isError: false,
+      error: null,
+    });
+
+    render(<ItemFormPanel session={userSession} />, { wrapper: createWrapper() });
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Desk lamp' } });
+    fireEvent.change(screen.getByLabelText('Unit price'), { target: { value: '18' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create item' }));
+
+    await waitFor(() => {
+      expect(createMutation).toHaveBeenCalledWith({
+        name: 'Desk lamp',
+        type: 'product',
+        sku: null,
+        unit: 'unit',
+        unitPrice: 18,
+        tracksStock: true,
+        trackBatchMode: 'none',
+        categoryId: null,
+      });
+    });
+  });
 });

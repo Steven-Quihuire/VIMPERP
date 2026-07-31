@@ -143,6 +143,53 @@ describe('CategoriesPage', () => {
     });
   });
 
+  it('re-renders the category tree after a successful create mutation', async () => {
+    const createCategory = vi.fn().mockResolvedValue({ categoryId: 'category-new' });
+    useCreateCategoryMutationMock.mockReturnValue({
+      mutateAsync: createCategory,
+      isPending: false,
+      isError: false,
+      error: null,
+    });
+
+    const { rerender } = render(<CategoriesPage session={session} />, {
+      wrapper: createWrapper(),
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Category' }));
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Lighting' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save category' }));
+
+    await waitFor(() => {
+      expect(createCategory).toHaveBeenCalledWith({
+        name: 'Lighting',
+        parentId: null,
+      });
+    });
+
+    useCategoriesQueryMock.mockReturnValue({
+      data: {
+        categories: [
+          ...categories,
+          {
+            id: 'category-new',
+            companyId: 'company-1',
+            parentId: null,
+            name: 'Lighting',
+            createdAt: '2026-07-31T11:30:00.000Z',
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    rerender(<CategoriesPage session={session} />);
+
+    expect(screen.getByRole('button', { name: 'Edit Lighting' })).toBeInTheDocument();
+  });
+
   it('validates and submits the edit category form', async () => {
     const updateCategory = vi.fn().mockResolvedValue({ categoryId: 'category-child' });
     useUpdateCategoryMutationMock.mockReturnValue({

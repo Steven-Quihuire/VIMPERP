@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -37,12 +37,25 @@ type ItemMutationResult<TInput, TResult> = {
   error: Error | null;
 };
 
+type CategoryMutationResult<TInput> = {
+  mutateAsync: (input: TInput) => Promise<{ categoryId: string }>;
+  isPending: boolean;
+  isError: boolean;
+  error: Error | null;
+};
+
 const useItemsQueryMock = vi.fn<() => ItemsQueryResult>();
 const useItemQueryMock = vi.fn<(id: string) => ItemQueryResult>();
 const useCategoriesQueryMock = vi.fn<() => CategoriesQueryResult>();
 const useCreateItemMutationMock = vi.fn<() => ItemMutationResult<unknown, { itemId: string }>>();
 const useUpdateItemMutationMock = vi.fn<() => ItemMutationResult<unknown, { itemId: string }>>();
 const useSoftDeleteItemMutationMock = vi.fn<() => ItemMutationResult<string, void>>();
+const useCreateCategoryMutationMock = vi.fn<
+  () => CategoryMutationResult<{ name: string; parentId: string | null }>
+>();
+const useUpdateCategoryMutationMock = vi.fn<
+  () => CategoryMutationResult<{ id: string; input: { name?: string; parentId?: string | null } }>
+>();
 
 vi.mock('../infrastructure/item-queries', () => ({
   useItemsQuery: () => useItemsQueryMock(),
@@ -51,6 +64,8 @@ vi.mock('../infrastructure/item-queries', () => ({
   useCreateItemMutation: () => useCreateItemMutationMock(),
   useUpdateItemMutation: () => useUpdateItemMutationMock(),
   useSoftDeleteItemMutation: () => useSoftDeleteItemMutationMock(),
+  useCreateCategoryMutation: () => useCreateCategoryMutationMock(),
+  useUpdateCategoryMutation: () => useUpdateCategoryMutationMock(),
 }));
 
 const session: AuthSession = {
@@ -152,6 +167,18 @@ describe('ItemCatalogPage', () => {
       isError: false,
       error: null,
     });
+    useCreateCategoryMutationMock.mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue({ categoryId: 'category-new' }),
+      isPending: false,
+      isError: false,
+      error: null,
+    });
+    useUpdateCategoryMutationMock.mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue({ categoryId: 'category-1' }),
+      isPending: false,
+      isError: false,
+      error: null,
+    });
   });
 
   afterEach(() => {
@@ -184,6 +211,100 @@ describe('ItemCatalogPage', () => {
 
     expect(screen.getByDisplayValue('Desk lamp')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit item' })).toBeInTheDocument();
+  });
+
+  it('refreshes the items list after a successful create mutation', async () => {
+    const createMutation = vi.fn().mockResolvedValue({ itemId: 'item-2' });
+    useCreateItemMutationMock.mockReturnValue({
+      mutateAsync: createMutation,
+      isPending: false,
+      isError: false,
+      error: null,
+    });
+
+    render(<ItemCatalogPage session={session} />, { wrapper: createWrapper() });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Product' }));
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'New lamp' } });
+    fireEvent.change(screen.getByLabelText('Unit price'), { target: { value: '20' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create item' }));
+
+    await waitFor(() => {
+      expect(createMutation).toHaveBeenCalledWith(expect.objectContaining({ name: 'New lamp' }));
+    });
+
+    expect(screen.getByText('Desk lamp')).toBeInTheDocument();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+
+  it('submits an edit through the update mutation and refreshes the table', async () => {
+    const updateMutation = vi.fn().mockResolvedValue({ itemId: 'item-1' });
+    useUpdateItemMutationMock.mockReturnValue({
+      mutateAsync: updateMutation,
+      isPending: false,
+      isError: false,
+      error: null,
+    });
+
+    render(<ItemCatalogPage session={session} />, { wrapper: createWrapper() });
+
+    fireEvent.click(screen.getByRole('button', { name: /open item desk lamp/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit item' }));
+
+    const nameInput = screen.getByLabelText('Name');
+    fireEvent.change(nameInput, { target: { value: 'Desk lamp pro' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => {
+      expect(updateMutation).toHaveBeenCalledWith({
+        id: 'item-1',
+        input: {
+          name: 'Desk lamp pro',
+          sku: 'SKU-1',
+          unit: 'unit',
+          unitPrice: 12,
+          tracksStock: true,
+          trackBatchMode: 'none',
+          categoryId: null,
+        },
+      });
+    });
+
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+
+  it('removes the deleted item from the list after confirmation', async () => {
+    const deleteMutation = vi.fn().mockResolvedValue(undefined);
+    useSoftDeleteItemMutationMock.mockReturnValue({
+      mutateAsync: deleteMutation,
+      isPending: false,
+      isError: false,
+      error: null,
+    });
+
+    const { rerender } = render(<ItemCatalogPage session={session} />, {
+      wrapper: createWrapper(),
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /open item desk lamp/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete item' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm delete' }));
+
+    await waitFor(() => {
+      expect(deleteMutation).toHaveBeenCalledWith('item-1');
+    });
+
+    useItemsQueryMock.mockReturnValue({
+      data: { items: [], nextCursor: null },
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    rerender(<ItemCatalogPage session={session} />);
+
+    expect(screen.queryByText('Desk lamp')).not.toBeInTheDocument();
+    expect(screen.getByText('No items yet')).toBeInTheDocument();
   });
 
   it('renders the items route at /dashboard/items within the app router', async () => {
@@ -260,6 +381,101 @@ describe('ItemCatalogPage', () => {
     );
 
     expect(await screen.findByRole('button', { name: 'Add Product' })).toBeInTheDocument();
+
+    vi.unstubAllGlobals();
+  });
+
+  it('renders the categories route at /dashboard/categories within the app router', async () => {
+    const setDesktopBrowser = (userAgent: string, coarsePointer: boolean) => {
+      Object.defineProperty(window.navigator, 'userAgent', {
+        configurable: true,
+        value: userAgent,
+      });
+
+      window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+        matches: query === '(pointer: coarse)' ? coarsePointer : false,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }));
+    };
+
+    setDesktopBrowser(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0',
+      false,
+    );
+
+    const createJsonResponse = (body: unknown, status: number) =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+
+      if (url.endsWith('/auth/me')) {
+        return Promise.resolve(
+          createJsonResponse({
+            user: { id: 'user-1', email: 'owner@vimcore.test', username: 'owner' },
+            memberships: [{ companyId: 'company-1', role: 'company-owner' }],
+          }, 200),
+        );
+      }
+
+      if (url.endsWith('/me/preferences')) {
+        return Promise.resolve(createJsonResponse({ paletteId: 'forest' }, 200));
+      }
+
+      if (url.endsWith('/me/company')) {
+        return Promise.resolve(createJsonResponse({ companyId: 'company-1', name: 'Northwind' }, 200));
+      }
+
+      if (url.endsWith('/item-categories')) {
+        return Promise.resolve(
+          createJsonResponse(
+            {
+              categories: [
+                { id: 'category-1', companyId: 'company-1', parentId: null, name: 'Lighting', createdAt: '2026-07-31T10:00:00.000Z' },
+              ],
+            },
+            200,
+          ),
+        );
+      }
+
+      throw new Error(`unexpected request: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    useCategoriesQueryMock.mockReturnValue({
+      data: {
+        categories: [
+          { id: 'category-1', companyId: 'company-1', parentId: null, name: 'Lighting', createdAt: '2026-07-31T10:00:00.000Z' },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <App initialEntries={['/dashboard/categories']} />
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Add Category' })).toBeInTheDocument();
+    expect((await screen.findAllByText('Lighting')).length).toBeGreaterThan(0);
 
     vi.unstubAllGlobals();
   });

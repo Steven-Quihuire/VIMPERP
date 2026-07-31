@@ -57,4 +57,20 @@ describe('itemFormSchema', () => {
     expect(result.success).toBe(false);
     expect(result.error?.flatten().fieldErrors.name).toContain('Name is required.');
   });
+
+  it('rejects an invalid unit value', () => {
+    const result = itemFormSchema.safeParse({
+      name: 'Desk lamp',
+      type: 'product',
+      sku: '',
+      unit: 'invalid',
+      unitPrice: 0,
+      tracksStock: false,
+      trackBatchMode: 'none',
+      categoryId: '',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.flatten().fieldErrors.unit).toBeDefined();
+  });
 });
