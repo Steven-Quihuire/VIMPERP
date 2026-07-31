@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.5.7",
     "@fontsource-variable/jetbrains-mono": "^5.3.0",
     "@fontsource-variable/montserrat": "^5.3.0",
     "@tailwindcss/vite": "^4.3.3",
@@ -20,9 +21,11 @@
     "radix-ui": "^1.6.7",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-hook-form": "^7.83.0",
     "react-router-dom": "^7.18.1",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.3",
+    "zod": "^4.4.3",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
