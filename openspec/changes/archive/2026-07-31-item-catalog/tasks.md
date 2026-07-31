@@ -45,7 +45,8 @@ Chain strategy: stacked-to-main
 - [x] 3.3 RED then GREEN: `soft-delete-item.{test,}.ts` — R5; defense-in-depth rejects `company-user`.
 - [x] 3.4 RED then GREEN: `get-item.{test,}.ts` — R3.
 - [x] 3.5 RED then GREEN: `list-items.{test,}.ts` — R2; cursor pagination.
-- [ ] 3.6 RED then GREEN: `create-category`+`update-category`+`list-categories` {test,}.ts — R6; cycle via `gateway.getDescendantIds`.
+- [x] 3.6 RED then GREEN: `create-category`+`update-category` {test,}.ts — R6; cycle via `gateway.getDescendantIds` (spec-required parts).
+- [ ] 3.6.d RED then GREEN: `list-categories` {test,}.ts — R6 list tree — **DEFERRED** (not required by spec scenarios; conscious scope decision recorded in verify-report design coherence + apply-progress deviations).
 - [x] 3.7 `pnpm --filter api test -- features/items/application` exits 0.
 
 ## Phase 4: Presentation & Wiring (PR 4)

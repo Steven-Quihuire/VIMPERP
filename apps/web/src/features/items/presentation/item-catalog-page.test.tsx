@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { App } from '../../../app/app';
 import type { AuthSession } from '../../auth/domain/auth';
 import type { Item } from '../domain/item';
 import { useItemCatalogStore } from './use-item-catalog-store';
@@ -183,5 +184,83 @@ describe('ItemCatalogPage', () => {
 
     expect(screen.getByDisplayValue('Desk lamp')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit item' })).toBeInTheDocument();
+  });
+
+  it('renders the items route at /dashboard/items within the app router', async () => {
+    const setDesktopBrowser = (userAgent: string, coarsePointer: boolean) => {
+      Object.defineProperty(window.navigator, 'userAgent', {
+        configurable: true,
+        value: userAgent,
+      });
+
+      window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+        matches: query === '(pointer: coarse)' ? coarsePointer : false,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }));
+    };
+
+    setDesktopBrowser(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0',
+      false,
+    );
+
+    const createJsonResponse = (body: unknown, status: number) =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+
+      if (url.endsWith('/auth/me')) {
+        return Promise.resolve(
+          createJsonResponse({
+            user: { id: 'user-1', email: 'owner@vimcore.test', username: 'owner' },
+            memberships: [{ companyId: 'company-1', role: 'company-owner' }],
+          }, 200),
+        );
+      }
+
+      if (url.endsWith('/me/preferences')) {
+        return Promise.resolve(createJsonResponse({ paletteId: 'forest' }, 200));
+      }
+
+      if (url.endsWith('/me/company')) {
+        return Promise.resolve(createJsonResponse({ companyId: 'company-1', name: 'Northwind' }, 200));
+      }
+
+      if (url.endsWith('/items')) {
+        return Promise.resolve(createJsonResponse({ items: [], nextCursor: null }, 200));
+      }
+
+      if (url.endsWith('/item-categories')) {
+        return Promise.resolve(createJsonResponse({ categories: [] }, 200));
+      }
+
+      throw new Error(`unexpected request: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <App initialEntries={['/dashboard/items']} />
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Add Product' })).toBeInTheDocument();
+
+    vi.unstubAllGlobals();
   });
 });

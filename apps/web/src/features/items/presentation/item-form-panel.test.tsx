@@ -232,4 +232,32 @@ describe('ItemFormPanel', () => {
 
     expect(screen.queryByRole('button', { name: 'Delete item' })).not.toBeInTheDocument();
   });
+
+  it('shows an error message when the submit mutation fails', async () => {
+    useItemCatalogStore.getState().startCreate();
+
+    useCreateItemMutationMock.mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue({ itemId: 'item-2' }),
+      isPending: false,
+      isError: true,
+      error: new Error('Server error'),
+    });
+
+    render(<ItemFormPanel session={ownerSession} />, { wrapper: createWrapper() });
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Desk lamp' } });
+    fireEvent.change(screen.getByLabelText('Unit price'), { target: { value: '15' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create item' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Server error');
+  });
+
+  it('does not render a currency selector field', () => {
+    useItemCatalogStore.getState().startCreate();
+
+    render(<ItemFormPanel session={ownerSession} />, { wrapper: createWrapper() });
+
+    expect(screen.queryByLabelText('Currency')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Currency' })).not.toBeInTheDocument();
+  });
 });

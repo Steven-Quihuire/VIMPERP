@@ -125,4 +125,16 @@ describe('ItemTable', () => {
 
     expect(screen.getByText('No items yet')).toBeInTheDocument();
   });
+
+  it('renders an error message when the list request fails', () => {
+    useItemsQueryMock.mockReturnValue({
+      isLoading: false,
+      isError: true,
+      error: new Error('Network error'),
+    });
+
+    render(<ItemTable />);
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Network error');
+  });
 });
