@@ -113,6 +113,7 @@ export const createItemRouter = ({
   softDeleteItem,
   getItem,
   listItems,
+  listCategories,
   createCategory,
   updateCategory,
   getCategoryById,
@@ -181,7 +182,7 @@ export const createItemRouter = ({
     companyId: string;
     categoryId: string;
   }) => Promise<ItemCategory | null>;
-  listCategories?: (input: { companyId: string }) => Promise<ItemCategory[]>;
+  listCategories?: (input: { companyId: string }) => Promise<{ categories: ItemCategory[] }>;
 }): Router => {
   const router = Router();
 
@@ -312,6 +313,19 @@ export const createItemRouter = ({
       next(error);
     }
   });
+
+  if (listCategories) {
+    router.get('/item-categories', requireAuth, async (request, response, next) => {
+      try {
+        const context = getRouteContext(response);
+        const result = await listCategories({ companyId: context.companyId });
+
+        response.status(200).json(result);
+      } catch (error) {
+        next(error);
+      }
+    });
+  }
 
   router.post('/item-categories', requireAuth, async (request, response, next) => {
     try {

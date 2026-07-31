@@ -55,6 +55,7 @@ import { createAuthRouter } from '../features/identity/presentation/auth.router'
 import { createCreateCategoryUseCase } from '../features/items/application/create-category';
 import { createCreateItemUseCase } from '../features/items/application/create-item';
 import { createGetItemUseCase } from '../features/items/application/get-item';
+import { createListCategoriesUseCase } from '../features/items/application/list-categories';
 import { createListItemsUseCase } from '../features/items/application/list-items';
 import { createSoftDeleteItemUseCase } from '../features/items/application/soft-delete-item';
 import { createUpdateCategoryUseCase } from '../features/items/application/update-category';
@@ -194,6 +195,7 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       softDeleteItem: createSoftDeleteItemUseCase({ itemGateway }),
       getItem: createGetItemUseCase({ itemGateway }),
       listItems: createListItemsUseCase({ itemGateway }),
+      listCategories: createListCategoriesUseCase({ itemGateway }),
       createCategory: createCreateCategoryUseCase({ itemGateway }),
       updateCategory: createUpdateCategoryUseCase({ itemGateway }),
       getCategoryById: async (input) => {
