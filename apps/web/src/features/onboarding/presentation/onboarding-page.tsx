@@ -11,7 +11,7 @@ import {
   Tags,
   UserRound,
 } from 'lucide-react';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sileo } from 'sileo';
 
@@ -120,6 +120,10 @@ export const OnboardingPage = ({
 
   const currentStep = onboardingSteps[currentStepIndex];
   const step = stepDetails[currentStepIndex] ?? stepDetails[0];
+
+  useEffect(() => {
+    reset(session);
+  }, [session, reset]);
 
   const finishOnboarding = async () => {
     if (isSubmittingRef.current || createCompany.isPending) {

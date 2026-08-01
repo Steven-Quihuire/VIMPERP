@@ -94,6 +94,43 @@ describe('App onboarding flow', () => {
     );
   });
 
+  it('prefills the company name from the registered username', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = readUrl(input);
+
+      if (url.endsWith('/auth/me')) {
+        return Promise.resolve(
+          createJsonResponse(
+            {
+              user: {
+                id: 'user-1',
+                email: 'owner@vimcore.test',
+                username: 'vimcore_labs',
+              },
+              memberships: [],
+            },
+            200,
+          ),
+        );
+      }
+
+      if (url.endsWith('/me/preferences')) {
+        return Promise.resolve(createJsonResponse({ paletteId: 'ocean' }, 200));
+      }
+
+      throw new Error(`unexpected request: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App initialEntries={['/onboarding']} />);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Company onboarding' }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Company name')).toHaveValue('vimcore_labs');
+  });
+
   it('submits the authenticated onboarding flow and reaches the dashboard', async () => {
     let authCalls = 0;
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
