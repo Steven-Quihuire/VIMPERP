@@ -5,7 +5,7 @@ export const registerCopy = {
     'Administra tu empresa en pocos pasos, lLeva el control y la información operativa de tu empresa. y sus productos',
   emailLabel: 'Correo corporativo',
   emailPlaceholder: 'nombre@empresa.com',
-  usernameLabel: 'Usuario',
+  usernameLabel: 'Nombre de tu empresa',
   usernamePlaceholder: 'empresa_admin',
   usernameHelp: 'Usa solo letras, números, punto, guion o guion bajo.',
   passwordLabel: 'Contraseña',

@@ -55,7 +55,7 @@ describe('App onboarding flow', () => {
               user: {
                 id: 'user-1',
                 email: 'owner@vimcore.test',
-                username: 'owner',
+                username: '',
               },
               memberships: [],
             },

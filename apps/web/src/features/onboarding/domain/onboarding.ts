@@ -34,7 +34,7 @@ export type OnboardingDraft = {
 export const createInitialOnboardingDraft = (
   session: AuthSession | null,
 ): OnboardingDraft => ({
-  companyName: '',
+  companyName: session?.user.username ?? '',
   legalIdentifier: '',
   servicesInput: '',
   country: '',
