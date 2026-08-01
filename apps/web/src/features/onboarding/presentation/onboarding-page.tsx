@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Building2, Check, Loader2, MapPin, Palette, Sparkles, Store, Tags, UserRound } from 'lucide-react';
+import { sileo } from 'sileo';
 
 import type { AuthSession } from '../../auth/domain/auth';
 import {
@@ -82,7 +83,19 @@ export const OnboardingPage = ({
       });
 
       reset(session);
+      sileo.success({
+        title: 'Empresa creada',
+        description: 'Tu workspace está listo.',
+      });
       void navigate('/dashboard');
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : undefined;
+
+      sileo.error({
+        title: 'No pudimos crear la empresa',
+        ...(message ? { description: message } : {}),
+      });
     } finally {
       isSubmittingRef.current = false;
     }

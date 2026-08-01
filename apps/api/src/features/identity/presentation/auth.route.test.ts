@@ -84,7 +84,8 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
 
 const passwordHasher: PasswordHasher = {
   hash: async (value) => await Promise.resolve(`hashed:${value}`),
-  verify: async (hash, value) => await Promise.resolve(hash === `hashed:${value}`),
+  verify: async (hash, value) =>
+    await Promise.resolve(hash === `hashed:${value}`),
 };
 
 const sessionTokenService: SessionTokenService = {
@@ -100,7 +101,8 @@ const adminGateway: AdminGateway = {
       companies: [],
     }),
   listNotifications: async () => await Promise.resolve([]),
-  listProvisioningRuns: async () => await Promise.resolve({ items: [], nextCursor: null }),
+  listProvisioningRuns: async () =>
+    await Promise.resolve({ items: [], nextCursor: null }),
   getProvisioningRun: async () =>
     await Promise.resolve({
       id: 'run-1',
@@ -116,7 +118,8 @@ const adminGateway: AdminGateway = {
       updatedAt: '2026-07-28T10:01:00.000Z',
       steps: [],
     }),
-  listApplicationErrors: async () => await Promise.resolve({ items: [], nextCursor: null }),
+  listApplicationErrors: async () =>
+    await Promise.resolve({ items: [], nextCursor: null }),
   getApplicationError: async () =>
     await Promise.resolve({
       id: 'error-1',
@@ -130,7 +133,8 @@ const adminGateway: AdminGateway = {
       context: null,
       createdAt: '2026-07-28T10:00:00.000Z',
     }),
-  listAuditEvents: async () => await Promise.resolve({ items: [], nextCursor: null }),
+  listAuditEvents: async () =>
+    await Promise.resolve({ items: [], nextCursor: null }),
   getAuditEvent: async () =>
     await Promise.resolve({
       id: 'audit-1',
@@ -239,7 +243,7 @@ describe('auth routes', () => {
     expect(response.body).toEqual({
       error: {
         code: 'AUTH_CONFLICT',
-        message: 'Email or username already registered',
+        message: 'El correo o empresa ingresada ya se encuentra registrada',
       },
     });
   });
@@ -385,7 +389,9 @@ describe('auth routes', () => {
     expect(logoutResponse.status).toBe(204);
     expect(logoutResponse.headers['set-cookie']).toBeTruthy();
 
-    const meAfterLogout = await request(app).get('/auth/me').set('Cookie', sessionCookie);
+    const meAfterLogout = await request(app)
+      .get('/auth/me')
+      .set('Cookie', sessionCookie);
 
     expect(meAfterLogout.status).toBe(401);
   });
@@ -443,7 +449,10 @@ describe('auth routes', () => {
     });
     const platformAdminResponse = await request(app)
       .get('/admin/companies/summary')
-      .set('Cookie', getSessionCookie(platformAdminLogin.headers['set-cookie']));
+      .set(
+        'Cookie',
+        getSessionCookie(platformAdminLogin.headers['set-cookie']),
+      );
 
     expect(platformAdminResponse.status).toBe(200);
     expect(platformAdminResponse.body).toEqual({

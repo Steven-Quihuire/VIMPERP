@@ -7,6 +7,7 @@ import {
   Route,
   Routes,
 } from 'react-router-dom';
+import { Toaster } from 'sileo';
 
 import { LoginPage } from '../features/auth/presentation/login-page';
 import { RegisterPage } from '../features/auth/presentation/register-page';
@@ -25,6 +26,7 @@ import { ProvisioningRunsListPage } from '../features/dashboard/presentation/pro
 import { DesktopGate } from '../features/desktop-access/presentation/desktop-gate';
 import { CategoriesPage } from '../features/items/presentation/categories-page';
 import { ItemCatalogPage } from '../features/items/presentation/item-catalog-page';
+import { LandingPage } from '../features/landing/presentation/landing-page';
 import { needsCompanyOnboarding } from '../features/onboarding/domain/onboarding';
 import { OnboardingPage } from '../features/onboarding/presentation/onboarding-page';
 import { ThemeProvider } from '../features/theme/presentation/theme-provider';
@@ -44,7 +46,12 @@ const ProtectedDashboardShell = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
     return <Navigate to="/onboarding" replace />;
   }
 
-  return <DashboardShell session={auth.session} {...(apiBaseUrl ? { apiBaseUrl } : {})} />;
+  return (
+    <DashboardShell
+      session={auth.session}
+      {...(apiBaseUrl ? { apiBaseUrl } : {})}
+    />
+  );
 };
 
 const ProtectedDashboard = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
@@ -52,7 +59,8 @@ const ProtectedDashboard = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
 
   if (auth.isLoading) return <p>Loading...</p>;
   if (!auth.session) return <Navigate to="/login" replace />;
-  if (needsCompanyOnboarding(auth.session)) return <Navigate to="/onboarding" replace />;
+  if (needsCompanyOnboarding(auth.session))
+    return <Navigate to="/onboarding" replace />;
 
   return (
     <DashboardPage
@@ -86,7 +94,12 @@ const LoginRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
   if (auth.isSuccess && auth.session) {
-    return <Navigate to={needsCompanyOnboarding(auth.session) ? '/onboarding' : '/dashboard'} replace />;
+    return (
+      <Navigate
+        to={needsCompanyOnboarding(auth.session) ? '/onboarding' : '/dashboard'}
+        replace
+      />
+    );
   }
 
   return <LoginPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />;
@@ -96,7 +109,12 @@ const RegisterRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
   if (auth.isSuccess && auth.session) {
-    return <Navigate to={needsCompanyOnboarding(auth.session) ? '/onboarding' : '/dashboard'} replace />;
+    return (
+      <Navigate
+        to={needsCompanyOnboarding(auth.session) ? '/onboarding' : '/dashboard'}
+        replace
+      />
+    );
   }
 
   return <RegisterPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />;
@@ -152,7 +170,7 @@ const RootLayout = () => <Outlet />;
 const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
   <Routes>
     <Route path="/" element={<RootLayout />}>
-      <Route index element={<Navigate to="/dashboard" replace />} />
+      <Route index element={<LandingPage />} />
       <Route
         path="/login"
         element={<LoginRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
@@ -161,8 +179,18 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
         path="/register"
         element={<RegisterRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
       />
-      <Route path="/dashboard" element={<ProtectedDashboardShell {...(apiBaseUrl ? { apiBaseUrl } : {})} />}>
-        <Route index element={<ProtectedDashboard {...(apiBaseUrl ? { apiBaseUrl } : {})} />} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedDashboardShell {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+        }
+      >
+        <Route
+          index
+          element={
+            <ProtectedDashboard {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+          }
+        />
         <Route
           path="items"
           element={<ItemsRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
@@ -173,42 +201,77 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
         />
         <Route
           path="settings/profile"
-          element={<DashboardProfileSettingsPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+          element={
+            <DashboardProfileSettingsPage
+              {...(apiBaseUrl ? { apiBaseUrl } : {})}
+            />
+          }
         />
         <Route
           path="settings/theme"
-          element={<DashboardThemeSettingsPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
-        />
-        <Route path="admin" element={<ProtectedAdminDashboard {...(apiBaseUrl ? { apiBaseUrl } : {})} />}>
-        <Route
-          path="provisioning-runs"
-          element={<ProvisioningRunsListPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
-        />
-        <Route
-          path="provisioning-runs/:id"
-          element={<ProvisioningRunDetailPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+          element={
+            <DashboardThemeSettingsPage
+              {...(apiBaseUrl ? { apiBaseUrl } : {})}
+            />
+          }
         />
         <Route
-          path="application-errors"
-          element={<ApplicationErrorsListPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
-        />
-        <Route
-          path="application-errors/:id"
-          element={<ApplicationErrorDetailPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
-        />
-        <Route
-          path="audit-events"
-          element={<AuditEventsListPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
-        />
-        <Route
-          path="audit-events/:id"
-          element={<AuditEventDetailPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
-        />
+          path="admin"
+          element={
+            <ProtectedAdminDashboard {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+          }
+        >
+          <Route
+            path="provisioning-runs"
+            element={
+              <ProvisioningRunsListPage
+                {...(apiBaseUrl ? { apiBaseUrl } : {})}
+              />
+            }
+          />
+          <Route
+            path="provisioning-runs/:id"
+            element={
+              <ProvisioningRunDetailPage
+                {...(apiBaseUrl ? { apiBaseUrl } : {})}
+              />
+            }
+          />
+          <Route
+            path="application-errors"
+            element={
+              <ApplicationErrorsListPage
+                {...(apiBaseUrl ? { apiBaseUrl } : {})}
+              />
+            }
+          />
+          <Route
+            path="application-errors/:id"
+            element={
+              <ApplicationErrorDetailPage
+                {...(apiBaseUrl ? { apiBaseUrl } : {})}
+              />
+            }
+          />
+          <Route
+            path="audit-events"
+            element={
+              <AuditEventsListPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+            }
+          />
+          <Route
+            path="audit-events/:id"
+            element={
+              <AuditEventDetailPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+            }
+          />
         </Route>
       </Route>
       <Route
         path="/onboarding"
-        element={<ProtectedOnboarding {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        element={
+          <ProtectedOnboarding {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+        }
       />
     </Route>
   </Routes>
@@ -231,6 +294,7 @@ export const App = ({
         <DesktopGate>
           <ThemeProvider {...(apiBaseUrl ? { apiBaseUrl } : {})}>
             <AppRoutes {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+            <Toaster position="top-center" theme="dark" />
           </ThemeProvider>
         </DesktopGate>
       </RouterComponent>

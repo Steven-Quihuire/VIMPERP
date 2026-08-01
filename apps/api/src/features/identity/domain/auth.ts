@@ -81,7 +81,7 @@ export class ForbiddenError extends Error {
 export class DuplicateIdentityError extends Error {
   readonly code = 'AUTH_CONFLICT';
 
-  constructor(message = 'Email or username already registered') {
+  constructor(message = 'El correo o empresa ingresada ya se encuentra registrada') {
     super(message);
   }
 }
