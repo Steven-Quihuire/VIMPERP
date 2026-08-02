@@ -51,6 +51,8 @@ describe('createUpdateItemUseCase', () => {
     const result = await updateItem({
       companyId: 'company-1',
       actorUserId: 'user-1',
+      capabilities: ['catalog.write'],
+      companyStatus: 'active',
       correlationId: 'corr-1',
       itemId: 'item-1',
       name: '  Keyboard Pro  ',
@@ -90,6 +92,8 @@ describe('createUpdateItemUseCase', () => {
     await updateItem({
       companyId: 'company-1',
       actorUserId: 'user-1',
+      capabilities: ['catalog.write'],
+      companyStatus: 'active',
       correlationId: 'corr-1',
       itemId: 'item-1',
       type: 'product',
@@ -113,6 +117,8 @@ describe('createUpdateItemUseCase', () => {
       updateItem({
         companyId: 'company-1',
         actorUserId: 'user-1',
+        capabilities: ['catalog.write'],
+        companyStatus: 'active',
         correlationId: 'corr-1',
         itemId: 'item-1',
         type: 'service',
@@ -130,6 +136,8 @@ describe('createUpdateItemUseCase', () => {
       updateItem({
         companyId: 'company-1',
         actorUserId: 'user-1',
+        capabilities: ['catalog.write'],
+        companyStatus: 'active',
         correlationId: 'corr-1',
         itemId: 'item-404',
       }),
@@ -146,6 +154,8 @@ describe('createUpdateItemUseCase', () => {
       updateItem({
         companyId: 'company-1',
         actorUserId: 'user-1',
+        capabilities: ['catalog.write'],
+        companyStatus: 'active',
         correlationId: 'corr-1',
         itemId: 'item-1',
         name: 'Updated',

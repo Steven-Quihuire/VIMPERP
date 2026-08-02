@@ -64,6 +64,7 @@ export type CreateCompanyInput = {
   ownerUserId: string;
   correlationId: string;
   requestId: string;
+  idempotencyKey: string | null;
   name: string;
   legalIdentifier: string;
   services: string[];
@@ -95,6 +96,10 @@ export type CreateCompanyResult = {
   paletteId: PaletteId;
 };
 
+export type CompanyProvisioningStartResult =
+  | { kind: 'started'; runId: string }
+  | { kind: 'replay-succeeded'; runId: string; result: CreateCompanyResult };
+
 export type ProvisioningStepStatus = 'succeeded' | 'failed' | 'skipped';
 
 export type ProvisioningStep = {
@@ -109,7 +114,9 @@ export type ProvisioningRecorder = {
     correlationId: string;
     process: string;
     requestId: string;
-  }) => Promise<{ runId: string }>;
+    idempotencyKey: string | null;
+    payloadFingerprint: string;
+  }) => Promise<CompanyProvisioningStartResult>;
   succeedRun: (input: {
     runId: string;
     steps: ProvisioningStep[];
@@ -122,10 +129,30 @@ export type ProvisioningRecorder = {
   sweepStaleRuns: (olderThan: Date) => Promise<number>;
 };
 
+export class CompanyConflictError extends Error {
+  readonly code = 'COMPANY_CONFLICT';
+
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+export class DuplicateCompanyError extends CompanyConflictError {
+  constructor(message = 'The company is already registered.') {
+    super(message);
+  }
+}
+
+export class CompanyIdempotencyConflictError extends CompanyConflictError {
+  constructor(message = 'Idempotency key already used with a different company payload') {
+    super(message);
+  }
+}
+
 export type CompanyOnboardingGateway = {
   createCompany: (input: CreateCompanyInput) => Promise<CreateCompanyResult>;
   getCurrentCompanySummary: (
-    userId: string,
+    activeCompanyId: string | null,
   ) => Promise<CurrentCompanySummary | null>;
   getThemePreference: (userId: string) => Promise<ThemePreference | null>;
   saveThemePreference: (input: {

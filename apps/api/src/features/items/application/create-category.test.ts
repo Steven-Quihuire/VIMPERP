@@ -42,6 +42,8 @@ describe('createCreateCategoryUseCase', () => {
     const result = await createCategory({
       companyId: 'company-1',
       actorUserId: 'user-1',
+      capabilities: ['catalog.write'],
+      companyStatus: 'active',
       correlationId: 'corr-1',
       name: '  Keyboards  ',
       parentId: 'category-1',
@@ -69,6 +71,8 @@ describe('createCreateCategoryUseCase', () => {
       createCategory({
         companyId: 'company-1',
         actorUserId: 'user-1',
+        capabilities: ['catalog.write'],
+        companyStatus: 'active',
         correlationId: 'corr-1',
         name: 'Keyboards',
         parentId: 'missing-parent',

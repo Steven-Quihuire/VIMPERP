@@ -1,3 +1,4 @@
+import { ForbiddenError, hasAuthCapability, type AuthCapability, type CompanyLifecycle } from '../../identity/domain/auth';
 import {
   ItemNotFoundError,
   ItemTypeImmutableError,
@@ -10,6 +11,8 @@ import {
 type UpdateItemInput = {
   companyId: string;
   actorUserId: string;
+  capabilities: AuthCapability[];
+  companyStatus: CompanyLifecycle;
   correlationId: string;
   itemId: string;
   type?: ItemType;
@@ -28,6 +31,14 @@ export const createUpdateItemUseCase = ({
   itemGateway: ItemCatalogGateway;
 }) => {
   return async (input: UpdateItemInput): Promise<{ itemId: string }> => {
+    if (input.companyStatus !== 'active') {
+      throw new ForbiddenError('Company access unavailable');
+    }
+
+    if (!hasAuthCapability(input.capabilities, 'catalog.write')) {
+      throw new ForbiddenError();
+    }
+
     const existingItem = await itemGateway.getItemById({
       companyId: input.companyId,
       itemId: input.itemId,

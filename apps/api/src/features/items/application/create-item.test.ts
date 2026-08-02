@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createCreateItemUseCase } from './create-item';
+import { ForbiddenError } from '../../identity/domain/auth';
 import type { CategoryGateway, ItemCatalogGateway } from '../domain/item';
 
 const createGateway = () => {
@@ -28,6 +29,8 @@ describe('createCreateItemUseCase', () => {
     const result = await createItem({
       companyId: 'company-1',
       actorUserId: 'user-1',
+      capabilities: ['catalog.write'],
+      companyStatus: 'active',
       correlationId: 'corr-1',
       name: '  Keyboard  ',
       type: 'product',
@@ -60,6 +63,8 @@ describe('createCreateItemUseCase', () => {
     await createItem({
       companyId: 'company-1',
       actorUserId: 'user-1',
+      capabilities: ['catalog.write'],
+      companyStatus: 'active',
       correlationId: 'corr-1',
       name: '  Consulting  ',
       type: 'service',
@@ -88,6 +93,8 @@ describe('createCreateItemUseCase', () => {
       createItem({
         companyId: 'company-1',
         actorUserId: 'user-1',
+        capabilities: ['catalog.write'],
+        companyStatus: 'active',
         correlationId: 'corr-1',
         name: 'Keyboard',
         type: 'product',
@@ -109,6 +116,8 @@ describe('createCreateItemUseCase', () => {
       createItem({
         companyId: 'company-1',
         actorUserId: 'user-1',
+        capabilities: ['catalog.write'],
+        companyStatus: 'active',
         correlationId: 'corr-1',
         name: '   ',
         type: 'product',
@@ -118,6 +127,52 @@ describe('createCreateItemUseCase', () => {
         unitPrice: 0,
       }),
     ).rejects.toThrow('Item name is required');
+
+    expect(itemGateway.createItem).not.toHaveBeenCalled();
+  });
+
+  it('rejects writes when the active company is blocked', async () => {
+    const itemGateway = createGateway();
+    const createItem = createCreateItemUseCase({ itemGateway });
+
+    await expect(
+      createItem({
+        companyId: 'company-1',
+        actorUserId: 'user-1',
+        capabilities: ['catalog.write'],
+        companyStatus: 'suspended',
+        correlationId: 'corr-1',
+        name: 'Keyboard',
+        type: 'product',
+        unit: 'unit',
+        sku: null,
+        categoryId: null,
+        unitPrice: 0,
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+
+    expect(itemGateway.createItem).not.toHaveBeenCalled();
+  });
+
+  it('rejects writes when the caller lacks catalog write capability', async () => {
+    const itemGateway = createGateway();
+    const createItem = createCreateItemUseCase({ itemGateway });
+
+    await expect(
+      createItem({
+        companyId: 'company-1',
+        actorUserId: 'user-1',
+        capabilities: ['catalog.read'],
+        companyStatus: 'active',
+        correlationId: 'corr-1',
+        name: 'Keyboard',
+        type: 'product',
+        unit: 'unit',
+        sku: null,
+        categoryId: null,
+        unitPrice: 0,
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
 
     expect(itemGateway.createItem).not.toHaveBeenCalled();
   });

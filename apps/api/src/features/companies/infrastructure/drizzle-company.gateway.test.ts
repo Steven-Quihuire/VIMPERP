@@ -10,17 +10,34 @@ import {
   membershipsTable,
   notificationsTable,
   themePreferencesTable,
+  userPreferencesTable,
 } from '../../../shared/infrastructure/db/schema';
 import type { AppDb } from '../../../shared/infrastructure/db/client';
 
 const createFakeDb = () => {
   const writes: Array<{ table: unknown; values: unknown }> = [];
+  const emptyQuery = {
+    from: () => ({
+      where: () => ({
+        limit: async () => [],
+      }),
+    }),
+  };
 
   const tx = {
     insert: (table: unknown) => ({
       values: (values: unknown) => {
         writes.push({ table, values });
         return Promise.resolve([]);
+      },
+    }),
+    select: () => emptyQuery,
+    update: (table: unknown) => ({
+      set: (values: unknown) => {
+        writes.push({ table, values });
+        return {
+          where: async () => [],
+        };
       },
     }),
   };
@@ -45,6 +62,7 @@ describe('createDrizzleCompanyOnboardingGateway', () => {
       ownerUserId: 'user-1',
       correlationId: 'corr-1',
       requestId: 'req-1',
+      idempotencyKey: 'idem-1',
       name: 'Vimcore Labs',
       legalIdentifier: 'RFC-123456',
       services: ['Implementation', 'Implementation', 'Support', 'Support'],
@@ -70,6 +88,7 @@ describe('createDrizzleCompanyOnboardingGateway', () => {
           createdAt: new Date('2026-07-28T12:00:00.000Z'),
           id: 'fixed-id',
           name: 'Vimcore Labs',
+          status: 'active',
         },
       },
       {
@@ -127,6 +146,13 @@ describe('createDrizzleCompanyOnboardingGateway', () => {
         values: {
           companyId: 'fixed-id',
           paletteId: 'ocean',
+          userId: 'user-1',
+        },
+      },
+      {
+        table: userPreferencesTable,
+        values: {
+          activeCompanyId: 'fixed-id',
           userId: 'user-1',
         },
       },

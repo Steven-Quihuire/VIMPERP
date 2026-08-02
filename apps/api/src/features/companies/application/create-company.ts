@@ -9,6 +9,30 @@ import type {
   ProvisioningRecorder,
 } from '../domain/company';
 
+const createPayloadFingerprint = (input: CreateCompanyInput) => {
+  return JSON.stringify({
+    ownerUserId: input.ownerUserId,
+    name: input.name.trim(),
+    legalIdentifier: input.legalIdentifier.trim(),
+    services: normalizeCompanyServices(input.services),
+    address: {
+      country: input.address.country.trim(),
+      city: input.address.city.trim(),
+      exactLocation: input.address.exactLocation.trim(),
+    },
+    contact: {
+      phone: input.contact.phone.trim(),
+      email: input.contact.email.trim().toLowerCase(),
+    },
+    paletteId: input.paletteId,
+    erpModuleId: input.erpModuleId,
+    branches: input.branches.map((branch) => ({
+      name: branch.name.trim(),
+      locale: branch.locale?.trim() ?? null,
+    })),
+  });
+};
+
 const ERROR_SUMMARY_MAX_LENGTH = 500;
 const ERROR_SUMMARY_INPUT_MAX_LENGTH = 2048;
 const REDACTED_VALUE = '[REDACTED]';
@@ -50,12 +74,21 @@ export const createCreateCompany = ({
   recorder: ProvisioningRecorder;
 }) => {
   return async (input: CreateCompanyInput) => {
-    const { runId } = await recorder.startRun({
+    const payloadFingerprint = createPayloadFingerprint(input);
+    const startResult = await recorder.startRun({
       actorUserId: input.ownerUserId,
       correlationId: input.correlationId,
+      idempotencyKey: input.idempotencyKey,
+      payloadFingerprint,
       process: 'company-onboarding',
       requestId: input.requestId,
     });
+
+    if (startResult.kind === 'replay-succeeded') {
+      return startResult.result;
+    }
+
+    const { runId } = startResult;
 
     let result: CreateCompanyResult;
 
@@ -97,7 +130,7 @@ export const createCreateCompany = ({
           {
             name: 'company-creation',
             status: 'failed',
-            detail: { message: errorSummary },
+            detail: { message: errorSummary, payloadFingerprint },
           },
         ],
       });
@@ -112,7 +145,11 @@ export const createCreateCompany = ({
           {
             name: 'company-creation',
             status: 'succeeded',
-            detail: { companyId: result.companyId },
+            detail: {
+              companyId: result.companyId,
+              paletteId: result.paletteId,
+              payloadFingerprint,
+            },
           },
         ],
       });

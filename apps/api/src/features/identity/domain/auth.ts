@@ -33,6 +33,14 @@ export type ActiveCompany = {
   status: CompanyLifecycle;
 };
 
+export const authCapabilityValues = [
+  'catalog.read',
+  'catalog.write',
+  'catalog.delete',
+] as const;
+
+export type AuthCapability = (typeof authCapabilityValues)[number];
+
 export type AuthSessionRecord = {
   token: string;
   userId: string;
@@ -43,6 +51,7 @@ export type AuthSession = {
   user: PublicAuthUser;
   memberships: AuthMembership[];
   activeCompany: ActiveCompany | null;
+  capabilities: AuthCapability[];
 };
 
 export type AuthIdentityGateway = {
@@ -116,6 +125,61 @@ export class DuplicateIdentityError extends Error {
     super(message);
   }
 }
+
+export const hasAuthCapability = (
+  capabilities: readonly AuthCapability[],
+  capability: AuthCapability,
+) => capabilities.includes(capability);
+
+export const deriveAuthCapabilities = (input: {
+  memberships: AuthMembership[];
+  activeCompany: ActiveCompany | null;
+}): AuthCapability[] => {
+  if (!input.activeCompany) {
+    return [];
+  }
+
+  const activeMembership = input.memberships.find(
+    (membership): membership is AuthMembership & { companyId: string } =>
+      membership.companyId === input.activeCompany?.companyId,
+  );
+
+  if (!activeMembership) {
+    return [];
+  }
+
+  switch (activeMembership.role) {
+    case 'company-owner':
+      return ['catalog.read', 'catalog.write', 'catalog.delete'];
+    case 'company-user':
+      return ['catalog.read', 'catalog.write'];
+    default:
+      return [];
+  }
+};
+
+export const requireTenantCapability = (
+  auth: AuthSession,
+  capability: AuthCapability,
+): { companyId: string; status: CompanyLifecycle; capabilities: AuthCapability[] } => {
+  if (!auth.activeCompany) {
+    throw new ForbiddenError('Active company required');
+  }
+
+  if (auth.activeCompany.status !== 'active') {
+    throw new ForbiddenError('Company access unavailable');
+  }
+
+  if (!hasAuthCapability(auth.capabilities, capability)) {
+    throw new ForbiddenError();
+  }
+
+  return {
+    companyId: auth.activeCompany.companyId,
+    status: auth.activeCompany.status,
+    capabilities: auth.capabilities,
+  };
+};
 
 export const toPublicAuthUser = (user: AuthUser): PublicAuthUser => ({
   id: user.id,

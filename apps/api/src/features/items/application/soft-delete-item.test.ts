@@ -51,9 +51,10 @@ describe('createSoftDeleteItemUseCase', () => {
       softDeleteItem({
         companyId: 'company-1',
         actorUserId: 'user-1',
+        capabilities: ['catalog.delete'],
+        companyStatus: 'active',
         correlationId: 'corr-1',
         itemId: 'item-1',
-        role: 'company-owner',
       }),
     ).resolves.toBeUndefined();
 
@@ -78,9 +79,10 @@ describe('createSoftDeleteItemUseCase', () => {
       softDeleteItem({
         companyId: 'company-1',
         actorUserId: 'user-1',
+        capabilities: ['catalog.write'],
+        companyStatus: 'active',
         correlationId: 'corr-1',
         itemId: 'item-1',
-        role: 'company-user',
       }),
     ).rejects.toBeInstanceOf(ForbiddenError);
 
@@ -96,9 +98,10 @@ describe('createSoftDeleteItemUseCase', () => {
       softDeleteItem({
         companyId: 'company-1',
         actorUserId: 'user-1',
+        capabilities: ['catalog.delete'],
+        companyStatus: 'active',
         correlationId: 'corr-1',
         itemId: 'item-404',
-        role: 'company-owner',
       }),
     ).rejects.toBeInstanceOf(ItemNotFoundError);
 
@@ -113,9 +116,10 @@ describe('createSoftDeleteItemUseCase', () => {
       softDeleteItem({
         companyId: 'company-1',
         actorUserId: 'user-1',
+        capabilities: ['catalog.delete'],
+        companyStatus: 'active',
         correlationId: 'corr-1',
         itemId: 'item-1',
-        role: 'company-owner',
       }),
     ).rejects.toBeInstanceOf(ItemNotFoundError);
 
@@ -124,5 +128,24 @@ describe('createSoftDeleteItemUseCase', () => {
       itemId: 'item-1',
       includeDeleted: false,
     });
+  });
+
+  it('rejects deletes when the active company is blocked even if delete capability exists', async () => {
+    const itemGateway = createGateway();
+    const softDeleteItem = createSoftDeleteItemUseCase({ itemGateway });
+
+    await expect(
+      softDeleteItem({
+        companyId: 'company-1',
+        actorUserId: 'user-1',
+        capabilities: ['catalog.delete'],
+        companyStatus: 'provisioning_failed',
+        correlationId: 'corr-1',
+        itemId: 'item-1',
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+
+    expect(itemGateway.getItemById).not.toHaveBeenCalled();
+    expect(itemGateway.softDeleteItem).not.toHaveBeenCalled();
   });
 });

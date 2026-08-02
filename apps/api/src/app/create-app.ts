@@ -135,7 +135,6 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
   });
   const requireAuth = createRequireAuth(resolveAuthSession, sessionCookieName);
   const requirePlatformAdmin = createRequireRole('platform-admin');
-  const requireCompanyOwner = createRequireRole('company-owner');
   const sweepStaleProvisioningRuns = createSweepStaleProvisioningRuns({
     recorder: provisioningRecorder,
     ...(input.provisioningStaleTimeoutMs !== undefined
@@ -232,7 +231,6 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
   app.use(
     createItemRouter({
       requireAuth,
-      requireOwner: requireCompanyOwner,
       createItem: createCreateItemUseCase({ itemGateway }),
       updateItem: createUpdateItemUseCase({ itemGateway }),
       softDeleteItem: createSoftDeleteItemUseCase({ itemGateway }),

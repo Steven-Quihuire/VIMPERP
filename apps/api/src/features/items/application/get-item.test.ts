@@ -42,7 +42,14 @@ describe('createGetItemUseCase', () => {
     const itemGateway = createGateway(item);
     const getItem = createGetItemUseCase({ itemGateway });
 
-    await expect(getItem({ companyId: 'company-1', itemId: 'item-1' })).resolves.toEqual(item);
+    await expect(
+      getItem({
+        companyId: 'company-1',
+        capabilities: ['catalog.read'],
+        companyStatus: 'active',
+        itemId: 'item-1',
+      }),
+    ).resolves.toEqual(item);
 
     expect(itemGateway.getItemById).toHaveBeenCalledWith({
       companyId: 'company-1',
@@ -55,14 +62,27 @@ describe('createGetItemUseCase', () => {
     const itemGateway = createGateway(null);
     const getItem = createGetItemUseCase({ itemGateway });
 
-    await expect(getItem({ companyId: 'company-a', itemId: 'item-b' })).resolves.toBeNull();
+    await expect(
+      getItem({
+        companyId: 'company-a',
+        capabilities: ['catalog.read'],
+        companyStatus: 'active',
+        itemId: 'item-b',
+      }),
+    ).resolves.toBeNull();
   });
 
   it('allows callers to opt into includeDeleted lookups', async () => {
     const itemGateway = createGateway();
     const getItem = createGetItemUseCase({ itemGateway });
 
-    await getItem({ companyId: 'company-1', itemId: 'item-1', includeDeleted: true });
+    await getItem({
+      companyId: 'company-1',
+      capabilities: ['catalog.read'],
+      companyStatus: 'active',
+      itemId: 'item-1',
+      includeDeleted: true,
+    });
 
     expect(itemGateway.getItemById).toHaveBeenCalledWith({
       companyId: 'company-1',

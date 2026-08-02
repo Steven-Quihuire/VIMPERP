@@ -1,12 +1,18 @@
-import { ForbiddenError } from '../../identity/domain/auth';
+import {
+  ForbiddenError,
+  hasAuthCapability,
+  type AuthCapability,
+  type CompanyLifecycle,
+} from '../../identity/domain/auth';
 import { ItemNotFoundError, type ItemCatalogGateway } from '../domain/item';
 
 type SoftDeleteItemInput = {
   companyId: string;
   actorUserId: string;
+  capabilities: AuthCapability[];
+  companyStatus: CompanyLifecycle;
   correlationId: string;
   itemId: string;
-  role: string;
 };
 
 export const createSoftDeleteItemUseCase = ({
@@ -15,7 +21,11 @@ export const createSoftDeleteItemUseCase = ({
   itemGateway: ItemCatalogGateway;
 }) => {
   return async (input: SoftDeleteItemInput): Promise<void> => {
-    if (input.role !== 'company-owner') {
+    if (input.companyStatus !== 'active') {
+      throw new ForbiddenError('Company access unavailable');
+    }
+
+    if (!hasAuthCapability(input.capabilities, 'catalog.delete')) {
       throw new ForbiddenError();
     }
 

@@ -1,3 +1,4 @@
+import { ForbiddenError, hasAuthCapability, type AuthCapability, type CompanyLifecycle } from '../../identity/domain/auth';
 import {
   CategoryNotFoundError,
   type CategoryGateway,
@@ -6,6 +7,8 @@ import {
 type CreateCategoryInput = {
   companyId: string;
   actorUserId: string;
+  capabilities: AuthCapability[];
+  companyStatus: CompanyLifecycle;
   correlationId: string;
   name: string;
   parentId: string | null;
@@ -17,6 +20,14 @@ export const createCreateCategoryUseCase = ({
   itemGateway: CategoryGateway;
 }) => {
   return async (input: CreateCategoryInput): Promise<{ categoryId: string }> => {
+    if (input.companyStatus !== 'active') {
+      throw new ForbiddenError('Company access unavailable');
+    }
+
+    if (!hasAuthCapability(input.capabilities, 'catalog.write')) {
+      throw new ForbiddenError();
+    }
+
     const name = input.name.trim();
 
     if (name.length === 0) {

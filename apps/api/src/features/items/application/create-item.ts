@@ -1,3 +1,4 @@
+import { ForbiddenError, hasAuthCapability, type AuthCapability, type CompanyLifecycle } from '../../identity/domain/auth';
 import type {
   ItemCatalogGateway,
   ItemTrackBatchMode,
@@ -8,6 +9,8 @@ import type {
 type CreateItemInput = {
   companyId: string;
   actorUserId: string;
+  capabilities: AuthCapability[];
+  companyStatus: CompanyLifecycle;
   correlationId: string;
   name: string;
   type: ItemType;
@@ -25,6 +28,14 @@ export const createCreateItemUseCase = ({
   itemGateway: ItemCatalogGateway;
 }) => {
   return async (input: CreateItemInput): Promise<{ itemId: string }> => {
+    if (input.companyStatus !== 'active') {
+      throw new ForbiddenError('Company access unavailable');
+    }
+
+    if (!hasAuthCapability(input.capabilities, 'catalog.write')) {
+      throw new ForbiddenError();
+    }
+
     const name = input.name.trim();
 
     if (name.length === 0) {

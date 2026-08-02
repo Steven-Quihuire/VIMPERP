@@ -12,9 +12,15 @@ import {
   membershipsTable,
   notificationsTable,
   themePreferencesTable,
+  userPreferencesTable,
 } from '../../../shared/infrastructure/db/schema';
-import type { CompanyOnboardingGateway, PaletteId } from '../domain/company';
-import { normalizeCompanyServices, paletteValues } from '../domain/company';
+import {
+  DuplicateCompanyError,
+  normalizeCompanyServices,
+  paletteValues,
+  type CompanyOnboardingGateway,
+  type PaletteId,
+} from '../domain/company';
 
 const toPaletteId = (value: string): PaletteId => {
   if (paletteValues.includes(value as PaletteId)) {
@@ -41,9 +47,20 @@ export const createDrizzleCompanyOnboardingGateway = (
       const createdAt = now();
       const services = normalizeCompanyServices(input.services);
 
+      const [existingCompanyProfile] = await tx
+        .select({ companyId: companyProfilesTable.companyId })
+        .from(companyProfilesTable)
+        .where(eq(companyProfilesTable.legalIdentifier, input.legalIdentifier))
+        .limit(1);
+
+      if (existingCompanyProfile) {
+        throw new DuplicateCompanyError();
+      }
+
       await tx.insert(companiesTable).values({
         id: companyId,
         name: input.name,
+        status: 'active',
         createdAt,
       });
 
@@ -85,11 +102,42 @@ export const createDrizzleCompanyOnboardingGateway = (
         role: 'company-owner',
       });
 
-      await tx.insert(themePreferencesTable).values({
-        userId: input.ownerUserId,
-        companyId,
-        paletteId: input.paletteId,
-      });
+      const [existingThemePreference] = await tx
+        .select({ userId: themePreferencesTable.userId })
+        .from(themePreferencesTable)
+        .where(eq(themePreferencesTable.userId, input.ownerUserId))
+        .limit(1);
+
+      if (existingThemePreference) {
+        await tx
+          .update(themePreferencesTable)
+          .set({ companyId, paletteId: input.paletteId })
+          .where(eq(themePreferencesTable.userId, input.ownerUserId));
+      } else {
+        await tx.insert(themePreferencesTable).values({
+          userId: input.ownerUserId,
+          companyId,
+          paletteId: input.paletteId,
+        });
+      }
+
+      const [existingUserPreference] = await tx
+        .select({ userId: userPreferencesTable.userId })
+        .from(userPreferencesTable)
+        .where(eq(userPreferencesTable.userId, input.ownerUserId))
+        .limit(1);
+
+      if (existingUserPreference) {
+        await tx
+          .update(userPreferencesTable)
+          .set({ activeCompanyId: companyId })
+          .where(eq(userPreferencesTable.userId, input.ownerUserId));
+      } else {
+        await tx.insert(userPreferencesTable).values({
+          userId: input.ownerUserId,
+          activeCompanyId: companyId,
+        });
+      }
 
       await tx.insert(notificationsTable).values({
         id: generateId(),
@@ -127,23 +175,18 @@ export const createDrizzleCompanyOnboardingGateway = (
       };
     });
   },
-  getCurrentCompanySummary: async (userId) => {
+  getCurrentCompanySummary: async (activeCompanyId) => {
+    if (!activeCompanyId) {
+      return null;
+    }
+
     const [company] = await db
       .select({
         companyId: companiesTable.id,
         name: companiesTable.name,
       })
-      .from(membershipsTable)
-      .innerJoin(
-        companiesTable,
-        eq(membershipsTable.companyId, companiesTable.id),
-      )
-      .where(
-        and(
-          eq(membershipsTable.userId, userId),
-          isNotNull(membershipsTable.companyId),
-        ),
-      )
+      .from(companiesTable)
+      .where(and(eq(companiesTable.id, activeCompanyId), isNotNull(companiesTable.id)))
       .limit(1);
 
     return company ?? null;

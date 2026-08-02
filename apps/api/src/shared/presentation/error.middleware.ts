@@ -8,6 +8,7 @@ import {
   ItemSkuConflictError,
   ItemTypeImmutableError,
 } from '../../features/items/domain/item';
+import { CompanyConflictError } from '../../features/companies/domain/company';
 import {
   DuplicateIdentityError,
   ForbiddenError,
@@ -61,6 +62,11 @@ export const createErrorMiddleware = ({
 
     if (error instanceof DuplicateIdentityError) {
       response.status(409).json(toResponseBody('AUTH_CONFLICT', error.message));
+      return;
+    }
+
+    if (error instanceof CompanyConflictError) {
+      response.status(409).json(toResponseBody('CONFLICT', error.message));
       return;
     }
 

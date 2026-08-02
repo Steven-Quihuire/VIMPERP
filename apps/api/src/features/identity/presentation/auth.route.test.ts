@@ -252,6 +252,7 @@ describe('auth routes', () => {
       },
       memberships: [],
       activeCompany: null,
+      capabilities: [],
     });
   });
 
@@ -363,6 +364,7 @@ describe('auth routes', () => {
         companyId: 'company-1',
         status: 'active',
       },
+      capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
     });
   });
 
@@ -415,6 +417,7 @@ describe('auth routes', () => {
         companyId: 'company-2',
         status: 'active',
       },
+      capabilities: ['catalog.read', 'catalog.write'],
     });
   });
 
@@ -463,6 +466,7 @@ describe('auth routes', () => {
         companyId: 'company-1',
         status: 'active',
       },
+      capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
     });
   });
 

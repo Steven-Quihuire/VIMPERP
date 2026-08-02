@@ -51,6 +51,9 @@ const authSessionSchema = z.object({
       status: z.enum(['active', 'suspended', 'provisioning_failed']),
     })
     .nullable(),
+  capabilities: z.array(
+    z.enum(['catalog.read', 'catalog.write', 'catalog.delete']),
+  ),
 });
 
 const getCookieValue = (cookieHeader: string | undefined, cookieName: string) => {

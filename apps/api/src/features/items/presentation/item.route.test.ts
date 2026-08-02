@@ -26,6 +26,11 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
   private usersByIdentifier = new Map<string, AuthUser>();
   private sessions = new Map<string, AuthSessionRecord>();
   private membershipsByUserId = new Map<string, AuthMembership[]>();
+  private activeCompanyByUserId = new Map<string, string | null>();
+  private companyStatusByCompanyId = new Map<
+    string,
+    'active' | 'suspended' | 'provisioning_failed'
+  >();
 
   addUser(user: AuthUser) {
     this.usersById.set(user.id, user);
@@ -35,6 +40,17 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
 
   setMemberships(userId: string, memberships: AuthMembership[]) {
     this.membershipsByUserId.set(userId, memberships);
+  }
+
+  setActiveCompany(userId: string, companyId: string | null) {
+    this.activeCompanyByUserId.set(userId, companyId);
+  }
+
+  setCompanyStatus(
+    companyId: string,
+    status: 'active' | 'suspended' | 'provisioning_failed',
+  ) {
+    this.companyStatusByCompanyId.set(companyId, status);
   }
 
   async findUserByIdentifier(identifier: string) {
@@ -76,15 +92,18 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
     return await Promise.resolve(this.membershipsByUserId.get(userId) ?? []);
   }
 
-  async findActiveCompanyId() {
-    return await Promise.resolve(null);
+  async findActiveCompanyId(userId: string) {
+    return await Promise.resolve(this.activeCompanyByUserId.get(userId) ?? null);
   }
 
-  async findCompanyStatus() {
-    return await Promise.resolve('active' as const);
+  async findCompanyStatus(companyId: string) {
+    return await Promise.resolve(
+      this.companyStatusByCompanyId.get(companyId) ?? 'active',
+    );
   }
 
-  async setActiveCompanyId() {
+  async setActiveCompanyId(userId: string, companyId: string) {
+    this.activeCompanyByUserId.set(userId, companyId);
     await Promise.resolve();
   }
 
@@ -415,6 +434,9 @@ const createAuthenticatedApp = async ({
   authGateway.setMemberships('owner-user', [
     { companyId: 'company-a', role: 'company-owner' },
   ]);
+  authGateway.setActiveCompany('owner-user', 'company-a');
+  authGateway.setCompanyStatus('company-a', 'active');
+  authGateway.setCompanyStatus('company-b', 'active');
 
   authGateway.addUser({
     id: 'member-user',
@@ -425,6 +447,7 @@ const createAuthenticatedApp = async ({
   authGateway.setMemberships('member-user', [
     { companyId: 'company-a', role: 'company-user' },
   ]);
+  authGateway.setActiveCompany('member-user', 'company-a');
 
   authGateway.addUser({
     id: 'other-owner-user',
@@ -435,6 +458,7 @@ const createAuthenticatedApp = async ({
   authGateway.setMemberships('other-owner-user', [
     { companyId: 'company-b', role: 'company-owner' },
   ]);
+  authGateway.setActiveCompany('other-owner-user', 'company-b');
 
   const app = createApp({
     authIdentityGateway: authGateway,
@@ -550,7 +574,7 @@ describe('item routes', () => {
     expect(itemGateway.items[1]?.tracksStock).toBe(false);
   });
 
-  it('rejects unknown item fields such as currency', async () => {
+  it('ignores body companyId and still writes into the authenticated active company', async () => {
     const { app, ownerSessionCookie } = await createAuthenticatedApp();
 
     const response = await request(app)
@@ -560,11 +584,11 @@ describe('item routes', () => {
         name: 'Keyboard',
         type: 'product',
         unit: 'unit',
-        currency: 'USD',
+        companyId: 'company-b',
       });
 
-    expect(response.status).toBe(400);
-    expect((response.body as { error: { code: string } }).error.code).toBe('BAD_REQUEST');
+    expect(response.status).toBe(201);
+    expect(response.body).toEqual({ itemId: 'item-1' });
   });
 
   it('lists only active items from the authenticated tenant', async () => {
@@ -734,6 +758,40 @@ describe('item routes', () => {
     expect(itemGateway.items[0]?.deletedAt).toBeInstanceOf(Date);
   });
 
+  it('forbids delete when the user is only an owner in another company, not in the active company', async () => {
+    const itemGateway = new InMemoryItemGateway();
+    itemGateway.items.push({
+      id: 'item-a1',
+      companyId: 'company-a',
+      categoryId: null,
+      sku: null,
+      name: 'Keyboard',
+      type: 'product',
+      unit: 'unit',
+      unitPrice: 20,
+      tracksStock: true,
+      trackBatchMode: 'none',
+      deletedAt: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+
+    const { app, authGateway, memberSessionCookie } = await createAuthenticatedApp({ itemGateway });
+
+    authGateway.setMemberships('member-user', [
+      { companyId: 'company-a', role: 'company-user' },
+      { companyId: 'company-b', role: 'company-owner' },
+    ]);
+    authGateway.setActiveCompany('member-user', 'company-a');
+
+    const response = await request(app)
+      .delete('/items/item-a1')
+      .set('Cookie', memberSessionCookie);
+
+    expect(response.status).toBe(403);
+    expect((response.body as { error: { code: string } }).error.code).toBe('FORBIDDEN');
+  });
+
   it('creates categories and maps cycle violations to conflict responses', async () => {
     const itemGateway = new InMemoryItemGateway();
     itemGateway.categories.push(
@@ -792,5 +850,41 @@ describe('item routes', () => {
     expect(response.status).toBe(201);
     expect(itemGateway.createItemCalls[0]?.companyId).toBe('company-a');
     expect(itemGateway.createItemCalls[0]?.actorUserId).toBe('owner-user');
+  });
+
+  it('denies tenant routes when the user has memberships but no active company selected', async () => {
+    const { app, authGateway, ownerSessionCookie, itemGateway } = await createAuthenticatedApp();
+
+    authGateway.setMemberships('owner-user', [
+      { companyId: 'company-a', role: 'company-owner' },
+      { companyId: 'company-b', role: 'company-owner' },
+    ]);
+    authGateway.setActiveCompany('owner-user', null);
+
+    const response = await request(app)
+      .get('/items')
+      .set('Cookie', ownerSessionCookie);
+
+    expect(response.status).toBe(403);
+    expect((response.body as { error: { code: string } }).error.code).toBe('FORBIDDEN');
+    expect(itemGateway.createItemCalls).toHaveLength(0);
+  });
+
+  it('denies tenant routes when the active company lifecycle is blocked', async () => {
+    const { app, authGateway, ownerSessionCookie } = await createAuthenticatedApp();
+
+    authGateway.setCompanyStatus('company-a', 'suspended');
+
+    const response = await request(app)
+      .post('/items')
+      .set('Cookie', ownerSessionCookie)
+      .send({
+        name: 'Blocked item',
+        type: 'product',
+        unit: 'unit',
+      });
+
+    expect(response.status).toBe(403);
+    expect((response.body as { error: { code: string } }).error.code).toBe('FORBIDDEN');
   });
 });

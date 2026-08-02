@@ -49,11 +49,13 @@ describe('createDrizzleProvisioningRecorder', () => {
     const result = await recorder.startRun({
       actorUserId: 'user-1',
       correlationId: 'corr-1',
+      idempotencyKey: null,
+      payloadFingerprint: 'fingerprint-1',
       process: 'company-onboarding',
       requestId: 'req-1',
     });
 
-    expect(result).toEqual({ runId: 'run-1' });
+    expect(result).toEqual({ kind: 'started', runId: 'run-1' });
     expect(inserts).toEqual([
       {
         table: provisioningRunsTable,
@@ -64,6 +66,7 @@ describe('createDrizzleProvisioningRecorder', () => {
           createdAt: new Date('2026-07-28T12:00:00.000Z'),
           errorSummary: null,
           id: 'run-1',
+          idempotencyKey: null,
           process: 'company-onboarding',
           requestId: 'req-1',
           status: 'running',

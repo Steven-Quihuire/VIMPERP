@@ -65,6 +65,16 @@ type AuthenticatedResponseLocals = {
   };
 };
 
+const getIdempotencyKey = (headerValue: string | string[] | undefined) => {
+  if (Array.isArray(headerValue)) {
+    return getIdempotencyKey(headerValue[0]);
+  }
+
+  const normalized = headerValue?.trim();
+
+  return normalized && normalized.length > 0 ? normalized : null;
+};
+
 export const createCompanyRouter = ({
   requireAuth,
   createCompany,
@@ -78,6 +88,7 @@ export const createCompanyRouter = ({
     correlationId: string;
     ownerUserId: string;
     requestId: string;
+    idempotencyKey: string | null;
     name: string;
     legalIdentifier: string;
     services: string[];
@@ -94,7 +105,7 @@ export const createCompanyRouter = ({
     erpModuleId: (typeof erpModuleValues)[number];
     branches: Array<{ name: string; locale?: string | undefined }>;
   }) => Promise<{ companyId: string; paletteId: PaletteId }>;
-  getCurrentCompanySummary: (userId: string) => Promise<{
+  getCurrentCompanySummary: (activeCompanyId: string | null) => Promise<{
     companyId: string;
     name: string;
   } | null>;
@@ -123,6 +134,7 @@ export const createCompanyRouter = ({
         correlationId:
           requestContext?.correlationId ??
           String(response.getHeader('x-correlation-id')),
+        idempotencyKey: getIdempotencyKey(request.headers['x-idempotency-key']),
         ownerUserId: auth.user.id,
         requestId:
           requestContext?.requestId ??
@@ -139,7 +151,9 @@ export const createCompanyRouter = ({
   router.get('/me/company', requireAuth, async (_request, response, next) => {
     try {
       const auth = (response.locals as AuthenticatedResponseLocals).auth;
-      const company = await getCurrentCompanySummary(auth.user.id);
+      const company = await getCurrentCompanySummary(
+        auth.activeCompany?.companyId ?? null,
+      );
 
       response
         .status(200)

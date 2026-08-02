@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createCreateCompany } from './create-company';
 import type {
   CompanyOnboardingGateway,
+  CompanyProvisioningStartResult,
   CreateCompanyInput,
   ProvisioningRecorder,
 } from '../domain/company';
@@ -23,13 +24,25 @@ const buildInput = (): CreateCompanyInput => ({
     phone: ' 0991234567 ',
     email: ' OPS@VIMCORE.TEST ',
   },
+  idempotencyKey: 'idem-key-1',
   paletteId: 'ocean',
   erpModuleId: 'inventory',
   branches: [{ name: ' HQ ', locale: ' es-MX ' }, { name: ' Remote ' }],
 });
 
 const createRecorder = (): ProvisioningRecorder => ({
-  startRun: vi.fn().mockResolvedValue({ runId: 'run-1' }),
+  startRun: vi
+    .fn<
+      (input: {
+        actorUserId: string;
+        correlationId: string;
+        process: string;
+        requestId: string;
+        idempotencyKey: string | null;
+        payloadFingerprint: string;
+      }) => Promise<CompanyProvisioningStartResult>
+    >()
+    .mockResolvedValue({ kind: 'started', runId: 'run-1' }),
   succeedRun: vi.fn().mockResolvedValue(undefined),
   failRun: vi.fn().mockResolvedValue(undefined),
   sweepStaleRuns: vi.fn().mockResolvedValue(0),
@@ -54,6 +67,8 @@ describe('createCreateCompany', () => {
     expect(recorder.startRun).toHaveBeenCalledWith({
       actorUserId: 'user-1',
       correlationId: 'corr-1',
+      idempotencyKey: 'idem-key-1',
+      payloadFingerprint: expect.any(String),
       process: 'company-onboarding',
       requestId: 'req-1',
     });
@@ -71,13 +86,18 @@ describe('createCreateCompany', () => {
         phone: '0991234567',
         email: 'ops@vimcore.test',
       },
+      idempotencyKey: 'idem-key-1',
       branches: [{ name: 'HQ', locale: 'es-MX' }, { name: 'Remote' }],
     });
     expect(recorder.succeedRun).toHaveBeenCalledWith({
       runId: 'run-1',
       steps: [
         {
-          detail: { companyId: 'company-1' },
+          detail: expect.objectContaining({
+            companyId: 'company-1',
+            paletteId: 'ocean',
+            payloadFingerprint: expect.any(String),
+          }),
           name: 'company-creation',
           status: 'succeeded',
         },
@@ -163,7 +183,10 @@ describe('createCreateCompany', () => {
       runId: 'run-1',
       steps: [
         {
-          detail: { message: 'duplicate legal identifier' },
+          detail: expect.objectContaining({
+            message: 'duplicate legal identifier',
+            payloadFingerprint: expect.any(String),
+          }),
           name: 'company-creation',
           status: 'failed',
         },
@@ -225,11 +248,59 @@ describe('createCreateCompany', () => {
       runId: 'run-1',
       steps: [
         {
-          detail: { message: 'Unexpected server error' },
+          detail: expect.objectContaining({
+            message: 'Unexpected server error',
+            payloadFingerprint: expect.any(String),
+          }),
           name: 'company-creation',
           status: 'failed',
         },
       ],
     });
+  });
+
+  it('replays the original terminal result when the recorder resolves an equivalent idempotent retry', async () => {
+    const recorder = createRecorder();
+    vi.mocked(recorder.startRun).mockResolvedValue({
+      kind: 'replay-succeeded',
+      runId: 'run-1',
+      result: { companyId: 'company-1', paletteId: 'ocean' },
+    });
+    const gateway: CompanyOnboardingGateway = {
+      createCompany: vi.fn(),
+      getCurrentCompanySummary: vi.fn(),
+      getThemePreference: vi.fn(),
+      saveThemePreference: vi.fn(),
+    };
+    const createCompany = createCreateCompany({ gateway, recorder });
+
+    const result = await createCompany(buildInput());
+
+    expect(result).toEqual({ companyId: 'company-1', paletteId: 'ocean' });
+    expect(gateway.createCompany).not.toHaveBeenCalled();
+    expect(recorder.succeedRun).not.toHaveBeenCalled();
+    expect(recorder.failRun).not.toHaveBeenCalled();
+  });
+
+  it('rethrows payload-conflict rejections from the recorder before any company write occurs', async () => {
+    const recorder = createRecorder();
+    vi.mocked(recorder.startRun).mockRejectedValue(
+      new Error('Idempotency key already used with a different company payload'),
+    );
+    const gateway: CompanyOnboardingGateway = {
+      createCompany: vi.fn(),
+      getCurrentCompanySummary: vi.fn(),
+      getThemePreference: vi.fn(),
+      saveThemePreference: vi.fn(),
+    };
+    const createCompany = createCreateCompany({ gateway, recorder });
+
+    await expect(createCompany(buildInput())).rejects.toThrow(
+      'Idempotency key already used with a different company payload',
+    );
+
+    expect(gateway.createCompany).not.toHaveBeenCalled();
+    expect(recorder.succeedRun).not.toHaveBeenCalled();
+    expect(recorder.failRun).not.toHaveBeenCalled();
   });
 });

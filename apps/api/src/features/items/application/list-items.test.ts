@@ -44,7 +44,13 @@ describe('createListItemsUseCase', () => {
     const itemGateway = createGateway();
     const listItems = createListItemsUseCase({ itemGateway });
 
-    const result = await listItems({ companyId: 'company-1', limit: 25, cursor: 'cursor-1' });
+    const result = await listItems({
+      companyId: 'company-1',
+      capabilities: ['catalog.read'],
+      companyStatus: 'active',
+      limit: 25,
+      cursor: 'cursor-1',
+    });
 
     expect(itemGateway.listItems).toHaveBeenCalledWith({
       companyId: 'company-1',
@@ -61,7 +67,12 @@ describe('createListItemsUseCase', () => {
     const itemGateway = createGateway();
     const listItems = createListItemsUseCase({ itemGateway });
 
-    await listItems({ companyId: 'company-1', limit: 10 });
+    await listItems({
+      companyId: 'company-1',
+      capabilities: ['catalog.read'],
+      companyStatus: 'active',
+      limit: 10,
+    });
 
     expect(itemGateway.listItems).toHaveBeenCalledWith({
       companyId: 'company-1',

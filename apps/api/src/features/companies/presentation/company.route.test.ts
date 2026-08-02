@@ -3,12 +3,15 @@ import { describe, expect, it } from 'vitest';
 
 import { createApp } from '../../../app/create-app';
 import type { ApplicationErrorRecorder } from '../../../shared/presentation/error.middleware';
-import type {
-  CompanyOnboardingGateway,
-  CurrentCompanySummary,
-  CreateCompanyInput,
-  PaletteId,
-  ProvisioningRecorder,
+import {
+  CompanyIdempotencyConflictError,
+  DuplicateCompanyError,
+  type CompanyOnboardingGateway,
+  type CompanyProvisioningStartResult,
+  type CurrentCompanySummary,
+  type CreateCompanyInput,
+  type PaletteId,
+  type ProvisioningRecorder,
 } from '../domain/company';
 import type {
   CompanyLifecycle,
@@ -48,6 +51,10 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
 
   setMemberships(userId: string, memberships: AuthMembership[]) {
     this.membershipsByUserId.set(userId, memberships);
+  }
+
+  membershipsFor(userId: string) {
+    return this.membershipsByUserId.get(userId);
   }
 
   setActiveCompany(userId: string, companyId: string | null) {
@@ -143,13 +150,29 @@ class InMemoryCompanyGateway implements CompanyOnboardingGateway {
   readonly auditEvents: Array<{ companyId: string; actorUserId: string }> = [];
   private preferences = new Map<string, { paletteId: PaletteId }>();
 
+  constructor(private readonly authGateway: InMemoryAuthGateway) {}
+
   async createCompany(input: CreateCompanyInput) {
+    if (
+      this.companies.some(
+        (company) => company.legalIdentifier.trim() === input.legalIdentifier.trim(),
+      )
+    ) {
+      throw new DuplicateCompanyError();
+    }
+
     const companyId = `company-${this.companies.length + 1}`;
 
     this.companies.push({ ...input, companyId });
     this.preferences.set(input.ownerUserId, { paletteId: input.paletteId });
     this.notifications.push({ companyId, targetRole: 'platform-admin' });
     this.auditEvents.push({ companyId, actorUserId: input.ownerUserId });
+    this.authGateway.setMemberships(input.ownerUserId, [
+      ...(this.authGateway.membershipsFor(input.ownerUserId) ?? []),
+      { companyId, role: 'company-owner' },
+    ]);
+    this.authGateway.setActiveCompany(input.ownerUserId, companyId);
+    this.authGateway.setCompanyStatus(companyId, 'active');
 
     return await Promise.resolve({
       companyId,
@@ -158,11 +181,9 @@ class InMemoryCompanyGateway implements CompanyOnboardingGateway {
   }
 
   async getCurrentCompanySummary(
-    userId: string,
+    activeCompanyId: string | null,
   ): Promise<CurrentCompanySummary | null> {
-    const company = this.companies.find(
-      (entry) => entry.ownerUserId === userId,
-    );
+    const company = this.companies.find((entry) => entry.companyId === activeCompanyId);
 
     if (!company) {
       return await Promise.resolve(null);
@@ -185,6 +206,59 @@ class InMemoryCompanyGateway implements CompanyOnboardingGateway {
   }
 }
 
+const createProvisioningRecorder = (): ProvisioningRecorder & ApplicationErrorRecorder => {
+  const runs = new Map<string, { fingerprint: string; result: { companyId: string; paletteId: PaletteId } | null }>();
+
+  return {
+    startRun: async ({ idempotencyKey, payloadFingerprint }) => {
+      if (!idempotencyKey) {
+        return await Promise.resolve({ kind: 'started', runId: 'run-1' } satisfies CompanyProvisioningStartResult);
+      }
+
+      const existing = runs.get(idempotencyKey);
+
+      if (!existing) {
+        runs.set(idempotencyKey, { fingerprint: payloadFingerprint, result: null });
+        return await Promise.resolve({ kind: 'started', runId: idempotencyKey } satisfies CompanyProvisioningStartResult);
+      }
+
+      if (existing.fingerprint !== payloadFingerprint) {
+        throw new CompanyIdempotencyConflictError();
+      }
+
+      if (existing.result) {
+        return await Promise.resolve({
+          kind: 'replay-succeeded',
+          runId: idempotencyKey,
+          result: existing.result,
+        } satisfies CompanyProvisioningStartResult);
+      }
+
+      return await Promise.resolve({ kind: 'started', runId: idempotencyKey } satisfies CompanyProvisioningStartResult);
+    },
+    succeedRun: async ({ runId, steps }) => {
+      const stepDetail = steps[0]?.detail as
+        | { companyId?: string; paletteId?: PaletteId; payloadFingerprint?: string }
+        | undefined;
+
+      if (stepDetail?.companyId && stepDetail.paletteId) {
+        const existing = runs.get(runId);
+        if (existing) {
+          existing.result = {
+            companyId: stepDetail.companyId,
+            paletteId: stepDetail.paletteId,
+          };
+        }
+      }
+
+      await Promise.resolve();
+    },
+    failRun: async () => await Promise.resolve(),
+    sweepStaleRuns: async () => await Promise.resolve(0),
+    record: async () => await Promise.resolve(),
+  };
+};
+
 const passwordHasher: PasswordHasher = {
   hash: async (value) => await Promise.resolve(`hashed:${value}`),
   verify: async (hash, value) =>
@@ -193,14 +267,6 @@ const passwordHasher: PasswordHasher = {
 
 const sessionTokenService: SessionTokenService = {
   create: () => 'session-token',
-};
-
-const provisioningRecorder: ProvisioningRecorder & ApplicationErrorRecorder = {
-  startRun: async () => await Promise.resolve({ runId: 'run-1' }),
-  succeedRun: async () => await Promise.resolve(),
-  failRun: async () => await Promise.resolve(),
-  sweepStaleRuns: async () => await Promise.resolve(0),
-  record: async () => await Promise.resolve(),
 };
 
 const getSessionCookie = (headers: string | string[] | undefined): string => {
@@ -231,7 +297,8 @@ const getSessionCookie = (headers: string | string[] | undefined): string => {
 
 const createAuthenticatedApp = async () => {
   const authGateway = new InMemoryAuthGateway();
-  const companyGateway = new InMemoryCompanyGateway();
+  const companyGateway = new InMemoryCompanyGateway(authGateway);
+  const provisioningRecorder = createProvisioningRecorder();
 
   authGateway.addUser({
     id: 'user-1',
@@ -313,6 +380,15 @@ describe('company onboarding routes', () => {
     expect(currentCompanyResponse.body).toEqual({
       companyId: createdCompany.companyId,
       name: 'Vimcore Labs',
+    });
+    const meResponse = await request(app)
+      .get('/auth/me')
+      .set('Cookie', sessionCookie);
+
+    expect(meResponse.status).toBe(200);
+    expect((meResponse.body as AuthMeResponseBody).activeCompany).toEqual({
+      companyId: createdCompany.companyId,
+      status: 'active',
     });
     expect(companyGateway.companies).toHaveLength(1);
     expect(companyGateway.notifications).toEqual([
@@ -533,5 +609,141 @@ describe('company onboarding routes', () => {
       },
     });
     expect(authGateway.switchEvents).toEqual([]);
+  });
+
+  it('replays the original company response when the same idempotency key is retried with the same payload', async () => {
+    const { app, companyGateway, sessionCookie } = await createAuthenticatedApp();
+    const payload = {
+      name: 'Vimcore Labs',
+      legalIdentifier: 'RFC-123456',
+      services: ['Implementation'],
+      address: {
+        country: 'Mexico',
+        city: 'Monterrey',
+        exactLocation: 'San Pedro 123',
+      },
+      contact: {
+        phone: '0991234567',
+        email: 'ops@vimcore.test',
+      },
+      paletteId: 'ocean',
+    };
+
+    const firstResponse = await request(app)
+      .post('/companies')
+      .set('Cookie', sessionCookie)
+      .set('x-idempotency-key', 'company-create-1')
+      .send(payload);
+
+    const secondResponse = await request(app)
+      .post('/companies')
+      .set('Cookie', sessionCookie)
+      .set('x-idempotency-key', 'company-create-1')
+      .send(payload);
+
+    expect(firstResponse.status).toBe(201);
+    expect(secondResponse.status).toBe(201);
+    expect(secondResponse.body).toEqual(firstResponse.body);
+    expect(companyGateway.companies).toHaveLength(1);
+  });
+
+  it('rejects reusing an idempotency key with a different payload', async () => {
+    const { app, sessionCookie } = await createAuthenticatedApp();
+
+    const firstResponse = await request(app)
+      .post('/companies')
+      .set('Cookie', sessionCookie)
+      .set('x-idempotency-key', 'company-create-2')
+      .send({
+        name: 'Vimcore Labs',
+        legalIdentifier: 'RFC-123456',
+        services: ['Implementation'],
+        address: {
+          country: 'Mexico',
+          city: 'Monterrey',
+          exactLocation: 'San Pedro 123',
+        },
+        contact: {
+          phone: '0991234567',
+          email: 'ops@vimcore.test',
+        },
+        paletteId: 'ocean',
+      });
+
+    const secondResponse = await request(app)
+      .post('/companies')
+      .set('Cookie', sessionCookie)
+      .set('x-idempotency-key', 'company-create-2')
+      .send({
+        name: 'Another Company',
+        legalIdentifier: 'RFC-123456',
+        services: ['Implementation'],
+        address: {
+          country: 'Mexico',
+          city: 'Monterrey',
+          exactLocation: 'San Pedro 123',
+        },
+        contact: {
+          phone: '0991234567',
+          email: 'ops@vimcore.test',
+        },
+        paletteId: 'forest',
+      });
+
+    expect(firstResponse.status).toBe(201);
+    expect(secondResponse.status).toBe(409);
+    expect((secondResponse.body as { error: { code: string } }).error.code).toBe('CONFLICT');
+  });
+
+  it('returns a sanitized conflict when the company legal identifier already exists', async () => {
+    const { app, sessionCookie } = await createAuthenticatedApp();
+
+    await request(app)
+      .post('/companies')
+      .set('Cookie', sessionCookie)
+      .set('x-idempotency-key', 'company-create-3a')
+      .send({
+        name: 'Vimcore Labs',
+        legalIdentifier: 'RFC-123456',
+        services: ['Implementation'],
+        address: {
+          country: 'Mexico',
+          city: 'Monterrey',
+          exactLocation: 'San Pedro 123',
+        },
+        contact: {
+          phone: '0991234567',
+          email: 'ops@vimcore.test',
+        },
+        paletteId: 'ocean',
+      });
+
+    const duplicateResponse = await request(app)
+      .post('/companies')
+      .set('Cookie', sessionCookie)
+      .set('x-idempotency-key', 'company-create-3b')
+      .send({
+        name: 'Vimcore Labs 2',
+        legalIdentifier: 'RFC-123456',
+        services: ['Support'],
+        address: {
+          country: 'Mexico',
+          city: 'Monterrey',
+          exactLocation: 'San Pedro 456',
+        },
+        contact: {
+          phone: '0991234567',
+          email: 'ops2@vimcore.test',
+        },
+        paletteId: 'forest',
+      });
+
+    expect(duplicateResponse.status).toBe(409);
+    expect(duplicateResponse.body).toEqual({
+      error: {
+        code: 'CONFLICT',
+        message: 'The company is already registered.',
+      },
+    });
   });
 });

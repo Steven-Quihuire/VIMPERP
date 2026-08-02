@@ -36,7 +36,11 @@ describe('createListCategoriesUseCase', () => {
     const itemGateway = createGateway();
     const listCategories = createListCategoriesUseCase({ itemGateway });
 
-    const result = await listCategories({ companyId: 'company-1' });
+    const result = await listCategories({
+      companyId: 'company-1',
+      capabilities: ['catalog.read'],
+      companyStatus: 'active',
+    });
 
     expect(itemGateway.listCategories).toHaveBeenCalledWith({ companyId: 'company-1' });
     expect(result).toEqual({

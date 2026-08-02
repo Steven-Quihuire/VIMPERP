@@ -32,11 +32,11 @@ Chain strategy: feature-branch-chain
 
 ## Phase 2: API Contract Enforcement
 
-- [ ] 2.1 RED: extend `apps/api/src/features/companies/application/create-company.test.ts` and `apps/api/src/features/companies/presentation/company.route.test.ts` for idempotent replay, payload-conflict rejection, new-company-active preference write, and sanitized duplicate-company outcomes.
-- [ ] 2.2 GREEN: update `apps/api/src/features/companies/domain/company.ts`, `apps/api/src/features/companies/application/create-company.ts`, `apps/api/src/features/companies/application/get-current-company-summary.ts`, `apps/api/src/features/companies/infrastructure/drizzle-company.gateway.ts`, and `apps/api/src/features/companies/infrastructure/drizzle-company.gateway.test.ts` to persist lifecycle defaults and active-company preference in one transaction.
-- [ ] 2.3 RED: extend `apps/api/src/features/items/presentation/item.route.test.ts` and item application tests for missing active company denial, body `companyId` ignore, capability-based delete, and blocked lifecycle denial.
-- [ ] 2.4 GREEN: update `apps/api/src/features/items/application/*.ts`, `apps/api/src/features/items/presentation/item.router.ts`, and `apps/api/src/features/items/infrastructure/drizzle-item.gateway.ts` to use explicit active company + centralized capabilities instead of first-membership/owner-only checks.
-- [ ] 2.5 REFACTOR: remove duplicated tenant/role inference across `apps/api/src/features/identity/**`, `apps/api/src/features/companies/**`, and `apps/api/src/features/items/**` behind one capability/session contract.
+- [x] 2.1 RED: extend `apps/api/src/features/companies/application/create-company.test.ts` and `apps/api/src/features/companies/presentation/company.route.test.ts` for idempotent replay, payload-conflict rejection, new-company-active preference write, and sanitized duplicate-company outcomes.
+- [x] 2.2 GREEN: update `apps/api/src/features/companies/domain/company.ts`, `apps/api/src/features/companies/application/create-company.ts`, `apps/api/src/features/companies/application/get-current-company-summary.ts`, `apps/api/src/features/companies/infrastructure/drizzle-company.gateway.ts`, and `apps/api/src/features/companies/infrastructure/drizzle-company.gateway.test.ts` to persist lifecycle defaults and active-company preference in one transaction.
+- [x] 2.3 RED: extend `apps/api/src/features/items/presentation/item.route.test.ts` and item application tests for missing active company denial, body `companyId` ignore, capability-based delete, and blocked lifecycle denial.
+- [x] 2.4 GREEN: update `apps/api/src/features/items/application/*.ts`, `apps/api/src/features/items/presentation/item.router.ts`, and `apps/api/src/features/items/infrastructure/drizzle-item.gateway.ts` to use explicit active company + centralized capabilities instead of first-membership/owner-only checks.
+- [x] 2.5 REFACTOR: remove duplicated tenant/role inference across `apps/api/src/features/identity/**`, `apps/api/src/features/companies/**`, and `apps/api/src/features/items/**` behind one capability/session contract.
 
 ## Phase 3: Web Contract and UX
 

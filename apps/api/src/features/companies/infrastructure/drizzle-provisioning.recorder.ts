@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { eq, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 
 import type { ApplicationErrorRecorder } from '../../../shared/presentation/error.middleware';
 import type { SanitizedApplicationError } from '../../../shared/infrastructure/observability/error-sanitizer';
@@ -10,9 +10,11 @@ import {
   provisioningRunsTable,
   provisioningStepsTable,
 } from '../../../shared/infrastructure/db/schema';
-import type {
-  ProvisioningRecorder,
-  ProvisioningStep,
+import {
+  CompanyIdempotencyConflictError,
+  type PaletteId as CreatePaletteId,
+  type ProvisioningRecorder,
+  type ProvisioningStep,
 } from '../domain/company';
 
 type DrizzleProvisioningRecorder = ProvisioningRecorder & ApplicationErrorRecorder;
@@ -52,7 +54,76 @@ export const createDrizzleProvisioningRecorder = (
   const generateId = createId ?? randomUUID;
 
   return {
-    startRun: async ({ actorUserId, correlationId, process, requestId }) => {
+    startRun: async ({
+      actorUserId,
+      correlationId,
+      process,
+      requestId,
+      idempotencyKey,
+      payloadFingerprint,
+    }) => {
+      if (idempotencyKey) {
+        const [existingRun] = await db
+          .select({
+            id: provisioningRunsTable.id,
+            status: provisioningRunsTable.status,
+          })
+          .from(provisioningRunsTable)
+          .where(
+            and(
+              eq(provisioningRunsTable.process, process),
+              eq(provisioningRunsTable.idempotencyKey, idempotencyKey),
+            ),
+          )
+          .limit(1);
+
+        if (existingRun) {
+          const [existingStep] = await db
+            .select({ detail: provisioningStepsTable.detail })
+            .from(provisioningStepsTable)
+            .where(
+              and(
+                eq(provisioningStepsTable.runId, existingRun.id),
+                eq(provisioningStepsTable.name, 'company-creation'),
+              ),
+            )
+            .orderBy(desc(provisioningStepsTable.createdAt))
+            .limit(1);
+
+          const detail =
+            (existingStep?.detail as Record<string, unknown> | null) ?? null;
+          const savedFingerprint =
+            typeof detail?.payloadFingerprint === 'string'
+              ? detail.payloadFingerprint
+              : null;
+
+          if (savedFingerprint && savedFingerprint !== payloadFingerprint) {
+            throw new CompanyIdempotencyConflictError();
+          }
+
+          if (
+            existingRun.status === 'succeeded' &&
+            typeof detail?.companyId === 'string' &&
+            typeof detail?.paletteId === 'string'
+          ) {
+            return {
+              kind: 'replay-succeeded' as const,
+              runId: existingRun.id,
+              result: {
+                companyId: detail.companyId,
+                paletteId: detail.paletteId as CreatePaletteId,
+              },
+            };
+          }
+
+          if (savedFingerprint === payloadFingerprint) {
+            throw new CompanyIdempotencyConflictError(
+              'Company onboarding request is already in progress',
+            );
+          }
+        }
+      }
+
       const createdAt = now();
       const runId = generateId();
 
@@ -64,12 +135,13 @@ export const createDrizzleProvisioningRecorder = (
         process,
         status: 'running',
         attempt: 1,
+        idempotencyKey,
         errorSummary: null,
         createdAt,
         updatedAt: createdAt,
       });
 
-      return { runId };
+      return { kind: 'started' as const, runId };
     },
     succeedRun: async ({ runId, steps }) => {
       const recordedAt = now();

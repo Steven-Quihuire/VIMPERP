@@ -2,6 +2,7 @@ import {
   companyLifecycleValues,
   createSeedAdminMemberships,
   createSeedAdminUser,
+  deriveAuthCapabilities,
   InvalidSessionError,
   type AuthIdentityGateway,
   type AuthSession,
@@ -71,6 +72,7 @@ export const createResolveAuthSession = ({
         user: toPublicAuthUser(createSeedAdminUser()),
         memberships: createSeedAdminMemberships(),
         activeCompany: null,
+        capabilities: [],
       };
     }
 
@@ -87,10 +89,13 @@ export const createResolveAuthSession = ({
 
     const memberships = await authIdentityGateway.listMemberships(user.id);
 
+    const activeCompany = await resolveActiveCompany(user.id, memberships);
+
     return {
       user: toPublicAuthUser(user),
       memberships,
-      activeCompany: await resolveActiveCompany(user.id, memberships),
+      activeCompany,
+      capabilities: deriveAuthCapabilities({ memberships, activeCompany }),
     };
   };
 };

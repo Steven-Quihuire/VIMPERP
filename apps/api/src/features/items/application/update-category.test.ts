@@ -62,6 +62,8 @@ describe('createUpdateCategoryUseCase', () => {
       updateCategory({
         companyId: 'company-1',
         actorUserId: 'user-1',
+        capabilities: ['catalog.write'],
+        companyStatus: 'active',
         correlationId: 'corr-1',
         categoryId: 'category-1',
         parentId: 'category-1',
@@ -82,6 +84,8 @@ describe('createUpdateCategoryUseCase', () => {
       updateCategory({
         companyId: 'company-1',
         actorUserId: 'user-1',
+        capabilities: ['catalog.write'],
+        companyStatus: 'active',
         correlationId: 'corr-1',
         categoryId: 'category-1',
         parentId: 'child-1',
@@ -101,6 +105,8 @@ describe('createUpdateCategoryUseCase', () => {
     const result = await updateCategory({
       companyId: 'company-1',
       actorUserId: 'user-1',
+      capabilities: ['catalog.write'],
+      companyStatus: 'active',
       correlationId: 'corr-1',
       categoryId: 'category-1',
       name: '  Hardware Updated  ',
@@ -126,6 +132,8 @@ describe('createUpdateCategoryUseCase', () => {
       updateMissingCurrent({
         companyId: 'company-1',
         actorUserId: 'user-1',
+        capabilities: ['catalog.write'],
+        companyStatus: 'active',
         correlationId: 'corr-1',
         categoryId: 'missing-category',
         parentId: 'parent-1',
@@ -139,6 +147,8 @@ describe('createUpdateCategoryUseCase', () => {
       updateMissingParent({
         companyId: 'company-1',
         actorUserId: 'user-1',
+        capabilities: ['catalog.write'],
+        companyStatus: 'active',
         correlationId: 'corr-1',
         categoryId: 'category-1',
         parentId: 'missing-parent',

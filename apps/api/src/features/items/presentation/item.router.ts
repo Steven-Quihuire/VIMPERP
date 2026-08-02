@@ -1,7 +1,12 @@
 import { Router, type RequestHandler } from 'express';
 import { z } from 'zod';
 
-import { ForbiddenError, type AuthMembership, type AuthSession } from '../../identity/domain/auth';
+import {
+  requireTenantCapability,
+  type AuthCapability,
+  type AuthSession,
+  type CompanyLifecycle,
+} from '../../identity/domain/auth';
 import {
   CategoryNotFoundError,
   ItemNotFoundError,
@@ -26,6 +31,7 @@ const createItemBodySchema = z
     unit: itemUnitSchema,
     sku: z.string().min(1).nullable().optional(),
     categoryId: z.string().min(1).nullable().optional(),
+    companyId: z.string().min(1).optional(),
     unitPrice: z.number().nonnegative().default(0),
     tracksStock: z.boolean().default(false),
     trackBatchMode: itemTrackBatchModeSchema.default('none'),
@@ -79,35 +85,26 @@ type AuthenticatedResponseLocals = {
   };
 };
 
-const getCompanyMembership = (auth: AuthSession): AuthMembership & { companyId: string } => {
-  const membership = auth.memberships.find(
-    (candidate): candidate is AuthMembership & { companyId: string } => candidate.companyId !== null,
-  );
-
-  if (!membership) {
-    throw new ForbiddenError('Company membership required');
-  }
-
-  return membership;
-};
-
-const getRouteContext = (response: Parameters<RequestHandler>[1]) => {
+const getRouteContext = (
+  response: Parameters<RequestHandler>[1],
+  capability: AuthCapability,
+) => {
   const locals = response.locals as AuthenticatedResponseLocals;
   const auth = locals.auth;
-  const membership = getCompanyMembership(auth);
+  const activeCompany = requireTenantCapability(auth, capability);
 
   return {
     actorUserId: auth.user.id,
-    companyId: membership.companyId,
+    capabilities: activeCompany.capabilities,
+    companyId: activeCompany.companyId,
+    companyStatus: activeCompany.status,
     correlationId:
       locals.requestContext?.correlationId ?? String(response.getHeader('x-correlation-id')),
-    role: membership.role,
   };
 };
 
 export const createItemRouter = ({
   requireAuth,
-  requireOwner,
   createItem,
   updateItem,
   softDeleteItem,
@@ -119,10 +116,11 @@ export const createItemRouter = ({
   getCategoryById,
 }: {
   requireAuth: RequestHandler;
-  requireOwner: RequestHandler;
   createItem: (input: {
     companyId: string;
     actorUserId: string;
+    capabilities: AuthCapability[];
+    companyStatus: CompanyLifecycle;
     correlationId: string;
     name: string;
     type: ItemType;
@@ -136,6 +134,8 @@ export const createItemRouter = ({
   updateItem: (input: {
     companyId: string;
     actorUserId: string;
+    capabilities: AuthCapability[];
+    companyStatus: CompanyLifecycle;
     correlationId: string;
     itemId: string;
     name?: string;
@@ -149,23 +149,30 @@ export const createItemRouter = ({
   softDeleteItem: (input: {
     companyId: string;
     actorUserId: string;
+    capabilities: AuthCapability[];
+    companyStatus: CompanyLifecycle;
     correlationId: string;
     itemId: string;
-    role: string;
   }) => Promise<void>;
   getItem: (input: {
     companyId: string;
+    capabilities: AuthCapability[];
+    companyStatus: CompanyLifecycle;
     itemId: string;
     includeDeleted?: boolean;
   }) => Promise<Item | null>;
   listItems: (input: {
     companyId: string;
+    capabilities: AuthCapability[];
+    companyStatus: CompanyLifecycle;
     limit: number;
     cursor?: string;
   }) => Promise<{ items: Item[]; nextCursor: string | null }>;
   createCategory: (input: {
     companyId: string;
     actorUserId: string;
+    capabilities: AuthCapability[];
+    companyStatus: CompanyLifecycle;
     correlationId: string;
     name: string;
     parentId: string | null;
@@ -173,6 +180,8 @@ export const createItemRouter = ({
   updateCategory: (input: {
     companyId: string;
     actorUserId: string;
+    capabilities: AuthCapability[];
+    companyStatus: CompanyLifecycle;
     correlationId: string;
     categoryId: string;
     name?: string;
@@ -182,19 +191,24 @@ export const createItemRouter = ({
     companyId: string;
     categoryId: string;
   }) => Promise<ItemCategory | null>;
-  listCategories?: (input: { companyId: string }) => Promise<{ categories: ItemCategory[] }>;
+  listCategories?: (input: {
+    companyId: string;
+    capabilities: AuthCapability[];
+    companyStatus: CompanyLifecycle;
+  }) => Promise<{ categories: ItemCategory[] }>;
 }): Router => {
   const router = Router();
 
   router.post('/items', requireAuth, async (request, response, next) => {
     try {
       const body = createItemBodySchema.parse(request.body);
-      const context = getRouteContext(response);
+      const context = getRouteContext(response, 'catalog.write');
+      const { companyId: _ignoredCompanyId, ...itemBody } = body;
       const result = await createItem({
         ...context,
-        ...body,
-        sku: body.sku ?? null,
-        categoryId: body.categoryId ?? null,
+        ...itemBody,
+        sku: itemBody.sku ?? null,
+        categoryId: itemBody.categoryId ?? null,
       });
 
       response.status(201).json(result);
@@ -206,9 +220,11 @@ export const createItemRouter = ({
   router.get('/items', requireAuth, async (request, response, next) => {
     try {
       const query = listItemsQuerySchema.parse(request.query);
-      const context = getRouteContext(response);
+      const context = getRouteContext(response, 'catalog.read');
       const result = await listItems({
+        capabilities: context.capabilities,
         companyId: context.companyId,
+        companyStatus: context.companyStatus,
         limit: query.limit,
         ...(query.cursor !== undefined ? { cursor: query.cursor } : {}),
       });
@@ -223,9 +239,11 @@ export const createItemRouter = ({
     try {
       const params = idParamsSchema.parse(request.params);
       const query = getItemQuerySchema.parse(request.query);
-      const context = getRouteContext(response);
+      const context = getRouteContext(response, 'catalog.read');
       const item = await getItem({
+        capabilities: context.capabilities,
         companyId: context.companyId,
+        companyStatus: context.companyStatus,
         itemId: params.id,
         includeDeleted: query.includeDeleted === 'true',
       });
@@ -244,10 +262,12 @@ export const createItemRouter = ({
     try {
       const params = idParamsSchema.parse(request.params);
       const body = updateItemBodySchema.parse(request.body);
-      const context = getRouteContext(response);
+      const context = getRouteContext(response, 'catalog.write');
       const input: {
         companyId: string;
         actorUserId: string;
+        capabilities: AuthCapability[];
+        companyStatus: CompanyLifecycle;
         correlationId: string;
         itemId: string;
         name?: string;
@@ -298,10 +318,10 @@ export const createItemRouter = ({
     }
   });
 
-  router.delete('/items/:id', requireAuth, requireOwner, async (request, response, next) => {
+  router.delete('/items/:id', requireAuth, async (request, response, next) => {
     try {
       const params = idParamsSchema.parse(request.params);
-      const context = getRouteContext(response);
+      const context = getRouteContext(response, 'catalog.delete');
 
       await softDeleteItem({
         ...context,
@@ -317,8 +337,12 @@ export const createItemRouter = ({
   if (listCategories) {
     router.get('/item-categories', requireAuth, async (request, response, next) => {
       try {
-        const context = getRouteContext(response);
-        const result = await listCategories({ companyId: context.companyId });
+        const context = getRouteContext(response, 'catalog.read');
+        const result = await listCategories({
+          capabilities: context.capabilities,
+          companyId: context.companyId,
+          companyStatus: context.companyStatus,
+        });
 
         response.status(200).json(result);
       } catch (error) {
@@ -330,7 +354,7 @@ export const createItemRouter = ({
   router.post('/item-categories', requireAuth, async (request, response, next) => {
     try {
       const body = createCategoryBodySchema.parse(request.body);
-      const context = getRouteContext(response);
+      const context = getRouteContext(response, 'catalog.write');
       const result = await createCategory({
         ...context,
         name: body.name,
@@ -347,7 +371,7 @@ export const createItemRouter = ({
     router.get('/item-categories/:id', requireAuth, async (request, response, next) => {
       try {
         const params = idParamsSchema.parse(request.params);
-        const context = getRouteContext(response);
+        const context = getRouteContext(response, 'catalog.read');
         const category = await getCategoryById({
           companyId: context.companyId,
           categoryId: params.id,
@@ -368,10 +392,12 @@ export const createItemRouter = ({
     try {
       const params = idParamsSchema.parse(request.params);
       const body = updateCategoryBodySchema.parse(request.body);
-      const context = getRouteContext(response);
+      const context = getRouteContext(response, 'catalog.write');
       const input: {
         companyId: string;
         actorUserId: string;
+        capabilities: AuthCapability[];
+        companyStatus: CompanyLifecycle;
         correlationId: string;
         categoryId: string;
         name?: string;
@@ -379,6 +405,8 @@ export const createItemRouter = ({
       } = {
         companyId: context.companyId,
         actorUserId: context.actorUserId,
+        capabilities: context.capabilities,
+        companyStatus: context.companyStatus,
         correlationId: context.correlationId,
         categoryId: params.id,
       };
