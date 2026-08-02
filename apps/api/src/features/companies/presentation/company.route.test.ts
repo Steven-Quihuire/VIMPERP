@@ -11,6 +11,7 @@ import type {
   ProvisioningRecorder,
 } from '../domain/company';
 import type {
+  CompanyLifecycle,
   AuthIdentityGateway,
   AuthMembership,
   AuthSessionRecord,
@@ -18,6 +19,13 @@ import type {
   PasswordHasher,
   SessionTokenService,
 } from '../../identity/domain/auth';
+
+type AuthMeResponseBody = {
+  activeCompany: {
+    companyId: string;
+    status: CompanyLifecycle;
+  } | null;
+};
 
 class InMemoryAuthGateway implements AuthIdentityGateway {
   private usersById = new Map<string, AuthUser>();
@@ -469,7 +477,9 @@ describe('company onboarding routes', () => {
       .set('Cookie', sessionCookie);
 
     expect(meResponse.status).toBe(200);
-    expect(meResponse.body.activeCompany).toEqual({
+    const meBody = meResponse.body as AuthMeResponseBody;
+
+    expect(meBody.activeCompany).toEqual({
       companyId: 'company-2',
       status: 'active',
     });
