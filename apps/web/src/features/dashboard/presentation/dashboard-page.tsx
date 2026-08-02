@@ -22,7 +22,6 @@ import {
   canViewAdminSignals,
   getDashboardCompanyDetail,
   getDashboardCompanyLabel,
-  getPrimaryMembership,
   getVisibleDashboardModules,
 } from '../domain/dashboard';
 import {
@@ -40,10 +39,9 @@ export const DashboardPage = ({
 }) => {
   const isPlatformAdmin = canViewAdminSignals(session);
   const modules = getVisibleDashboardModules(session);
-  const primaryMembership = getPrimaryMembership(session);
   const currentCompany = useDashboardCurrentCompany(
     apiBaseUrl,
-    Boolean(primaryMembership?.companyId),
+    Boolean(session.activeCompany),
   );
   const summary = useDashboardSummary(apiBaseUrl, isPlatformAdmin);
   const notifications = useDashboardNotifications(apiBaseUrl, isPlatformAdmin);
@@ -206,23 +204,37 @@ export const DashboardPage = ({
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Company modules</CardTitle>
+            {session.activeCompany ? (
+              <CardTitle>Company modules</CardTitle>
+            ) : (
+              <h1 className="text-3xl font-semibold tracking-tight">
+                Selecciona una empresa
+              </h1>
+            )}
             <CardDescription>
-              Pick a module from the sidebar to continue your ERP setup.
+              {session.activeCompany
+                ? 'Pick a module from the sidebar to continue your ERP setup.'
+                : 'Elige una empresa activa desde el selector lateral para continuar.'}
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-3">
-            {modules.map((module) => (
-              <a
-                key={module.id}
-                href={`#${module.id}`}
-                aria-label={`Open ${module.label} module`}
-                className="flex items-center gap-3 rounded-lg border p-4 text-sm hover:bg-accent"
-              >
-                <Building2 className="size-4" />
-                <span>{module.label}</span>
-              </a>
-            ))}
+          <CardContent className={session.activeCompany ? 'grid gap-3 md:grid-cols-3' : 'space-y-2'}>
+            {session.activeCompany ? (
+              modules.map((module) => (
+                <a
+                  key={module.id}
+                  href={`#${module.id}`}
+                  aria-label={`Open ${module.label} module`}
+                  className="flex items-center gap-3 rounded-lg border p-4 text-sm hover:bg-accent"
+                >
+                  <Building2 className="size-4" />
+                  <span>{module.label}</span>
+                </a>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Cambia de empresa para habilitar los módulos de trabajo y seguir con la operación diaria.
+              </p>
+            )}
           </CardContent>
         </Card>
       )}

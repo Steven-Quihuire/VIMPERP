@@ -12,6 +12,10 @@ import { Toaster } from 'sileo';
 import { LoginPage } from '../features/auth/presentation/login-page';
 import { RegisterPage } from '../features/auth/presentation/register-page';
 import { useAuth } from '../features/auth/presentation/use-auth';
+import {
+  hasBlockedActiveCompany,
+  needsActiveCompanySelection,
+} from '../features/auth/domain/auth';
 import { canViewAdminSignals } from '../features/dashboard/domain/dashboard';
 import { ApplicationErrorDetailPage } from '../features/dashboard/presentation/application-error-detail-page';
 import { ApplicationErrorsListPage } from '../features/dashboard/presentation/application-errors-list-page';
@@ -19,6 +23,7 @@ import { AuditEventDetailPage } from '../features/dashboard/presentation/audit-e
 import { AuditEventsListPage } from '../features/dashboard/presentation/audit-events-list-page';
 import { DashboardPage } from '../features/dashboard/presentation/dashboard-page';
 import { AdminCompaniesPage } from '../features/dashboard/presentation/admin-companies-page';
+import { BlockedCompanyPage } from '../features/dashboard/presentation/blocked-company-page';
 import { DashboardNotificationsPage } from '../features/dashboard/presentation/dashboard-notifications-page';
 import { DashboardProfileSettingsPage } from '../features/dashboard/presentation/dashboard-profile-settings-page';
 import { DashboardShell } from '../features/dashboard/presentation/dashboard-shell';
@@ -32,6 +37,24 @@ import { LandingPage } from '../features/landing/presentation/landing-page';
 import { needsCompanyOnboarding } from '../features/onboarding/domain/onboarding';
 import { OnboardingPage } from '../features/onboarding/presentation/onboarding-page';
 import { ThemeProvider } from '../features/theme/presentation/theme-provider';
+
+const getAuthenticatedEntryRoute = (
+  session: Parameters<typeof needsCompanyOnboarding>[0],
+) => {
+  if (!session) {
+    return '/login';
+  }
+
+  if (needsCompanyOnboarding(session)) {
+    return '/onboarding';
+  }
+
+  if (hasBlockedActiveCompany(session)) {
+    return '/dashboard/company-status';
+  }
+
+  return '/dashboard';
+};
 
 const ProtectedDashboardShell = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
@@ -61,8 +84,12 @@ const ProtectedDashboard = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
 
   if (auth.isLoading) return <p>Loading...</p>;
   if (!auth.session) return <Navigate to="/login" replace />;
-  if (needsCompanyOnboarding(auth.session))
+  if (needsCompanyOnboarding(auth.session)) {
     return <Navigate to="/onboarding" replace />;
+  }
+  if (hasBlockedActiveCompany(auth.session)) {
+    return <Navigate to="/dashboard/company-status" replace />;
+  }
 
   return (
     <DashboardPage
@@ -75,8 +102,24 @@ const ProtectedDashboard = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
 const ItemsRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
-  if (auth.isLoading || !auth.session) {
+  if (auth.isLoading) {
     return <p>Loading...</p>;
+  }
+
+  if (!auth.session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (needsCompanyOnboarding(auth.session)) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  if (needsActiveCompanySelection(auth.session)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (hasBlockedActiveCompany(auth.session)) {
+    return <Navigate to="/dashboard/company-status" replace />;
   }
 
   return <ItemCatalogPage session={auth.session} />;
@@ -85,8 +128,24 @@ const ItemsRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
 const CategoriesRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
-  if (auth.isLoading || !auth.session) {
+  if (auth.isLoading) {
     return <p>Loading...</p>;
+  }
+
+  if (!auth.session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (needsCompanyOnboarding(auth.session)) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  if (needsActiveCompanySelection(auth.session)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (hasBlockedActiveCompany(auth.session)) {
+    return <Navigate to="/dashboard/company-status" replace />;
   }
 
   return <CategoriesPage session={auth.session} />;
@@ -96,12 +155,7 @@ const LoginRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
   if (auth.isSuccess && auth.session) {
-    return (
-      <Navigate
-        to={needsCompanyOnboarding(auth.session) ? '/onboarding' : '/dashboard'}
-        replace
-      />
-    );
+    return <Navigate to={getAuthenticatedEntryRoute(auth.session)} replace />;
   }
 
   return <LoginPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />;
@@ -111,12 +165,7 @@ const RegisterRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
   if (auth.isSuccess && auth.session) {
-    return (
-      <Navigate
-        to={needsCompanyOnboarding(auth.session) ? '/onboarding' : '/dashboard'}
-        replace
-      />
-    );
+    return <Navigate to={getAuthenticatedEntryRoute(auth.session)} replace />;
   }
 
   return <RegisterPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />;
@@ -134,7 +183,7 @@ const ProtectedOnboarding = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   }
 
   if (!needsCompanyOnboarding(auth.session)) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={getAuthenticatedEntryRoute(auth.session)} replace />;
   }
 
   return (
@@ -167,6 +216,24 @@ const ProtectedAdminDashboard = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   return <Outlet />;
 };
 
+const BlockedCompanyRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+  const auth = useAuth(apiBaseUrl);
+
+  if (auth.isLoading) {
+    return <p>Loading...</p>;
+  }
+
+  if (!auth.session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!hasBlockedActiveCompany(auth.session)) {
+    return <Navigate to={getAuthenticatedEntryRoute(auth.session)} replace />;
+  }
+
+  return <BlockedCompanyPage session={auth.session} />;
+};
+
 const RootLayout = () => <Outlet />;
 
 const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
@@ -191,6 +258,12 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
           index
           element={
             <ProtectedDashboard {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+          }
+        />
+        <Route
+          path="company-status"
+          element={
+            <BlockedCompanyRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />
           }
         />
         <Route

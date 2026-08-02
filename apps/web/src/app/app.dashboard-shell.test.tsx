@@ -1,7 +1,22 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './app';
+
+const createSessionResponse = (overrides?: Record<string, unknown>) => ({
+  user: {
+    id: 'user-1',
+    email: 'owner@vimcore.test',
+    username: 'owner',
+  },
+  memberships: [{ companyId: 'company-1', role: 'company-owner' }],
+  activeCompany: {
+    companyId: 'company-1',
+    status: 'active',
+  },
+  capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
+  ...overrides,
+});
 
 const createJsonResponse = (body: unknown, status: number) =>
   new Response(JSON.stringify(body), {
@@ -338,14 +353,7 @@ describe('App dashboard shell', () => {
       if (url.endsWith('/auth/me')) {
         return Promise.resolve(
           createJsonResponse(
-            {
-              user: {
-                id: 'user-1',
-                email: 'owner@vimcore.test',
-                username: 'owner',
-              },
-              memberships: [{ companyId: 'company-1', role: 'company-owner' }],
-            },
+            createSessionResponse(),
             200,
           ),
         );
@@ -465,14 +473,7 @@ describe('App dashboard shell', () => {
       if (url.endsWith('/auth/me')) {
         return Promise.resolve(
           createJsonResponse(
-            {
-              user: {
-                id: 'user-1',
-                email: 'owner@vimcore.test',
-                username: 'owner',
-              },
-              memberships: [{ companyId: 'company-1', role: 'company-owner' }],
-            },
+            createSessionResponse(),
             200,
           ),
         );
@@ -516,14 +517,7 @@ describe('App dashboard shell', () => {
       if (url.endsWith('/auth/me')) {
         return Promise.resolve(
           createJsonResponse(
-            {
-              user: {
-                id: 'user-1',
-                email: 'owner@vimcore.test',
-                username: 'owner',
-              },
-              memberships: [{ companyId: 'company-1', role: 'company-owner' }],
-            },
+            createSessionResponse(),
             200,
           ),
         );
@@ -753,14 +747,7 @@ describe('App dashboard shell', () => {
       if (url.endsWith('/auth/me')) {
         return Promise.resolve(
           createJsonResponse(
-            {
-              user: {
-                id: 'user-1',
-                email: 'owner@vimcore.test',
-                username: 'owner',
-              },
-              memberships: [{ companyId: 'company-1', role: 'company-owner' }],
-            },
+            createSessionResponse(),
             200,
           ),
         );
@@ -792,5 +779,150 @@ describe('App dashboard shell', () => {
     expect(document.documentElement.style.getPropertyValue('--color-surface')).toBeTruthy();
     expect(screen.queryByRole('switch', { name: /dark/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /light/i })).not.toBeInTheDocument();
+  });
+
+  it('redirects company-scoped routes without an active company back to the dashboard selector', async () => {
+    setDesktopBrowser(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0',
+      false,
+    );
+
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = readUrl(input);
+
+      if (url.endsWith('/auth/me')) {
+        return Promise.resolve(
+          createJsonResponse(
+            createSessionResponse({
+              memberships: [
+                { companyId: 'company-1', role: 'company-owner' },
+                { companyId: 'company-2', role: 'company-owner' },
+              ],
+              activeCompany: null,
+              capabilities: [],
+            }),
+            200,
+          ),
+        );
+      }
+
+      if (url.endsWith('/me/preferences')) {
+        return Promise.resolve(createJsonResponse({ paletteId: 'forest' }, 200));
+      }
+
+      throw new Error(`unexpected request: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App initialEntries={['/dashboard/items']} />);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Selecciona una empresa' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Items' }),
+    ).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      '/api/me/company',
+      expect.anything(),
+    );
+  });
+
+  it('persists a company switch across reloads and keeps blocked companies inside the dashboard shell', async () => {
+    setDesktopBrowser(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0',
+      false,
+    );
+
+    let activeCompanyId = 'company-1';
+
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = readUrl(input);
+
+      if (url.endsWith('/auth/me')) {
+        return Promise.resolve(
+          createJsonResponse(
+            createSessionResponse({
+              memberships: [
+                { companyId: 'company-1', role: 'company-owner' },
+                { companyId: 'company-2', role: 'company-owner' },
+              ],
+              activeCompany:
+                activeCompanyId === 'company-1'
+                  ? { companyId: 'company-1', status: 'active' }
+                  : { companyId: 'company-2', status: 'provisioning_failed' },
+              capabilities:
+                activeCompanyId === 'company-1'
+                  ? ['catalog.read', 'catalog.write', 'catalog.delete']
+                  : ['catalog.read', 'catalog.write', 'catalog.delete'],
+            }),
+            200,
+          ),
+        );
+      }
+
+      if (url.endsWith('/me/preferences')) {
+        return Promise.resolve(createJsonResponse({ paletteId: 'forest' }, 200));
+      }
+
+      if (url.endsWith('/me/company')) {
+        return Promise.resolve(
+          createJsonResponse(
+            activeCompanyId === 'company-1'
+              ? { companyId: 'company-1', name: 'Northwind' }
+              : { companyId: 'company-2', name: 'Southwind' },
+            200,
+          ),
+        );
+      }
+
+      if (url.endsWith('/me/active-company')) {
+        expect(init?.method).toBe('PATCH');
+        activeCompanyId = 'company-2';
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+
+      throw new Error(`unexpected request: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { unmount } = render(<App initialEntries={['/dashboard']} />);
+
+    expect(
+      await screen.findByRole('heading', { name: 'ERP dashboard' }),
+    ).toBeInTheDocument();
+
+    const switcherButton = screen.getByRole('button', { name: /Northwind/i });
+    fireEvent.pointerDown(switcherButton);
+    fireEvent.click(switcherButton);
+    fireEvent.click(await screen.findByText(/Empresa 2/i));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Estado de tu empresa' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'No podemos mostrar la información de esta empresa en este momento. Contacta a soporte para continuar.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/provisioning_failed/i)).not.toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/me/active-company',
+        expect.objectContaining({ method: 'PATCH' }),
+      );
+    });
+
+    unmount();
+
+    render(<App initialEntries={['/dashboard/items']} />);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Estado de tu empresa' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Items' })).not.toBeInTheDocument();
   });
 });

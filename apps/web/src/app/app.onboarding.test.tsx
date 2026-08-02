@@ -3,6 +3,18 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { App } from './app';
 
+const createSessionResponse = (overrides?: Record<string, unknown>) => ({
+  user: {
+    id: 'user-1',
+    email: 'owner@vimcore.test',
+    username: 'owner',
+  },
+  memberships: [],
+  activeCompany: null,
+  capabilities: [],
+  ...overrides,
+});
+
 const createJsonResponse = (body: unknown, status: number) =>
   new Response(JSON.stringify(body), {
     status,
@@ -61,14 +73,7 @@ describe('App onboarding flow', () => {
       if (url.endsWith('/auth/me')) {
         return Promise.resolve(
           createJsonResponse(
-            {
-              user: {
-                id: 'user-1',
-                email: 'owner@vimcore.test',
-                username: '',
-              },
-              memberships: [],
-            },
+            createSessionResponse({ user: { id: 'user-1', email: 'owner@vimcore.test', username: '' } }),
             200,
           ),
         );
@@ -118,14 +123,13 @@ describe('App onboarding flow', () => {
       if (url.endsWith('/auth/me')) {
         return Promise.resolve(
           createJsonResponse(
-            {
+            createSessionResponse({
               user: {
                 id: 'user-1',
                 email: 'owner@vimcore.test',
                 username: 'vimcore_labs',
               },
-              memberships: [],
-            },
+            }),
             200,
           ),
         );
@@ -157,14 +161,7 @@ describe('App onboarding flow', () => {
       if (url.endsWith('/auth/me')) {
         return Promise.resolve(
           createJsonResponse(
-            {
-              user: {
-                id: 'user-1',
-                email: 'owner@vimcore.test',
-                username: 'owner',
-              },
-              memberships: [],
-            },
+            createSessionResponse(),
             200,
           ),
         );
@@ -258,14 +255,13 @@ describe('App onboarding flow', () => {
       if (url.endsWith('/auth/me')) {
         return Promise.resolve(
           createJsonResponse(
-            {
+            createSessionResponse({
               user: {
                 id: 'user-1',
                 email: 'owner@vimcore.test',
                 username: 'vimcore_labs',
               },
-              memberships: [],
-            },
+            }),
             200,
           ),
         );
@@ -301,14 +297,7 @@ describe('App onboarding flow', () => {
         if (authCalls === 1) {
           return Promise.resolve(
             createJsonResponse(
-              {
-                user: {
-                  id: 'user-1',
-                  email: 'owner@vimcore.test',
-                  username: 'owner',
-                },
-                memberships: [],
-              },
+              createSessionResponse(),
               200,
             ),
           );
@@ -316,14 +305,14 @@ describe('App onboarding flow', () => {
 
         return Promise.resolve(
           createJsonResponse(
-            {
-              user: {
-                id: 'user-1',
-                email: 'owner@vimcore.test',
-                username: 'owner',
-              },
+            createSessionResponse({
               memberships: [{ companyId: 'company-1', role: 'company-owner' }],
-            },
+              activeCompany: {
+                companyId: 'company-1',
+                status: 'active',
+              },
+              capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
+            }),
             200,
           ),
         );
@@ -394,14 +383,7 @@ describe('App onboarding flow', () => {
       if (url.endsWith('/auth/me')) {
         return Promise.resolve(
           createJsonResponse(
-            {
-              user: {
-                id: 'user-1',
-                email: 'owner@vimcore.test',
-                username: 'owner',
-              },
-              memberships: [],
-            },
+            createSessionResponse(),
             200,
           ),
         );
@@ -447,14 +429,14 @@ describe('App onboarding flow', () => {
       if (url.endsWith('/auth/me')) {
         return Promise.resolve(
           createJsonResponse(
-            {
-              user: {
-                id: 'user-1',
-                email: 'owner@vimcore.test',
-                username: 'owner',
-              },
+            createSessionResponse({
               memberships: [{ companyId: 'company-1', role: 'company-owner' }],
-            },
+              activeCompany: {
+                companyId: 'company-1',
+                status: 'active',
+              },
+              capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
+            }),
             200,
           ),
         );
@@ -489,5 +471,44 @@ describe('App onboarding flow', () => {
         expect.objectContaining({ method: 'PATCH' }),
       );
     });
+  });
+
+  it('redirects authenticated users with memberships but no active company back to the dashboard selector', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = readUrl(input);
+
+      if (url.endsWith('/auth/me')) {
+        return Promise.resolve(
+          createJsonResponse(
+            createSessionResponse({
+              memberships: [
+                { companyId: 'company-1', role: 'company-owner' },
+                { companyId: 'company-2', role: 'company-owner' },
+              ],
+            }),
+            200,
+          ),
+        );
+      }
+
+      if (url.endsWith('/me/preferences')) {
+        return Promise.resolve(createJsonResponse({ paletteId: 'ocean' }, 200));
+      }
+
+      throw new Error(`unexpected request: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App initialEntries={['/onboarding']} />);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Selecciona una empresa' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', {
+        name: 'Registro de información de a la empresa',
+      }),
+    ).not.toBeInTheDocument();
   });
 });

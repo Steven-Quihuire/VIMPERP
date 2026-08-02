@@ -3,6 +3,21 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { App } from './app';
 
+const createSessionResponse = (overrides?: Record<string, unknown>) => ({
+  user: {
+    id: 'user-1',
+    email: 'owner@vimcore.test',
+    username: 'owner',
+  },
+  memberships: [{ companyId: 'company-1', role: 'company-owner' }],
+  activeCompany: {
+    companyId: 'company-1',
+    status: 'active',
+  },
+  capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
+  ...overrides,
+});
+
 const createJsonResponse = (body: unknown, status: number) =>
   new Response(JSON.stringify(body), {
     status,
@@ -128,14 +143,7 @@ describe('App auth flow', () => {
 
         return Promise.resolve(
           createJsonResponse(
-            {
-              user: {
-                id: 'user-1',
-                email: 'owner@vimcore.test',
-                username: 'owner',
-              },
-              memberships: [],
-            },
+            createSessionResponse({ memberships: [], activeCompany: null, capabilities: [] }),
             200,
           ),
         );
@@ -209,14 +217,7 @@ describe('App auth flow', () => {
 
         return Promise.resolve(
           createJsonResponse(
-            {
-              user: {
-                id: 'user-1',
-                email: 'owner@vimcore.test',
-                username: 'owner',
-              },
-              memberships: [{ companyId: 'company-1', role: 'company-owner' }],
-            },
+            createSessionResponse(),
             200,
           ),
         );
@@ -266,5 +267,79 @@ describe('App auth flow', () => {
         expect.objectContaining({ method: 'POST' }),
       );
     });
+  });
+
+  it('redirects the login flow to the blocked-company route when the active company is unavailable', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = readUrl(input);
+
+      if (url.endsWith('/auth/me')) {
+        if (
+          fetchMock.mock.calls.filter(([value]) =>
+            readUrl(value).endsWith('/auth/me'),
+          ).length === 1
+        ) {
+          return Promise.resolve(
+            createJsonResponse(
+              { error: { code: 'UNAUTHORIZED', message: 'Invalid session' } },
+              401,
+            ),
+          );
+        }
+
+        return Promise.resolve(
+          createJsonResponse(
+            createSessionResponse({
+              activeCompany: {
+                companyId: 'company-1',
+                status: 'suspended',
+              },
+            }),
+            200,
+          ),
+        );
+      }
+
+      if (url.endsWith('/auth/login')) {
+        expect(init?.method).toBe('POST');
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+
+      if (url.endsWith('/me/preferences')) {
+        return Promise.resolve(createJsonResponse({ paletteId: 'ocean' }, 200));
+      }
+
+      if (url.endsWith('/me/company')) {
+        return Promise.resolve(
+          createJsonResponse(
+            { companyId: 'company-1', name: 'Northwind' },
+            200,
+          ),
+        );
+      }
+
+      throw new Error(`unexpected request: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App initialEntries={['/login']} />);
+
+    fireEvent.change(screen.getByLabelText('Correo o usuario'), {
+      target: { value: 'owner@vimcore.test' },
+    });
+    fireEvent.change(screen.getByLabelText('Contraseña'), {
+      target: { value: 'secret123' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Estado de tu empresa' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'No podemos mostrar la información de esta empresa en este momento. Contacta a soporte para continuar.',
+      ),
+    ).toBeInTheDocument();
   });
 });

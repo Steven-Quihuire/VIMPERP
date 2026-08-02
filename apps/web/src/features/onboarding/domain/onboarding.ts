@@ -1,4 +1,5 @@
 import type { AuthSession } from '../../auth/domain/auth';
+import { getCompanyMemberships } from '../../auth/domain/auth';
 
 export const paletteValues = [
   'mono',
@@ -215,8 +216,8 @@ export const needsCompanyOnboarding = (session: AuthSession | null) => {
     return false;
   }
 
-  return !session.memberships.some(
-    (membership) =>
-      membership.role === 'platform-admin' || membership.companyId,
+  return (
+    !session.memberships.some((membership) => membership.role === 'platform-admin') &&
+    getCompanyMemberships(session).length === 0
   );
 };

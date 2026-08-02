@@ -40,10 +40,10 @@ Chain strategy: feature-branch-chain
 
 ## Phase 3: Web Contract and UX
 
-- [ ] 3.1 RED: extend `apps/web/src/app/app.auth.test.tsx`, `apps/web/src/app/app.onboarding.test.tsx`, and `apps/web/src/app/app.dashboard-shell.test.tsx` for no-active-company redirect, blocked-company shell route, generic blocked copy, and persisted switch reload behavior.
-- [ ] 3.2 GREEN: update `apps/web/src/features/auth/domain/auth.ts`, `apps/web/src/features/auth/infrastructure/auth-client.ts`, `apps/web/src/features/auth/infrastructure/auth-store.ts`, `apps/web/src/features/auth/presentation/use-auth.ts`, and `apps/web/src/features/auth/presentation/components/team-switcher.tsx` for `activeCompany`, statuses, and switch mutation.
-- [ ] 3.3 GREEN: update `apps/web/src/app/app.tsx`, `apps/web/src/features/onboarding/domain/onboarding.ts`, `apps/web/src/features/dashboard/domain/dashboard.ts`, and create `apps/web/src/features/dashboard/presentation/blocked-company-page.tsx` for `/dashboard/company-status`, onboarding-only-without-company, and support-safe labels.
-- [ ] 3.4 REFACTOR: align sidebar/current-section helpers in `apps/web/src/features/dashboard/**` so company context comes from `activeCompany`, not `memberships[0]`.
+- [x] 3.1 RED: extend `apps/web/src/app/app.auth.test.tsx`, `apps/web/src/app/app.onboarding.test.tsx`, and `apps/web/src/app/app.dashboard-shell.test.tsx` for no-active-company redirect, blocked-company shell route, generic blocked copy, and persisted switch reload behavior.
+- [x] 3.2 GREEN: update `apps/web/src/features/auth/domain/auth.ts`, `apps/web/src/features/auth/infrastructure/auth-client.ts`, `apps/web/src/features/auth/infrastructure/auth-store.ts`, `apps/web/src/features/auth/presentation/use-auth.ts`, and `apps/web/src/features/auth/presentation/components/team-switcher.tsx` for `activeCompany`, statuses, and switch mutation.
+- [x] 3.3 GREEN: update `apps/web/src/app/app.tsx`, `apps/web/src/features/onboarding/domain/onboarding.ts`, `apps/web/src/features/dashboard/domain/dashboard.ts`, and create `apps/web/src/features/dashboard/presentation/blocked-company-page.tsx` for `/dashboard/company-status`, onboarding-only-without-company, and support-safe labels.
+- [x] 3.4 REFACTOR: align sidebar/current-section helpers in `apps/web/src/features/dashboard/**` so company context comes from `activeCompany`, not `memberships[0]`.
 
 ## Phase 4: Verification
 

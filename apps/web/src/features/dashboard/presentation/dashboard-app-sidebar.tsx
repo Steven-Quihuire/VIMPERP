@@ -14,7 +14,12 @@ import {
 import { NavLink } from 'react-router-dom';
 
 import type { AuthSession } from '../../auth/domain/auth';
-import { canViewAdminSignals } from '../domain/dashboard';
+import { getCompanyMemberships } from '../../auth/domain/auth';
+import { TeamSwitcher } from '../../auth/presentation/components/team-switcher';
+import { useSwitchActiveCompany } from '../../auth/presentation/use-auth';
+import {
+  canViewAdminSignals,
+} from '../domain/dashboard';
 import { useDashboardNotifications } from './use-dashboard';
 import { getReadNotificationIds, useNotificationReadVersion } from './use-dashboard';
 import {
@@ -49,6 +54,17 @@ const accountItems = [
 
 const isHashLink = (href: string) => href.startsWith('#');
 
+const getRoleLabel = (role: AuthSession['memberships'][number]['role']) => {
+  switch (role) {
+    case 'company-owner':
+      return 'Responsable de empresa';
+    case 'company-user':
+      return 'Usuario de empresa';
+    case 'platform-admin':
+      return 'Administrador de plataforma';
+  }
+};
+
 export const DashboardAppSidebar = ({
   session,
   companyLabel,
@@ -61,29 +77,55 @@ export const DashboardAppSidebar = ({
   apiBaseUrl?: string;
 }) => {
   const isPlatformAdmin = canViewAdminSignals(session);
+  const switchActiveCompany = useSwitchActiveCompany(apiBaseUrl);
   const notifications = useDashboardNotifications(apiBaseUrl, isPlatformAdmin);
   useNotificationReadVersion();
   const readNotificationIds = getReadNotificationIds();
   const newCompanyCount = notifications.data?.notifications.filter(
     (notification) => notification.type === 'company.registered' && !readNotificationIds.has(notification.id),
   ).length ?? 0;
+  const companyMemberships = getCompanyMemberships(session);
+  const companyOptions = companyMemberships.map((membership, index) => ({
+    companyId: membership.companyId,
+    name:
+      session.activeCompany?.companyId === membership.companyId
+        ? companyLabel
+        : `Empresa ${index + 1}`,
+    roleLabel:
+      session.activeCompany?.companyId === membership.companyId
+        ? companyDetail
+        : getRoleLabel(membership.role),
+    status:
+      session.activeCompany?.companyId === membership.companyId
+        ? session.activeCompany.status
+        : 'active',
+    isActive: session.activeCompany?.companyId === membership.companyId,
+  }));
 
   return (
     <Sidebar collapsible="icon" variant="sidebar">
       <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" className="font-semibold">
-              <span className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                V
-              </span>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{companyLabel}</span>
-                <span className="truncate text-xs text-muted-foreground">{companyDetail}</span>
-              </div>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        {companyOptions.length > 0 ? (
+          <TeamSwitcher
+            teams={companyOptions}
+            isPending={switchActiveCompany.isPending}
+            onSelect={(companyId) => switchActiveCompany.mutate({ companyId })}
+          />
+        ) : (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" className="font-semibold">
+                <span className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                  V
+                </span>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-medium">{companyLabel}</span>
+                  <span className="truncate text-xs text-muted-foreground">{companyDetail}</span>
+                </div>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        )}
       </SidebarHeader>
 
       <SidebarContent>

@@ -20,7 +20,6 @@ import {
 import { DashboardAppSidebar } from './dashboard-app-sidebar';
 import {
   canViewAdminSignals,
-  getPrimaryMembership,
   getDashboardCompanyDetail,
   getDashboardCompanyLabel,
   getDashboardCurrentSection,
@@ -36,10 +35,9 @@ export const DashboardShell = ({
 }) => {
   const location = useLocation();
   const currentSection = getDashboardCurrentSection(location.pathname);
-  const primaryMembership = getPrimaryMembership(session);
   const currentCompany = useDashboardCurrentCompany(
     apiBaseUrl,
-    Boolean(primaryMembership?.companyId),
+    Boolean(session.activeCompany),
   );
   const companyLabel = getDashboardCompanyLabel(session, currentCompany.data);
   const companyDetail = getDashboardCompanyDetail(session, currentCompany.data);

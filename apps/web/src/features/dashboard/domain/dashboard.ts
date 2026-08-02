@@ -1,4 +1,9 @@
-import type { AuthSession } from '../../auth/domain/auth';
+import type {
+  AuthMembership,
+  AuthSession,
+  CompanyLifecycle,
+} from '../../auth/domain/auth';
+import { getCompanyMemberships } from '../../auth/domain/auth';
 
 export type DashboardModule = {
   id: string;
@@ -33,6 +38,13 @@ export type DashboardCompanySummary = {
 export type DashboardCurrentCompanySummary = {
   companyId: string;
   name: string;
+};
+
+export type BlockedCompanyViewModel = {
+  status: 'suspended' | 'provisioning_failed';
+  title: string;
+  body: string;
+  supportHref: string;
 };
 
 export type DashboardNotification = {
@@ -96,43 +108,89 @@ export const adminWorkspaceLinks: AdminWorkspaceLink[] = [
 export const canViewAdminSignals = (session: AuthSession) =>
   session.memberships.some((membership) => membership.role === 'platform-admin');
 
-export const getPrimaryMembership = (session: AuthSession) => session.memberships[0] ?? null;
+export const getActiveMembership = (session: AuthSession): AuthMembership | null => {
+  if (session.activeCompany) {
+    return (
+      session.memberships.find(
+        (membership) => membership.companyId === session.activeCompany?.companyId,
+      ) ?? null
+    );
+  }
+
+  return (
+    session.memberships.find((membership) => membership.role === 'platform-admin') ??
+    null
+  );
+};
+
+export const getDashboardStatusLabel = (status: CompanyLifecycle) => {
+  switch (status) {
+    case 'active':
+      return 'Activa';
+    case 'suspended':
+      return 'Suspendida';
+    case 'provisioning_failed':
+      return 'Pendiente de soporte';
+  }
+};
 
 export const getDashboardCompanyLabel = (
   session: AuthSession,
   company?: DashboardCurrentCompanySummary | null,
 ) => {
-  const primaryMembership = getPrimaryMembership(session);
+  const activeMembership = getActiveMembership(session);
 
-  if (!primaryMembership) {
+  if (session.activeCompany) {
+    return company?.name ?? 'Empresa activa';
+  }
+
+  if (canViewAdminSignals(session)) {
+    return dashboardRoleLabels['platform-admin'];
+  }
+
+  if (getCompanyMemberships(session).length > 0) {
+    return 'Selecciona una empresa';
+  }
+
+  if (!activeMembership) {
     return 'Sin empresa vinculada';
   }
 
-  if (primaryMembership.companyId) {
-    return company?.name ?? 'Empresa vinculada';
-  }
-
-  return dashboardRoleLabels[primaryMembership.role];
+  return dashboardRoleLabels[activeMembership.role];
 };
 
 export const getDashboardCompanyDetail = (
   session: AuthSession,
   company?: DashboardCurrentCompanySummary | null,
 ) => {
-  const primaryMembership = getPrimaryMembership(session);
+  const activeMembership = getActiveMembership(session);
 
-  if (!primaryMembership) {
+  if (session.activeCompany) {
+    return activeMembership
+      ? `${dashboardRoleLabels[activeMembership.role]} · ${getDashboardStatusLabel(session.activeCompany.status)}`
+      : company?.name ?? session.user.email;
+  }
+
+  if (canViewAdminSignals(session)) {
+    return dashboardRoleLabels['platform-admin'];
+  }
+
+  if (getCompanyMemberships(session).length > 0) {
+    return 'Elige una empresa para continuar';
+  }
+
+  if (!activeMembership) {
     return session.user.email;
   }
 
-  if (primaryMembership.companyId) {
-    return company?.name ? dashboardRoleLabels[primaryMembership.role] : session.user.email;
-  }
-
-  return 'Sin empresa vinculada en esta sesion';
+  return dashboardRoleLabels[activeMembership.role];
 };
 
 export const getDashboardCurrentSection = (pathname: string) => {
+  if (pathname.startsWith('/dashboard/company-status')) {
+    return 'Estado de empresa';
+  }
+
   if (pathname.startsWith('/dashboard/notifications')) {
     return 'Notificaciones';
   }
@@ -153,5 +211,18 @@ export const getVisibleDashboardModules = (session: AuthSession) => {
     return [...baseModules, ...platformAdminModules];
   }
 
+  if (!session.activeCompany) {
+    return [];
+  }
+
   return baseModules;
 };
+
+export const createBlockedCompanyViewModel = (
+  status: BlockedCompanyViewModel['status'],
+): BlockedCompanyViewModel => ({
+  status,
+  title: 'Estado de tu empresa',
+  body: 'No podemos mostrar la información de esta empresa en este momento. Contacta a soporte para continuar.',
+  supportHref: 'mailto:soporte@vimcore.app',
+});

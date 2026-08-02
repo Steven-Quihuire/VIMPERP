@@ -2,12 +2,9 @@
 
 import * as React from "react"
 import {
-  AudioWaveform,
   BookOpen,
   Bot,
-  Command,
   Frame,
-  GalleryVerticalEnd,
   Map,
   PieChart,
   Settings2,
@@ -35,19 +32,25 @@ const data = {
   },
   teams: [
     {
+      companyId: "team-1",
       name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
+      roleLabel: "Enterprise",
+      status: "active" as const,
+      isActive: true,
     },
     {
+      companyId: "team-2",
       name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
+      roleLabel: "Startup",
+      status: "active" as const,
+      isActive: false,
     },
     {
+      companyId: "team-3",
       name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
+      roleLabel: "Free",
+      status: "suspended" as const,
+      isActive: false,
     },
   ],
   navMain: [
@@ -160,7 +163,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <TeamSwitcher teams={data.teams} onSelect={() => undefined} />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
