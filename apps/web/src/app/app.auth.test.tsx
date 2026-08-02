@@ -72,13 +72,12 @@ describe('App auth flow', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Crea tu cuenta administrativa',
+        name: 'Registro',
       }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Inicia sesión' })).toHaveAttribute(
-      'href',
-      '/login',
-    );
+    expect(
+      screen.getByText('Registra tu cuenta administrativa en Vimperp'),
+    ).toBeInTheDocument();
   });
 
   it('links from login to public company registration', async () => {
@@ -161,7 +160,7 @@ describe('App auth flow', () => {
     fireEvent.change(await screen.findByLabelText('Correo corporativo'), {
       target: { value: 'owner@vimcore.test' },
     });
-    fireEvent.change(screen.getByLabelText('Usuario'), {
+    fireEvent.change(screen.getByLabelText('Nombre de tu empresa'), {
       target: { value: 'owner' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
