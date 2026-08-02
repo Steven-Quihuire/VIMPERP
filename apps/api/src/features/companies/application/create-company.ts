@@ -1,3 +1,7 @@
+import {
+  isValidEcuadorianMobile,
+  normalizeCompanyServices,
+} from '../domain/company';
 import type {
   CompanyOnboardingGateway,
   CreateCompanyInput,
@@ -21,20 +25,6 @@ const REDACTION_PATTERNS: Array<[RegExp, string]> = [
   [/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, REDACTED_VALUE],
 ];
 
-const normalizeServices = (services: string[]) => {
-  const normalizedServices = new Set<string>();
-
-  for (const service of services) {
-    const normalizedService = service.trim();
-
-    if (normalizedService.length > 0) {
-      normalizedServices.add(normalizedService);
-    }
-  }
-
-  return [...normalizedServices];
-};
-
 const sanitizeErrorSummary = (message: string) => {
   const boundedInput = message.slice(0, ERROR_SUMMARY_INPUT_MAX_LENGTH);
 
@@ -47,7 +37,9 @@ const sanitizeErrorSummary = (message: string) => {
 const toErrorSummary = (error: unknown) => {
   const message = error instanceof Error ? error.message.trim() : '';
 
-  return message.length > 0 ? sanitizeErrorSummary(message) : 'Unexpected server error';
+  return message.length > 0
+    ? sanitizeErrorSummary(message)
+    : 'Unexpected server error';
 };
 
 export const createCreateCompany = ({
@@ -68,18 +60,26 @@ export const createCreateCompany = ({
     let result: CreateCompanyResult;
 
     try {
+      const contactPhone = input.contact.phone.trim();
+
+      if (!isValidEcuadorianMobile(contactPhone)) {
+        throw new Error(
+          'The contact phone must be a valid Ecuadorian mobile number.',
+        );
+      }
+
       result = await gateway.createCompany({
         ...input,
         name: input.name.trim(),
         legalIdentifier: input.legalIdentifier.trim(),
-        services: normalizeServices(input.services),
+        services: normalizeCompanyServices(input.services),
         address: {
           country: input.address.country.trim(),
           city: input.address.city.trim(),
           exactLocation: input.address.exactLocation.trim(),
         },
         contact: {
-          phone: input.contact.phone.trim(),
+          phone: contactPhone,
           email: input.contact.email.trim().toLowerCase(),
         },
         branches: input.branches.map((branch) => ({

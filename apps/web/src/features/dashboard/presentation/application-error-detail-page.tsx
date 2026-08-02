@@ -18,12 +18,12 @@ export const ApplicationErrorDetailPage = ({
 
   return (
     <main>
-      <h1>Application error detail</h1>
+      <h1>Detalle del error de aplicación</h1>
       <p>
-        <Link to="/dashboard/admin/application-errors">Back to application errors</Link>
+        <Link to="/dashboard/admin/application-errors">Volver a errores de aplicación</Link>
       </p>
 
-      {detailQuery.isLoading ? <p>Loading application error detail...</p> : null}
+      {detailQuery.isLoading ? <p>Cargando detalle del error...</p> : null}
 
       {detailQuery.data ? (
         <>

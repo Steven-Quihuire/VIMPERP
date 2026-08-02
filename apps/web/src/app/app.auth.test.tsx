@@ -26,8 +26,8 @@ describe('App auth flow', () => {
         if (url.endsWith('/auth/me')) {
           return Promise.resolve(
             createJsonResponse(
-            { error: { code: 'UNAUTHORIZED', message: 'Invalid session' } },
-            401,
+              { error: { code: 'UNAUTHORIZED', message: 'Invalid session' } },
+              401,
             ),
           );
         }
@@ -38,9 +38,15 @@ describe('App auth flow', () => {
 
     render(<App initialEntries={['/dashboard']} />);
 
-    expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /google/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /github/i })).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Iniciar sesión' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /google/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /github/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('renders the public register route and links back to login', async () => {
@@ -64,8 +70,15 @@ describe('App auth flow', () => {
 
     render(<App initialEntries={['/register']} />);
 
-    expect(await screen.findByRole('heading', { name: 'Crea tu cuenta administrativa' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Inicia sesión' })).toHaveAttribute('href', '/login');
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Crea tu cuenta administrativa',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Inicia sesión' })).toHaveAttribute(
+      'href',
+      '/login',
+    );
   });
 
   it('links from login to public company registration', async () => {
@@ -89,8 +102,12 @@ describe('App auth flow', () => {
 
     render(<App initialEntries={['/login']} />);
 
-    expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Registra tu empresa' })).toHaveAttribute('href', '/register');
+    expect(
+      await screen.findByRole('heading', { name: 'Iniciar sesión' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Registra tu empresa' }),
+    ).toHaveAttribute('href', '/register');
   });
 
   it('registers a public user and redirects to onboarding when no company membership exists', async () => {
@@ -102,23 +119,27 @@ describe('App auth flow', () => {
         authCalls += 1;
 
         if (authCalls === 1) {
-          return Promise.resolve(createJsonResponse(
-            { error: { code: 'UNAUTHORIZED', message: 'Invalid session' } },
-            401,
-          ));
+          return Promise.resolve(
+            createJsonResponse(
+              { error: { code: 'UNAUTHORIZED', message: 'Invalid session' } },
+              401,
+            ),
+          );
         }
 
-        return Promise.resolve(createJsonResponse(
-          {
-            user: {
-              id: 'user-1',
-              email: 'owner@vimcore.test',
-              username: 'owner',
+        return Promise.resolve(
+          createJsonResponse(
+            {
+              user: {
+                id: 'user-1',
+                email: 'owner@vimcore.test',
+                username: 'owner',
+              },
+              memberships: [],
             },
-            memberships: [],
-          },
-          200,
-        ));
+            200,
+          ),
+        );
       }
 
       if (url.endsWith('/me/preferences')) {
@@ -155,7 +176,11 @@ describe('App auth flow', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta' }));
 
-    expect(await screen.findByRole('heading', { name: 'Company onboarding' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Registro de información de a la empresa',
+      }),
+    ).toBeInTheDocument();
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -175,23 +200,27 @@ describe('App auth flow', () => {
             readUrl(value).endsWith('/auth/me'),
           ).length === 1
         ) {
-          return Promise.resolve(createJsonResponse(
-            { error: { code: 'UNAUTHORIZED', message: 'Invalid session' } },
-            401,
-          ));
+          return Promise.resolve(
+            createJsonResponse(
+              { error: { code: 'UNAUTHORIZED', message: 'Invalid session' } },
+              401,
+            ),
+          );
         }
 
-        return Promise.resolve(createJsonResponse(
-          {
-            user: {
-              id: 'user-1',
-              email: 'owner@vimcore.test',
-              username: 'owner',
+        return Promise.resolve(
+          createJsonResponse(
+            {
+              user: {
+                id: 'user-1',
+                email: 'owner@vimcore.test',
+                username: 'owner',
+              },
+              memberships: [{ companyId: 'company-1', role: 'company-owner' }],
             },
-            memberships: [{ companyId: 'company-1', role: 'company-owner' }],
-          },
-          200,
-        ));
+            200,
+          ),
+        );
       }
 
       if (url.endsWith('/me/preferences')) {
@@ -200,7 +229,10 @@ describe('App auth flow', () => {
 
       if (url.endsWith('/me/company')) {
         return Promise.resolve(
-          createJsonResponse({ companyId: 'company-1', name: 'Northwind' }, 200),
+          createJsonResponse(
+            { companyId: 'company-1', name: 'Northwind' },
+            200,
+          ),
         );
       }
 
@@ -224,7 +256,9 @@ describe('App auth flow', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
 
-    expect(await screen.findByRole('heading', { name: 'ERP dashboard' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'ERP dashboard' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('owner@vimcore.test')).toBeInTheDocument();
 
     await waitFor(() => {

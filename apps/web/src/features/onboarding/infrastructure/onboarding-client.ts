@@ -2,7 +2,7 @@ import { createAuthRepository } from '../../auth/infrastructure/auth-client';
 import type { AuthSession } from '../../auth/domain/auth';
 import { getApiBaseUrl } from '../../../shared/lib/http/api-base-url';
 import { createHttpClient } from '../../../shared/lib/http/http-client';
-import type { PaletteId } from '../domain/onboarding';
+import type { ErpModuleId, PaletteId } from '../domain/onboarding';
 
 export type CreateCompanyPayload = {
   name: string;
@@ -18,6 +18,7 @@ export type CreateCompanyPayload = {
     email: string;
   };
   paletteId: PaletteId;
+  erpModuleId: ErpModuleId;
 };
 
 export const createOnboardingRepository = (apiBaseUrl = getApiBaseUrl()) => {
@@ -28,7 +29,10 @@ export const createOnboardingRepository = (apiBaseUrl = getApiBaseUrl()) => {
     createCompany: async (payload: CreateCompanyPayload) => {
       const response = await httpClient.post('/companies', payload);
 
-      return (await response.json()) as { companyId: string; paletteId: PaletteId };
+      return (await response.json()) as {
+        companyId: string;
+        paletteId: PaletteId;
+      };
     },
     getPalettePreference: async () => {
       return httpClient.get<{ paletteId: PaletteId }>('/me/preferences');

@@ -31,6 +31,7 @@ const readErrorMessage = async (response: Response) => {
 export const createHttpClient = (baseUrl: string): HttpClient => ({
   get: async <T>(path: string) => {
     const response = await fetch(`${baseUrl}${path}`, {
+      cache: 'no-store',
       credentials: 'include',
       headers: {
         Accept: 'application/json',

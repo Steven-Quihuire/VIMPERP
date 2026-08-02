@@ -11,9 +11,16 @@ type PaletteTokens = {
   text: string;
 };
 
-export const defaultPaletteId: PaletteId = 'ocean';
+export const defaultPaletteId: PaletteId = 'mono';
 
 export const paletteTokens: Record<PaletteId, PaletteTokens> = {
+  mono: {
+    surface: '#f5f5f5',
+    background: '#ffffff',
+    border: '#d4d4d4',
+    accent: '#171717',
+    text: '#171717',
+  },
   ocean: {
     surface: '#f5f5f5',
     background: '#ffffff',

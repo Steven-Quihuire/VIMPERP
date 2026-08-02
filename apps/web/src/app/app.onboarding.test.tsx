@@ -20,27 +20,37 @@ const completeRequiredOnboardingFields = () => {
   fireEvent.change(screen.getByLabelText('Company name'), {
     target: { value: 'Vimcore Labs' },
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
   fireEvent.change(screen.getByLabelText('Legal or tax identifier'), {
-    target: { value: 'RFC-123456' },
+    target: { value: '1710034065001' },
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-  fireEvent.change(screen.getByLabelText('Services'), {
-    target: { value: 'Implementation, Support' },
+  fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+  const servicesInput = screen.getByLabelText('Services');
+  fireEvent.change(servicesInput, { target: { value: 'Implementation' } });
+  fireEvent.keyDown(servicesInput, { key: 'Enter', code: 'Enter' });
+  fireEvent.change(servicesInput, { target: { value: 'Support' } });
+  fireEvent.keyDown(servicesInput, { key: 'Enter', code: 'Enter' });
+  fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+  fireEvent.change(screen.getByLabelText('Country'), {
+    target: { value: 'Mexico' },
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-  fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'Mexico' } });
-  fireEvent.change(screen.getByLabelText('City'), { target: { value: 'Monterrey' } });
+  fireEvent.change(screen.getByLabelText('City'), {
+    target: { value: 'Monterrey' },
+  });
   fireEvent.change(screen.getByLabelText('Exact location'), {
     target: { value: 'San Pedro 123' },
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-  fireEvent.change(screen.getByLabelText('Contact phone'), {
-    target: { value: '+52 81 5555 0000' },
+  fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+  fireEvent.change(screen.getByLabelText('Teléfono celular ecuatoriano'), {
+    target: { value: '0991234567' },
   });
-  fireEvent.change(screen.getByLabelText('Contact email'), {
+  fireEvent.change(screen.getByLabelText('Correo electrónico'), {
     target: { value: 'ops@vimcore.test' },
   });
+  fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+  fireEvent.click(screen.getByRole('button', { name: /Ocean/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+  fireEvent.click(screen.getByRole('button', { name: /Inventario/ }));
 };
 
 describe('App onboarding flow', () => {
@@ -70,7 +80,10 @@ describe('App onboarding flow', () => {
 
       if (url.endsWith('/me/company')) {
         return Promise.resolve(
-          createJsonResponse({ companyId: 'company-1', name: 'Vimcore Labs' }, 200),
+          createJsonResponse(
+            { companyId: 'company-1', name: 'Vimcore Labs' },
+            200,
+          ),
         );
       }
 
@@ -81,12 +94,16 @@ describe('App onboarding flow', () => {
 
     render(<App initialEntries={['/dashboard']} />);
 
-    expect(await screen.findByRole('heading', { name: 'Company onboarding' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Registro de información de a la empresa',
+      }),
+    ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
 
     expect(
-      await screen.findByText('Complete the account step before continuing.'),
+      await screen.findByText('Nombre de empresa incompleto'),
     ).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalledWith(
       '/api/companies',
@@ -126,9 +143,151 @@ describe('App onboarding flow', () => {
     render(<App initialEntries={['/onboarding']} />);
 
     expect(
-      await screen.findByRole('heading', { name: 'Company onboarding' }),
+      await screen.findByRole('heading', {
+        name: 'Registro de información de a la empresa',
+      }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText('Company name')).toHaveValue('vimcore_labs');
+  });
+
+  it('hides the service input at five services and restores it after removal', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = readUrl(input);
+
+      if (url.endsWith('/auth/me')) {
+        return Promise.resolve(
+          createJsonResponse(
+            {
+              user: {
+                id: 'user-1',
+                email: 'owner@vimcore.test',
+                username: 'owner',
+              },
+              memberships: [],
+            },
+            200,
+          ),
+        );
+      }
+
+      throw new Error(`unexpected request: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App initialEntries={['/onboarding']} />);
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Registro de información de a la empresa',
+      }),
+    ).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Company name'), {
+      target: { value: 'Vimcore Labs' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+    fireEvent.change(screen.getByLabelText('Legal or tax identifier'), {
+      target: { value: '1710034065001' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+
+    for (const service of [
+      'Ventas',
+      'Consultoría',
+      'Desarrollo',
+      'Soporte',
+      'Auditoría',
+    ]) {
+      const input = screen.getByLabelText('Services');
+      fireEvent.change(input, { target: { value: service } });
+      fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+    }
+
+    expect(screen.queryByLabelText('Services')).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Has llegado al máximo de 5 servicios.'),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar Ventas' }));
+
+    expect(screen.getByLabelText('Services')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Escribe un servicio y presiona Enter para agregarlo (máximo 5).',
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+    fireEvent.change(screen.getByLabelText('City'), {
+      target: { value: 'Quito' },
+    });
+    fireEvent.change(screen.getByLabelText('Exact location'), {
+      target: { value: 'Av. República 123' },
+    });
+
+    expect(screen.getByLabelText('Preview company location')).toHaveTextContent(
+      'Quito, Ecuador',
+    );
+    expect(screen.getByLabelText('Preview company location')).toHaveTextContent(
+      'Av. República 123',
+    );
+  });
+
+  it('restores the saved onboarding draft and step after the user logs back in', async () => {
+    globalThis.localStorage.setItem(
+      'vimcore:onboarding:user-1',
+      JSON.stringify({
+        draft: {
+          companyName: 'Vimcore Labs',
+          legalIdentifier: '1710034065001',
+          servicesInput: 'Implementation, Support',
+          country: 'Mexico',
+          city: 'Monterrey',
+          exactLocation: 'San Pedro 123',
+          contactPhone: '',
+          contactEmail: 'owner@vimcore.test',
+          paletteId: 'ocean',
+        },
+        currentStepIndex: 4,
+      }),
+    );
+
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = readUrl(input);
+
+      if (url.endsWith('/auth/me')) {
+        return Promise.resolve(
+          createJsonResponse(
+            {
+              user: {
+                id: 'user-1',
+                email: 'owner@vimcore.test',
+                username: 'vimcore_labs',
+              },
+              memberships: [],
+            },
+            200,
+          ),
+        );
+      }
+
+      throw new Error(`unexpected request: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App initialEntries={['/onboarding']} />);
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Registro de información de a la empresa',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Vimcore Labs')).toBeInTheDocument();
+    expect(screen.getByText('Paso 5')).toBeInTheDocument();
+    expect(screen.getByLabelText('Correo electrónico')).toHaveValue(
+      'owner@vimcore.test',
+    );
   });
 
   it('submits the authenticated onboarding flow and reaches the dashboard', async () => {
@@ -173,7 +332,10 @@ describe('App onboarding flow', () => {
       if (url.endsWith('/companies')) {
         expect(init?.method).toBe('POST');
         return Promise.resolve(
-          createJsonResponse({ companyId: 'company-1', paletteId: 'ocean' }, 201),
+          createJsonResponse(
+            { companyId: 'company-1', paletteId: 'ocean' },
+            201,
+          ),
         );
       }
 
@@ -183,7 +345,10 @@ describe('App onboarding flow', () => {
 
       if (url.endsWith('/me/company')) {
         return Promise.resolve(
-          createJsonResponse({ companyId: 'company-1', name: 'Vimcore Labs' }, 200),
+          createJsonResponse(
+            { companyId: 'company-1', name: 'Vimcore Labs' },
+            200,
+          ),
         );
       }
 
@@ -194,19 +359,28 @@ describe('App onboarding flow', () => {
 
     render(<App initialEntries={['/onboarding']} />);
 
-    expect(await screen.findByRole('heading', { name: 'Company onboarding' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Registro de información de a la empresa',
+      }),
+    ).toBeInTheDocument();
 
     completeRequiredOnboardingFields();
-    fireEvent.change(screen.getByLabelText('Palette'), {
-      target: { value: 'ocean' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Create company' }));
+    expect(screen.getByLabelText('Preview company contact')).toHaveTextContent(
+      '0991234567',
+    );
+    expect(screen.getByLabelText('Preview company contact')).toHaveTextContent(
+      'ops@vimcore.test',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar Empresa' }));
 
-    expect(await screen.findByRole('heading', { name: 'ERP dashboard' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'ERP dashboard' }),
+    ).toBeInTheDocument();
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
-      '/api/companies',
+        '/api/companies',
         expect.objectContaining({ method: 'POST' }),
       );
     });
@@ -247,14 +421,20 @@ describe('App onboarding flow', () => {
 
     render(<App initialEntries={['/onboarding']} />);
 
-    expect(await screen.findByRole('heading', { name: 'Company onboarding' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Registro de información de a la empresa',
+      }),
+    ).toBeInTheDocument();
 
     completeRequiredOnboardingFields();
-    fireEvent.click(screen.getByRole('button', { name: 'Create company' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Create company' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar Empresa' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar Empresa' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Creating company...' })).toBeDisabled();
+      expect(
+        screen.getByRole('button', { name: 'Creando empresa...' }),
+      ).toBeDisabled();
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(resolveCreateCompany).toBeDefined();
@@ -281,7 +461,9 @@ describe('App onboarding flow', () => {
       }
 
       if (url.endsWith('/me/preferences') && init?.method === 'PATCH') {
-        return Promise.resolve(createJsonResponse({ paletteId: 'forest' }, 200));
+        return Promise.resolve(
+          createJsonResponse({ paletteId: 'forest' }, 200),
+        );
       }
 
       if (url.endsWith('/me/preferences')) {
@@ -295,7 +477,9 @@ describe('App onboarding flow', () => {
 
     render(<App initialEntries={['/dashboard/settings/theme']} />);
 
-    expect(await screen.findByRole('heading', { name: 'Paleta de colores' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Paleta de colores' }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Soft Graphite/i }));
 

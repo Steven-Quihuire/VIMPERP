@@ -18,6 +18,8 @@ import { ApplicationErrorsListPage } from '../features/dashboard/presentation/ap
 import { AuditEventDetailPage } from '../features/dashboard/presentation/audit-event-detail-page';
 import { AuditEventsListPage } from '../features/dashboard/presentation/audit-events-list-page';
 import { DashboardPage } from '../features/dashboard/presentation/dashboard-page';
+import { AdminCompaniesPage } from '../features/dashboard/presentation/admin-companies-page';
+import { DashboardNotificationsPage } from '../features/dashboard/presentation/dashboard-notifications-page';
 import { DashboardProfileSettingsPage } from '../features/dashboard/presentation/dashboard-profile-settings-page';
 import { DashboardShell } from '../features/dashboard/presentation/dashboard-shell';
 import { DashboardThemeSettingsPage } from '../features/dashboard/presentation/dashboard-theme-settings-page';
@@ -216,11 +218,23 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
           }
         />
         <Route
+          path="notifications"
+          element={<DashboardNotificationsPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
           path="admin"
           element={
             <ProtectedAdminDashboard {...(apiBaseUrl ? { apiBaseUrl } : {})} />
           }
         >
+          <Route
+            index
+            element={<Navigate to="companies" replace />}
+          />
+          <Route
+            path="companies"
+            element={<AdminCompaniesPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+          />
           <Route
             path="provisioning-runs"
             element={
@@ -267,6 +281,8 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
           />
         </Route>
       </Route>
+      <Route path="/enterprise" element={<Navigate to="/dashboard/admin/companies" replace />} />
+      <Route path="/companies" element={<Navigate to="/dashboard/admin/companies" replace />} />
       <Route
         path="/onboarding"
         element={

@@ -12,6 +12,7 @@ import {
   DuplicateIdentityError,
   ForbiddenError,
   InvalidSessionError,
+  TooManyRequestsError,
   UnauthorizedError,
 } from '../../features/identity/domain/auth';
 import {
@@ -46,10 +47,17 @@ export const createErrorMiddleware = ({
       return;
     }
 
-    if (error instanceof ForbiddenError) {
-      response.status(403).json(toResponseBody('FORBIDDEN', error.message));
-      return;
-    }
+  if (error instanceof ForbiddenError) {
+    response.status(403).json(toResponseBody('FORBIDDEN', error.message));
+    return;
+  }
+
+  if (error instanceof TooManyRequestsError) {
+    response
+      .status(429)
+      .json(toResponseBody('TOO_MANY_REQUESTS', error.message));
+    return;
+  }
 
     if (error instanceof DuplicateIdentityError) {
       response.status(409).json(toResponseBody('AUTH_CONFLICT', error.message));

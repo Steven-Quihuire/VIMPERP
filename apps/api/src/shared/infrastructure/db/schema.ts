@@ -52,6 +52,12 @@ export const itemTrackBatchModeEnum = pgEnum('item_track_batch_mode', [
   'serial',
 ]);
 
+export const companyStatusEnum = pgEnum('company_status', [
+  'active',
+  'suspended',
+  'provisioning_failed',
+]);
+
 export const usersTable = pgTable('users', {
   id: text('id').primaryKey(),
   email: text('email').notNull().unique(),
@@ -74,7 +80,13 @@ export const membershipsTable = pgTable('memberships', {
 export const companiesTable = pgTable('companies', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
+  status: companyStatusEnum('status').notNull().default('active'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+});
+
+export const userPreferencesTable = pgTable('user_preferences', {
+  userId: text('user_id').primaryKey(),
+  activeCompanyId: text('active_company_id').references(() => companiesTable.id),
 });
 
 export const companyProfilesTable = pgTable('company_profiles', {
@@ -86,48 +98,82 @@ export const companyProfilesTable = pgTable('company_profiles', {
   exactLocation: text('exact_location').notNull(),
   contactPhone: text('contact_phone').notNull(),
   contactEmail: text('contact_email').notNull(),
+  erpModuleId: text('erp_module_id').notNull().default('inventory'),
 });
 
-export const companyServicesTable = pgTable('company_services', {
-  id: text('id').primaryKey(),
-  companyId: text('company_id').notNull(),
-  name: text('name').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
-}, (table) => [uniqueIndex('company_services_company_name_idx').on(table.companyId, table.name)]);
+export const companyServicesTable = pgTable(
+  'company_services',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id').notNull(),
+    name: text('name').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('company_services_company_name_idx').on(
+      table.companyId,
+      table.name,
+    ),
+  ],
+);
 
-export const itemCategoriesTable = pgTable('item_categories', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  companyId: text('company_id').notNull().references(() => companiesTable.id),
-  parentId: uuid('parent_id').references((): AnyPgColumn => itemCategoriesTable.id),
-  name: text('name').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-}, (table) => [
-  uniqueIndex('item_categories_company_parent_name_idx').on(
-    table.companyId,
-    table.parentId,
-    table.name,
-  ),
-]);
+export const itemCategoriesTable = pgTable(
+  'item_categories',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id),
+    parentId: uuid('parent_id').references(
+      (): AnyPgColumn => itemCategoriesTable.id,
+    ),
+    name: text('name').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('item_categories_company_parent_name_idx').on(
+      table.companyId,
+      table.parentId,
+      table.name,
+    ),
+  ],
+);
 
-export const itemsTable = pgTable('items', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  companyId: text('company_id').notNull().references(() => companiesTable.id),
-  categoryId: uuid('category_id').references(() => itemCategoriesTable.id),
-  sku: text('sku'),
-  name: text('name').notNull(),
-  type: itemTypeEnum('type').notNull().default('product'),
-  unit: itemUnitEnum('unit').notNull().default('unit'),
-  unitPrice: numeric('unit_price', { precision: 12, scale: 2 }).notNull().default('0'),
-  tracksStock: boolean('tracks_stock').notNull().default(false),
-  trackBatchMode: itemTrackBatchModeEnum('track_batch_mode').notNull().default('none'),
-  deletedAt: timestamp('deleted_at', { withTimezone: true }),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-}, (table) => [
-  uniqueIndex('items_company_sku_idx')
-    .on(table.companyId, table.sku)
-    .where(sql`${table.sku} IS NOT NULL`),
-]);
+export const itemsTable = pgTable(
+  'items',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id),
+    categoryId: uuid('category_id').references(() => itemCategoriesTable.id),
+    sku: text('sku'),
+    name: text('name').notNull(),
+    type: itemTypeEnum('type').notNull().default('product'),
+    unit: itemUnitEnum('unit').notNull().default('unit'),
+    unitPrice: numeric('unit_price', { precision: 12, scale: 2 })
+      .notNull()
+      .default('0'),
+    tracksStock: boolean('tracks_stock').notNull().default(false),
+    trackBatchMode: itemTrackBatchModeEnum('track_batch_mode')
+      .notNull()
+      .default('none'),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('items_company_sku_idx')
+      .on(table.companyId, table.sku)
+      .where(sql`${table.sku} IS NOT NULL`),
+  ],
+);
 
 export const branchesTable = pgTable('branches', {
   id: text('id').primaryKey(),
@@ -142,78 +188,107 @@ export const themePreferencesTable = pgTable('theme_preferences', {
   paletteId: text('palette_id').notNull(),
 });
 
-export const notificationsTable = pgTable('notifications', {
-  id: text('id').primaryKey(),
-  companyId: text('company_id').notNull(),
-  targetRole: authRoleEnum('target_role').notNull(),
-  type: text('type').notNull(),
-  message: text('message').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
-}, (table) => [index('notifications_target_role_idx').on(table.targetRole)]);
+export const notificationsTable = pgTable(
+  'notifications',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id').notNull(),
+    targetRole: authRoleEnum('target_role').notNull(),
+    type: text('type').notNull(),
+    message: text('message').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [index('notifications_target_role_idx').on(table.targetRole)],
+);
 
-export const auditEventsTable = pgTable('audit_events', {
-  id: text('id').primaryKey(),
-  actorUserId: text('actor_user_id').notNull(),
-  companyId: text('company_id').notNull(),
-  type: text('type').notNull(),
-  correlationId: text('correlation_id'),
-  entityType: text('entity_type'),
-  entityId: text('entity_id'),
-  details: jsonb('details').notNull(),
-  oldValues: jsonb('old_values'),
-  newValues: jsonb('new_values'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
-}, (table) => [
-  index('audit_events_company_created_at_idx').on(table.companyId, table.createdAt),
-  index('audit_events_correlation_id_idx').on(table.correlationId),
-]);
+export const auditEventsTable = pgTable(
+  'audit_events',
+  {
+    id: text('id').primaryKey(),
+    actorUserId: text('actor_user_id').notNull(),
+    companyId: text('company_id').notNull(),
+    type: text('type').notNull(),
+    correlationId: text('correlation_id'),
+    entityType: text('entity_type'),
+    entityId: text('entity_id'),
+    details: jsonb('details').notNull(),
+    oldValues: jsonb('old_values'),
+    newValues: jsonb('new_values'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    index('audit_events_company_created_at_idx').on(
+      table.companyId,
+      table.createdAt,
+    ),
+    index('audit_events_correlation_id_idx').on(table.correlationId),
+  ],
+);
 
-export const provisioningRunsTable = pgTable('provisioning_runs', {
-  id: text('id').primaryKey(),
-  correlationId: text('correlation_id').notNull(),
-  requestId: text('request_id').notNull(),
-  actorUserId: text('actor_user_id').notNull(),
-  process: text('process').notNull(),
-  status: provisioningStatusEnum('status').notNull(),
-  attempt: integer('attempt').notNull().default(1),
-  idempotencyKey: text('idempotency_key'),
-  errorSummary: text('error_summary'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
-}, (table) => [
-  uniqueIndex('provisioning_runs_process_idempotency_idx')
-    .on(table.process, table.idempotencyKey)
-    .where(sql`${table.idempotencyKey} IS NOT NULL`),
-  index('provisioning_runs_correlation_id_idx').on(table.correlationId),
-  index('provisioning_runs_status_created_at_idx').on(table.status, table.createdAt),
-]);
+export const provisioningRunsTable = pgTable(
+  'provisioning_runs',
+  {
+    id: text('id').primaryKey(),
+    correlationId: text('correlation_id').notNull(),
+    requestId: text('request_id').notNull(),
+    actorUserId: text('actor_user_id').notNull(),
+    process: text('process').notNull(),
+    status: provisioningStatusEnum('status').notNull(),
+    attempt: integer('attempt').notNull().default(1),
+    idempotencyKey: text('idempotency_key'),
+    errorSummary: text('error_summary'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('provisioning_runs_process_idempotency_idx')
+      .on(table.process, table.idempotencyKey)
+      .where(sql`${table.idempotencyKey} IS NOT NULL`),
+    index('provisioning_runs_correlation_id_idx').on(table.correlationId),
+    index('provisioning_runs_status_created_at_idx').on(
+      table.status,
+      table.createdAt,
+    ),
+  ],
+);
 
-export const provisioningStepsTable = pgTable('provisioning_steps', {
-  id: text('id').primaryKey(),
-  runId: text('run_id').notNull(),
-  name: text('name').notNull(),
-  status: provisioningStepStatusEnum('status').notNull(),
-  attempt: integer('attempt').notNull().default(1),
-  detail: jsonb('detail'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
-}, (table) => [
-  index('provisioning_steps_run_id_created_at_idx').on(table.runId, table.createdAt),
-  index('provisioning_steps_status_idx').on(table.status),
-]);
+export const provisioningStepsTable = pgTable(
+  'provisioning_steps',
+  {
+    id: text('id').primaryKey(),
+    runId: text('run_id').notNull(),
+    name: text('name').notNull(),
+    status: provisioningStepStatusEnum('status').notNull(),
+    attempt: integer('attempt').notNull().default(1),
+    detail: jsonb('detail'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    index('provisioning_steps_run_id_created_at_idx').on(
+      table.runId,
+      table.createdAt,
+    ),
+    index('provisioning_steps_status_idx').on(table.status),
+  ],
+);
 
-export const applicationErrorsTable = pgTable('application_errors', {
-  id: text('id').primaryKey(),
-  correlationId: text('correlation_id').notNull(),
-  requestId: text('request_id').notNull(),
-  fingerprint: text('fingerprint').notNull(),
-  status: text('status').notNull(),
-  code: text('code').notNull(),
-  message: text('message').notNull(),
-  stack: text('stack'),
-  context: jsonb('context'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
-}, (table) => [
-  index('application_errors_correlation_id_idx').on(table.correlationId),
-  index('application_errors_fingerprint_idx').on(table.fingerprint),
-  index('application_errors_created_at_idx').on(table.createdAt),
-]);
+export const applicationErrorsTable = pgTable(
+  'application_errors',
+  {
+    id: text('id').primaryKey(),
+    correlationId: text('correlation_id').notNull(),
+    requestId: text('request_id').notNull(),
+    fingerprint: text('fingerprint').notNull(),
+    status: text('status').notNull(),
+    code: text('code').notNull(),
+    message: text('message').notNull(),
+    stack: text('stack'),
+    context: jsonb('context'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    index('application_errors_correlation_id_idx').on(table.correlationId),
+    index('application_errors_fingerprint_idx').on(table.fingerprint),
+    index('application_errors_created_at_idx').on(table.createdAt),
+  ],
+);

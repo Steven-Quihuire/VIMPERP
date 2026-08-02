@@ -18,12 +18,12 @@ export const AuditEventDetailPage = ({
 
   return (
     <main>
-      <h1>Audit event detail</h1>
+      <h1>Detalle del evento de auditoría</h1>
       <p>
-        <Link to="/dashboard/admin/audit-events">Back to audit events</Link>
+        <Link to="/dashboard/admin/audit-events">Volver a eventos de auditoría</Link>
       </p>
 
-      {detailQuery.isLoading ? <p>Loading audit event detail...</p> : null}
+      {detailQuery.isLoading ? <p>Cargando detalle del evento...</p> : null}
 
       {detailQuery.data ? (
         <>

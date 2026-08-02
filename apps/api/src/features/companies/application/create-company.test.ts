@@ -20,14 +20,12 @@ const buildInput = (): CreateCompanyInput => ({
     exactLocation: ' San Pedro 123 ',
   },
   contact: {
-    phone: ' +52 81 5555 0000 ',
+    phone: ' 0991234567 ',
     email: ' OPS@VIMCORE.TEST ',
   },
   paletteId: 'ocean',
-  branches: [
-    { name: ' HQ ', locale: ' es-MX ' },
-    { name: ' Remote ' },
-  ],
+  erpModuleId: 'inventory',
+  branches: [{ name: ' HQ ', locale: ' es-MX ' }, { name: ' Remote ' }],
 });
 
 const createRecorder = (): ProvisioningRecorder => ({
@@ -70,13 +68,10 @@ describe('createCreateCompany', () => {
         exactLocation: 'San Pedro 123',
       },
       contact: {
-        phone: '+52 81 5555 0000',
+        phone: '0991234567',
         email: 'ops@vimcore.test',
       },
-      branches: [
-        { name: 'HQ', locale: 'es-MX' },
-        { name: 'Remote' },
-      ],
+      branches: [{ name: 'HQ', locale: 'es-MX' }, { name: 'Remote' }],
     });
     expect(recorder.succeedRun).toHaveBeenCalledWith({
       runId: 'run-1',
@@ -94,7 +89,9 @@ describe('createCreateCompany', () => {
 
   it('returns the created company when success finalization fails after the atomic transaction commits', async () => {
     const recorder = createRecorder();
-    vi.mocked(recorder.succeedRun).mockRejectedValue(new Error('recorder unavailable'));
+    vi.mocked(recorder.succeedRun).mockRejectedValue(
+      new Error('recorder unavailable'),
+    );
     const gateway: CompanyOnboardingGateway = {
       createCompany: vi.fn().mockResolvedValue({
         companyId: 'company-1',
@@ -128,7 +125,13 @@ describe('createCreateCompany', () => {
 
     await createCompany({
       ...buildInput(),
-      services: [' Implementation ', 'Implementation', ' ', 'Support', 'Support '],
+      services: [
+        ' Implementation ',
+        'Implementation',
+        ' ',
+        'Support',
+        'Support ',
+      ],
     });
 
     expect(gateway.createCompany).toHaveBeenCalledWith(
@@ -149,7 +152,9 @@ describe('createCreateCompany', () => {
     };
     const createCompany = createCreateCompany({ gateway, recorder });
 
-    await expect(createCompany(buildInput())).rejects.toThrow('duplicate legal identifier');
+    await expect(createCompany(buildInput())).rejects.toThrow(
+      'duplicate legal identifier',
+    );
 
     expect(recorder.startRun).toHaveBeenCalledTimes(1);
     expect(recorder.succeedRun).not.toHaveBeenCalled();
@@ -168,7 +173,9 @@ describe('createCreateCompany', () => {
 
   it('sanitizes and bounds the failed provisioning summary before recording it', async () => {
     const recorder = createRecorder();
-    const gatewayError = new Error(`upstream failed with password=super-secret ${'x'.repeat(800)}`);
+    const gatewayError = new Error(
+      `upstream failed with password=super-secret ${'x'.repeat(800)}`,
+    );
     const gateway: CompanyOnboardingGateway = {
       createCompany: vi.fn().mockRejectedValue(gatewayError),
       getCurrentCompanySummary: vi.fn(),

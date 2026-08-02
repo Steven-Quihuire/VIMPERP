@@ -75,6 +75,26 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
   async listMemberships(userId: string) {
     return await Promise.resolve(this.membershipsByUserId.get(userId) ?? []);
   }
+
+  async findActiveCompanyId() {
+    return await Promise.resolve(null);
+  }
+
+  async findCompanyStatus() {
+    return await Promise.resolve('active' as const);
+  }
+
+  async setActiveCompanyId() {
+    await Promise.resolve();
+  }
+
+  async countRecentActiveCompanySwitches() {
+    return await Promise.resolve(0);
+  }
+
+  async recordActiveCompanySwitch() {
+    await Promise.resolve();
+  }
 }
 
 class InMemoryItemGateway implements ItemCatalogGateway, CategoryGateway {

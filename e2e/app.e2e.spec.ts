@@ -9,7 +9,14 @@ const pnpmCommand = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 const resetAndSeedOwner = () => {
   execFileSync(
     pnpmCommand,
-    ['--filter', 'api', 'exec', 'tsx', 'src/testing/e2e-state.ts', 'reset-and-seed-owner'],
+    [
+      '--filter',
+      'api',
+      'exec',
+      'tsx',
+      'src/testing/e2e-state.ts',
+      'reset-and-seed-owner',
+    ],
     {
       cwd: process.cwd(),
       env: {
@@ -25,16 +32,22 @@ test.beforeEach(() => {
   resetAndSeedOwner();
 });
 
-test('supports owner onboarding, palette persistence, and admin company visibility', async ({ page }) => {
+test('supports owner onboarding, palette persistence, and admin company visibility', async ({
+  page,
+}) => {
   await page.goto('/dashboard');
 
-  await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Iniciar sesión' }),
+  ).toBeVisible();
 
   await page.getByLabel('Correo o usuario').fill('owner');
   await page.getByRole('textbox', { name: 'Contraseña' }).fill('secret123');
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Company onboarding' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Company onboarding' }),
+  ).toBeVisible();
 
   await page.getByLabel('Company name').fill('Vimcore Labs');
   await page.getByRole('button', { name: 'Continue' }).click();
@@ -46,12 +59,14 @@ test('supports owner onboarding, palette persistence, and admin company visibili
   await page.getByLabel('City').fill('Monterrey');
   await page.getByLabel('Exact location').fill('San Pedro 123');
   await page.getByRole('button', { name: 'Continue' }).click();
-  await page.getByLabel('Contact phone').fill('+52 81 5555 0000');
-  await page.getByLabel('Contact email').fill('ops@vimcore.test');
+  await page.getByLabel('Teléfono celular ecuatoriano').fill('0991234567');
+  await page.getByLabel('Correo electrónico').fill('ops@vimcore.test');
   await page.getByLabel('Palette').selectOption('ocean');
   await page.getByRole('button', { name: 'Create company' }).click();
 
-  await expect(page.getByRole('heading', { name: 'ERP dashboard' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'ERP dashboard' }),
+  ).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'ocean');
 
   await page.getByLabel('Palette preference').selectOption('forest');
@@ -59,13 +74,17 @@ test('supports owner onboarding, palette persistence, and admin company visibili
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'forest');
 
   await page.getByRole('button', { name: 'Sign out' }).click();
-  await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Iniciar sesión' }),
+  ).toBeVisible();
 
   await page.getByLabel('Correo o usuario').fill('admin');
   await page.getByRole('textbox', { name: 'Contraseña' }).fill('admin');
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Platform overview' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Platform overview' }),
+  ).toBeVisible();
   await expect(page.getByText('Vimcore Labs registered')).toBeVisible();
 });
 
@@ -78,9 +97,13 @@ test('blocks mobile browsers with desktop guidance', async ({ browser }) => {
 
   await page.goto('/dashboard');
 
-  await expect(page.getByRole('heading', { name: 'Desktop browser required' })).toBeVisible();
   await expect(
-    page.getByText('Please continue from a desktop or laptop browser to use Vimcore ERP.'),
+    page.getByRole('heading', { name: 'Desktop browser required' }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      'Please continue from a desktop or laptop browser to use Vimcore ERP.',
+    ),
   ).toBeVisible();
 
   await context.close();

@@ -19,6 +19,14 @@ export type DashboardCompanySummary = {
     id: string;
     name: string;
     createdAt: string;
+    legalIdentifier?: string;
+    services?: string[];
+    country?: string;
+    city?: string;
+    exactLocation?: string;
+    contactPhone?: string;
+    contactEmail?: string;
+    erpModuleId?: string;
   }>;
 };
 
@@ -38,6 +46,7 @@ export type DashboardNotification = {
 
 export type AdminWorkspaceLink = {
   id:
+    | 'companies'
     | 'provisioning-runs'
     | 'application-errors'
     | 'audit-events';
@@ -53,28 +62,34 @@ const baseModules: DashboardModule[] = [
 ];
 
 const platformAdminModules: DashboardModule[] = [
-  { id: 'platform-overview', label: 'Platform overview' },
-  { id: 'notifications', label: 'Notifications' },
+  { id: 'platform-overview', label: 'Resumen de plataforma' },
+  { id: 'notifications', label: 'Notificaciones' },
 ];
 
 export const adminWorkspaceLinks: AdminWorkspaceLink[] = [
   {
+    id: 'companies',
+    label: 'Empresas',
+    href: '/dashboard/admin/companies',
+    description: 'Consulta la información completa de las empresas registradas.',
+  },
+  {
     id: 'provisioning-runs',
-    label: 'Provisioning runs',
+    label: 'Procesos de alta',
     href: '/dashboard/admin/provisioning-runs',
-    description: 'Inspect onboarding run status, attempts, and recorded steps.',
+    description: 'Revisa el estado de los procesos de alta y sus pasos registrados.',
   },
   {
     id: 'application-errors',
-    label: 'Application errors',
+    label: 'Errores de aplicación',
     href: '/dashboard/admin/application-errors',
-    description: 'Inspect sanitized technical failures linked to correlation identifiers.',
+    description: 'Investiga fallos técnicos asociados a identificadores de correlación.',
   },
   {
     id: 'audit-events',
-    label: 'Audit events',
+    label: 'Eventos de auditoría',
     href: '/dashboard/admin/audit-events',
-    description: 'Inspect structured audit history for platform activity.',
+    description: 'Consulta la trazabilidad estructurada de la actividad de la plataforma.',
   },
 ];
 
@@ -118,6 +133,10 @@ export const getDashboardCompanyDetail = (
 };
 
 export const getDashboardCurrentSection = (pathname: string) => {
+  if (pathname.startsWith('/dashboard/notifications')) {
+    return 'Notificaciones';
+  }
+
   if (pathname.startsWith('/dashboard/settings')) {
     return 'Configuracion';
   }

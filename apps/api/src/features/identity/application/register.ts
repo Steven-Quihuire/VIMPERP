@@ -63,6 +63,7 @@ export const createRegister = ({
       session: {
         user: toPublicAuthUser(user),
         memberships: [],
+        activeCompany: null,
       },
     };
   };

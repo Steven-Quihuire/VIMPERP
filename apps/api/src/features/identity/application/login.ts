@@ -55,6 +55,7 @@ export const createLogin = ({
         session: {
           user: toPublicAuthUser(user),
           memberships: createSeedAdminMemberships(),
+          activeCompany: null,
         },
       };
     }
@@ -85,6 +86,7 @@ export const createLogin = ({
       session: {
         user: toPublicAuthUser(user),
         memberships,
+        activeCompany: null,
       },
     };
   };

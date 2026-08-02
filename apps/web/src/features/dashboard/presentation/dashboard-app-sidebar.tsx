@@ -15,6 +15,8 @@ import { NavLink } from 'react-router-dom';
 
 import type { AuthSession } from '../../auth/domain/auth';
 import { canViewAdminSignals } from '../domain/dashboard';
+import { useDashboardNotifications } from './use-dashboard';
+import { getReadNotificationIds, useNotificationReadVersion } from './use-dashboard';
 import {
   Sidebar,
   SidebarContent,
@@ -40,7 +42,7 @@ const workspaceItems = [
 ];
 
 const accountItems = [
-  { label: 'Notificaciones', href: '#notifications', icon: Bell },
+  { label: 'Notificaciones', href: '/dashboard/notifications', icon: Bell },
   { label: 'Perfil', href: '/dashboard/settings/profile', icon: ShieldUser },
   { label: 'Configuracion', href: '/dashboard/settings/theme', icon: Settings },
 ];
@@ -51,6 +53,7 @@ export const DashboardAppSidebar = ({
   session,
   companyLabel,
   companyDetail,
+  apiBaseUrl,
 }: {
   session: AuthSession;
   companyLabel: string;
@@ -58,6 +61,12 @@ export const DashboardAppSidebar = ({
   apiBaseUrl?: string;
 }) => {
   const isPlatformAdmin = canViewAdminSignals(session);
+  const notifications = useDashboardNotifications(apiBaseUrl, isPlatformAdmin);
+  useNotificationReadVersion();
+  const readNotificationIds = getReadNotificationIds();
+  const newCompanyCount = notifications.data?.notifications.filter(
+    (notification) => notification.type === 'company.registered' && !readNotificationIds.has(notification.id),
+  ).length ?? 0;
 
   return (
     <Sidebar collapsible="icon" variant="sidebar">
@@ -126,6 +135,15 @@ export const DashboardAppSidebar = ({
                     )}
                   </NavLink>
                 </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <NavLink to="/dashboard/admin/companies">
+                    {({ isActive }) => (
+                      <SidebarMenuButton asChild tooltip="Empresas" isActive={isActive}>
+                        <span><Building2 /><span>Empresas</span></span>
+                      </SidebarMenuButton>
+                    )}
+                  </NavLink>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -151,6 +169,12 @@ export const DashboardAppSidebar = ({
                           <span>
                             <item.icon />
                             <span>{item.label}</span>
+                            {item.label === 'Notificaciones' && newCompanyCount > 0 ? (
+                              <span
+                                className="ml-auto size-2 rounded-full bg-red-500"
+                                aria-label={`${newCompanyCount} empresa(s) nueva(s)`}
+                              />
+                            ) : null}
                           </span>
                         </SidebarMenuButton>
                       )}

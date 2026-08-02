@@ -1,6 +1,14 @@
-import { Bell, Building2, ShieldCheck } from 'lucide-react';
+import {
+  Activity,
+  ArrowUpRight,
+  Bell,
+  Building2,
+  ShieldCheck,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 
-import type { AuthSession } from '../../auth/domain/auth';
+import { Badge } from '../../../shared/ui/badge';
+import { Button } from '../../../shared/ui/button';
 import {
   Card,
   CardContent,
@@ -8,13 +16,13 @@ import {
   CardHeader,
   CardTitle,
 } from '../../../shared/ui/card';
-import { Button } from '../../../shared/ui/button';
+import type { AuthSession } from '../../auth/domain/auth';
 import {
   adminWorkspaceLinks,
   canViewAdminSignals,
-  getPrimaryMembership,
   getDashboardCompanyDetail,
   getDashboardCompanyLabel,
+  getPrimaryMembership,
   getVisibleDashboardModules,
 } from '../domain/dashboard';
 import {
@@ -41,109 +49,167 @@ export const DashboardPage = ({
   const notifications = useDashboardNotifications(apiBaseUrl, isPlatformAdmin);
   const companyLabel = getDashboardCompanyLabel(session, currentCompany.data);
   const companyDetail = getDashboardCompanyDetail(session, currentCompany.data);
+  const notificationsList = notifications.data?.notifications ?? [];
+  const newCompanyCount = notificationsList.filter(
+    (notification) => notification.type === 'company.registered',
+  ).length;
+  const formatDate = (value: string) =>
+    new Intl.DateTimeFormat('es-EC', { dateStyle: 'medium' }).format(
+      new Date(value),
+    );
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-sm text-muted-foreground">{companyLabel}</p>
-          <h1 className="text-3xl font-semibold tracking-tight">ERP dashboard</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            ERP dashboard
+          </h1>
           <p className="text-sm text-muted-foreground">{companyDetail}</p>
         </div>
-        <div className="text-sm text-muted-foreground">{session.user.email}</div>
+        <div className="text-sm text-muted-foreground">
+          {session.user.email}
+        </div>
       </div>
 
       {isPlatformAdmin ? (
-        <section className="grid gap-4">
-          <Card>
+        <section className="grid gap-6">
+          <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/[0.08] via-card to-card">
             <CardHeader className="flex flex-row items-start justify-between gap-4">
               <div>
-                <CardDescription>Platform overview</CardDescription>
-                <h2 className="text-2xl font-semibold tracking-tight">Platform overview</h2>
-                <CardDescription>Seguimiento de companias, alertas y eventos auditables del sistema.</CardDescription>
+                <CardDescription>Administración de plataforma</CardDescription>
+                <h2 className="mt-1 text-2xl font-semibold tracking-tight">
+                  Todo bajo control
+                </h2>
+                <CardDescription className="mt-2 max-w-2xl">
+                  Supervisa empresas, actividad operativa y señales técnicas
+                  desde un solo lugar.
+                </CardDescription>
               </div>
-              <Button variant="outline" size="sm">{notifications.data?.notifications.length ?? 0} alertas activas</Button>
+              <Link to="/dashboard/notifications">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Bell className="size-4" />
+                  {newCompanyCount > 0
+                    ? `${newCompanyCount} nuevas`
+                    : 'Ver actividad'}
+                </Button>
+              </Link>
             </CardHeader>
           </Card>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <CardDescription>Total companies</CardDescription>
-                <CardTitle className="text-3xl">{summary.data?.totalCompanies ?? 0}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">Empresas activas</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardDescription>Operational notifications</CardDescription>
-                <CardTitle className="text-3xl">{summary.data?.notificationCount ?? 0}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">Requieren atencion</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardDescription>Audit events</CardDescription>
-                <CardTitle className="text-3xl">{summary.data?.auditEventCount ?? 0}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">Eventos registrados</p>
-              </CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardDescription>Lectura visual de la plataforma</CardDescription>
+              <CardTitle>Actividad operativa</CardTitle>
+              <CardDescription>Distribución actual de empresas, alertas y trazabilidad.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid h-48 grid-cols-3 items-end gap-6 rounded-lg border bg-muted/20 p-6">
+                {[
+                  { label: 'Empresas', value: summary.data?.totalCompanies ?? 0, color: 'bg-primary' },
+                  { label: 'Alertas', value: summary.data?.notificationCount ?? 0, color: 'bg-primary/70' },
+                  { label: 'Auditoría', value: summary.data?.auditEventCount ?? 0, color: 'bg-primary/45' },
+                ].map((item) => {
+                  const maxValue = Math.max(summary.data?.totalCompanies ?? 0, summary.data?.notificationCount ?? 0, summary.data?.auditEventCount ?? 0, 1);
+                  return (
+                    <div key={item.label} className="flex h-full flex-col items-center justify-end gap-3">
+                      <div className={`w-full max-w-24 rounded-t-lg ${item.color} transition-all`} style={{ height: `${Math.max((item.value / maxValue) * 100, 12)}%` }} aria-label={`Actividad de ${item.label.toLowerCase()}`} />
+                      <span className="text-sm font-medium text-muted-foreground">{item.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="grid gap-4 xl:grid-cols-[1.4fr_.9fr]">
+          <div className="grid gap-4 xl:grid-cols-[1.25fr_.75fr]">
             <Card>
               <CardHeader className="flex flex-row items-start justify-between gap-4">
                 <div>
-                  <CardDescription>Actividad</CardDescription>
+                  <CardDescription>Registro de actividad</CardDescription>
                   <CardTitle>Notificaciones recientes</CardTitle>
                 </div>
-                <Bell className="size-4 text-muted-foreground" />
+                <Link
+                  to="/dashboard/notifications"
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Ver todas
+                </Link>
               </CardHeader>
               <CardContent className="space-y-3">
-                {notifications.data?.notifications.map((notification) => (
-                  <div key={notification.id} className="flex items-center gap-3 rounded-lg border p-3">
+                {notificationsList.slice(0, 4).map((notification) => (
+                  <div
+                    key={notification.id}
+                    className="flex items-center gap-3 rounded-lg border p-3"
+                  >
                     <span className="rounded-md bg-muted p-2">
-                      <Bell className="size-4" />
+                      {notification.type === 'company.registered' ? (
+                        <Building2 className="size-4" />
+                      ) : (
+                        <Bell className="size-4" />
+                      )}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{notification.message}</p>
-                      <p className="text-xs text-muted-foreground">{notification.type}</p>
+                      <p className="truncate text-sm font-medium">
+                        {notification.message}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDate(notification.createdAt)}
+                      </p>
                     </div>
+                    {notification.type === 'company.registered' ? (
+                      <Badge variant="secondary">Nueva</Badge>
+                    ) : null}
                   </div>
                 ))}
+                {notificationsList.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No hay actividad reciente.
+                  </p>
+                ) : null}
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-start justify-between gap-4">
                 <div>
-                  <CardDescription>Accesos rapidos</CardDescription>
-                  <CardTitle>Observability workspace</CardTitle>
+                  <CardDescription>Herramientas de plataforma</CardDescription>
+                  <CardTitle>Centro de control</CardTitle>
                 </div>
-                <ShieldCheck className="size-4 text-muted-foreground" />
+                <Activity className="size-4 text-muted-foreground" />
               </CardHeader>
               <CardContent className="space-y-2">
                 {adminWorkspaceLinks.map((link) => (
-                  <a key={link.id} href={link.href} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm hover:bg-accent">
-                    <span>{link.label}</span>
-                    <span aria-hidden="true">→</span>
-                  </a>
+                  <Link
+                    key={link.id}
+                    to={link.href}
+                    className="group flex items-center gap-3 rounded-lg border p-3 transition-colors hover:border-primary/40 hover:bg-accent"
+                  >
+                    <ShieldCheck className="size-4 text-muted-foreground" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium">
+                        {link.label}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                        {link.description}
+                      </span>
+                    </span>
+                    <ArrowUpRight className="size-4 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                  </Link>
                 ))}
               </CardContent>
             </Card>
           </div>
+
         </section>
       ) : (
         <Card>
           <CardHeader>
             <CardTitle>Company modules</CardTitle>
-            <CardDescription>Pick a module from the sidebar to continue your ERP setup.</CardDescription>
+            <CardDescription>
+              Pick a module from the sidebar to continue your ERP setup.
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-3">
             {modules.map((module) => (
@@ -160,7 +226,6 @@ export const DashboardPage = ({
           </CardContent>
         </Card>
       )}
-
     </div>
   );
 };

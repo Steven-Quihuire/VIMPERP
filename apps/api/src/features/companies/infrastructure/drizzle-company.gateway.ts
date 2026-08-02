@@ -13,11 +13,8 @@ import {
   notificationsTable,
   themePreferencesTable,
 } from '../../../shared/infrastructure/db/schema';
-import type {
-  CompanyOnboardingGateway,
-  PaletteId,
-} from '../domain/company';
-import { paletteValues } from '../domain/company';
+import type { CompanyOnboardingGateway, PaletteId } from '../domain/company';
+import { normalizeCompanyServices, paletteValues } from '../domain/company';
 
 const toPaletteId = (value: string): PaletteId => {
   if (paletteValues.includes(value as PaletteId)) {
@@ -25,20 +22,6 @@ const toPaletteId = (value: string): PaletteId => {
   }
 
   return 'ocean';
-};
-
-const normalizeServices = (services: string[]) => {
-  const normalizedServices = new Set<string>();
-
-  for (const service of services) {
-    const normalizedService = service.trim();
-
-    if (normalizedService.length > 0) {
-      normalizedServices.add(normalizedService);
-    }
-  }
-
-  return [...normalizedServices];
 };
 
 export const createDrizzleCompanyOnboardingGateway = (
@@ -56,7 +39,7 @@ export const createDrizzleCompanyOnboardingGateway = (
       const generateId = createId ?? randomUUID;
       const companyId = generateId();
       const createdAt = now();
-      const services = normalizeServices(input.services);
+      const services = normalizeCompanyServices(input.services);
 
       await tx.insert(companiesTable).values({
         id: companyId,
@@ -73,6 +56,7 @@ export const createDrizzleCompanyOnboardingGateway = (
         exactLocation: input.address.exactLocation,
         contactPhone: input.contact.phone,
         contactEmail: input.contact.email,
+        erpModuleId: input.erpModuleId,
       });
 
       await tx.insert(companyServicesTable).values(
@@ -150,9 +134,15 @@ export const createDrizzleCompanyOnboardingGateway = (
         name: companiesTable.name,
       })
       .from(membershipsTable)
-      .innerJoin(companiesTable, eq(membershipsTable.companyId, companiesTable.id))
+      .innerJoin(
+        companiesTable,
+        eq(membershipsTable.companyId, companiesTable.id),
+      )
       .where(
-        and(eq(membershipsTable.userId, userId), isNotNull(membershipsTable.companyId)),
+        and(
+          eq(membershipsTable.userId, userId),
+          isNotNull(membershipsTable.companyId),
+        ),
       )
       .limit(1);
 

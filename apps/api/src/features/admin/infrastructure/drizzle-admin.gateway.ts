@@ -6,6 +6,7 @@ import {
   applicationErrorsTable,
   auditEventsTable,
   companiesTable,
+  companyProfilesTable,
   notificationsTable,
   provisioningRunsTable,
   provisioningStepsTable,
@@ -43,6 +44,21 @@ const listAuditEventsSchema = z.object({
   limit: z.number().int().min(1).max(50).default(20),
   cursor: z.string().min(1).optional(),
 });
+
+const parseCompanyServices = (value: string | null) => {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) && parsed.every((service) => typeof service === 'string')
+      ? parsed
+      : [];
+  } catch {
+    return [];
+  }
+};
 
 const mapProvisioningRunSummary = (row: {
   id: string;
@@ -127,8 +143,17 @@ export const createDrizzleAdminGateway = (db: AppDb): AdminGateway => ({
         id: companiesTable.id,
         name: companiesTable.name,
         createdAt: companiesTable.createdAt,
+        legalIdentifier: companyProfilesTable.legalIdentifier,
+        services: companyProfilesTable.services,
+        country: companyProfilesTable.country,
+        city: companyProfilesTable.city,
+        exactLocation: companyProfilesTable.exactLocation,
+        contactPhone: companyProfilesTable.contactPhone,
+        contactEmail: companyProfilesTable.contactEmail,
+        erpModuleId: companyProfilesTable.erpModuleId,
       })
       .from(companiesTable)
+      .leftJoin(companyProfilesTable, eq(companiesTable.id, companyProfilesTable.companyId))
       .orderBy(desc(companiesTable.createdAt))
       .limit(5);
 
@@ -140,6 +165,14 @@ export const createDrizzleAdminGateway = (db: AppDb): AdminGateway => ({
         id: company.id,
         name: company.name,
         createdAt: company.createdAt.toISOString(),
+        legalIdentifier: company.legalIdentifier ?? undefined,
+        services: parseCompanyServices(company.services),
+        country: company.country ?? undefined,
+        city: company.city ?? undefined,
+        exactLocation: company.exactLocation ?? undefined,
+        contactPhone: company.contactPhone ?? undefined,
+        contactEmail: company.contactEmail ?? undefined,
+        erpModuleId: company.erpModuleId ?? undefined,
       })),
     };
   },

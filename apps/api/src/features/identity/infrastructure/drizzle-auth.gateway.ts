@@ -1,9 +1,14 @@
-import { and, eq, or } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
+
+import { and, count, eq, gte, or } from 'drizzle-orm';
 
 import type { AppDb } from '../../../shared/infrastructure/db/client';
 import {
+  auditEventsTable,
+  companiesTable,
   membershipsTable,
   sessionsTable,
+  userPreferencesTable,
   usersTable,
 } from '../../../shared/infrastructure/db/schema';
 import {
@@ -94,5 +99,73 @@ export const createDrizzleAuthIdentityGateway = (
       })
       .from(membershipsTable)
       .where(and(eq(membershipsTable.userId, userId)));
+  },
+  findActiveCompanyId: async (userId) => {
+    const [preference] = await db
+      .select({ activeCompanyId: userPreferencesTable.activeCompanyId })
+      .from(userPreferencesTable)
+      .where(eq(userPreferencesTable.userId, userId))
+      .limit(1);
+
+    return preference?.activeCompanyId ?? null;
+  },
+  findCompanyStatus: async (companyId) => {
+    const [company] = await db
+      .select({ status: companiesTable.status })
+      .from(companiesTable)
+      .where(eq(companiesTable.id, companyId))
+      .limit(1);
+
+    return company?.status ?? 'active';
+  },
+  setActiveCompanyId: async (userId, companyId) => {
+    const [existingPreference] = await db
+      .select({ userId: userPreferencesTable.userId })
+      .from(userPreferencesTable)
+      .where(eq(userPreferencesTable.userId, userId))
+      .limit(1);
+
+    if (existingPreference) {
+      await db
+        .update(userPreferencesTable)
+        .set({ activeCompanyId: companyId })
+        .where(eq(userPreferencesTable.userId, userId));
+
+      return;
+    }
+
+    await db.insert(userPreferencesTable).values({
+      userId,
+      activeCompanyId: companyId,
+    });
+  },
+  countRecentActiveCompanySwitches: async (userId, since) => {
+    const [result] = await db
+      .select({ total: count(auditEventsTable.id) })
+      .from(auditEventsTable)
+      .where(
+        and(
+          eq(auditEventsTable.actorUserId, userId),
+          eq(auditEventsTable.type, 'auth.active_company_switched'),
+          gte(auditEventsTable.createdAt, since),
+        ),
+      );
+
+    return Number(result?.total ?? 0);
+  },
+  recordActiveCompanySwitch: async ({ userId, companyId, correlationId }) => {
+    await db.insert(auditEventsTable).values({
+      id: randomUUID(),
+      actorUserId: userId,
+      companyId,
+      type: 'auth.active_company_switched',
+      correlationId,
+      entityType: 'user_preference',
+      entityId: userId,
+      details: { activeCompanyId: companyId },
+      oldValues: null,
+      newValues: { activeCompanyId: companyId },
+      createdAt: new Date(),
+    });
   },
 });

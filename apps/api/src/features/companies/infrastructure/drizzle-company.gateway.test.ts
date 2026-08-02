@@ -26,7 +26,8 @@ const createFakeDb = () => {
   };
 
   const db = {
-    transaction: async <T>(callback: (client: typeof tx) => Promise<T>) => await callback(tx),
+    transaction: async <T>(callback: (client: typeof tx) => Promise<T>) =>
+      await callback(tx),
   } as unknown as AppDb;
 
   return { db, writes };
@@ -53,10 +54,11 @@ describe('createDrizzleCompanyOnboardingGateway', () => {
         exactLocation: 'San Pedro 123',
       },
       contact: {
-        phone: '+52 81 5555 0000',
+        phone: '0991234567',
         email: 'ops@vimcore.test',
       },
-      paletteId: 'ocean',
+       paletteId: 'ocean',
+       erpModuleId: 'inventory',
       branches: [{ name: 'HQ', locale: 'es-MX' }],
     });
 
@@ -76,9 +78,10 @@ describe('createDrizzleCompanyOnboardingGateway', () => {
           city: 'Monterrey',
           companyId: 'fixed-id',
           contactEmail: 'ops@vimcore.test',
-          contactPhone: '+52 81 5555 0000',
+          contactPhone: '0991234567',
           country: 'Mexico',
           exactLocation: 'San Pedro 123',
+          erpModuleId: 'inventory',
           legalIdentifier: 'RFC-123456',
           services: JSON.stringify(['Implementation', 'Support']),
         },

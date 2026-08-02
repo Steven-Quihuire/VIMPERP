@@ -1,6 +1,59 @@
-export const paletteValues = ['ocean', 'forest', 'violet', 'sunset', 'midnight'] as const;
+export const paletteValues = [
+  'mono',
+  'ocean',
+  'forest',
+  'violet',
+  'sunset',
+  'midnight',
+] as const;
 
 export type PaletteId = (typeof paletteValues)[number];
+
+export const erpModuleValues = [
+  'sales',
+  'purchases',
+  'inventory',
+  'accounting',
+  'invoicing',
+  'crm',
+  'human-resources',
+  'other',
+  'projects',
+  'manufacturing',
+  'assets',
+  'ecommerce',
+  'marketing',
+  'point-of-sale',
+  'logistics',
+  'reports',
+] as const;
+
+export type ErpModuleId = (typeof erpModuleValues)[number];
+
+export const MAX_COMPANY_SERVICES = 5;
+
+export const isValidEcuadorianMobile = (value: string) =>
+  /^09\d{8}$/.test(value);
+
+export const normalizeCompanyServices = (services: string[]) => {
+  const normalizedServices = new Set<string>();
+
+  for (const service of services) {
+    const normalizedService = service.trim();
+
+    if (normalizedService.length > 0) {
+      normalizedServices.add(normalizedService);
+    }
+  }
+
+  if (normalizedServices.size > MAX_COMPANY_SERVICES) {
+    throw new Error(
+      `A company can have at most ${MAX_COMPANY_SERVICES} services.`,
+    );
+  }
+
+  return [...normalizedServices];
+};
 
 export type CompanyBranchDraft = {
   name: string;
@@ -24,6 +77,7 @@ export type CreateCompanyInput = {
     email: string;
   };
   paletteId: PaletteId;
+  erpModuleId: ErpModuleId;
   branches: CompanyBranchDraft[];
 };
 
@@ -70,7 +124,9 @@ export type ProvisioningRecorder = {
 
 export type CompanyOnboardingGateway = {
   createCompany: (input: CreateCompanyInput) => Promise<CreateCompanyResult>;
-  getCurrentCompanySummary: (userId: string) => Promise<CurrentCompanySummary | null>;
+  getCurrentCompanySummary: (
+    userId: string,
+  ) => Promise<CurrentCompanySummary | null>;
   getThemePreference: (userId: string) => Promise<ThemePreference | null>;
   saveThemePreference: (input: {
     userId: string;

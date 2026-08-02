@@ -17,6 +17,11 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
   private usersByIdentifier = new Map<string, AuthUser>();
   private sessions = new Map<string, AuthSessionRecord>();
   private membershipsByUserId = new Map<string, AuthMembership[]>();
+  private activeCompanyByUserId = new Map<string, string | null>();
+  private companyStatusByCompanyId = new Map<
+    string,
+    'active' | 'suspended' | 'provisioning_failed'
+  >();
 
   addUser(user: AuthUser) {
     this.usersById.set(user.id, user);
@@ -26,6 +31,17 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
 
   setMemberships(userId: string, memberships: AuthMembership[]) {
     this.membershipsByUserId.set(userId, memberships);
+  }
+
+  setActiveCompany(userId: string, companyId: string | null) {
+    this.activeCompanyByUserId.set(userId, companyId);
+  }
+
+  setCompanyStatus(
+    companyId: string,
+    status: 'active' | 'suspended' | 'provisioning_failed',
+  ) {
+    this.companyStatusByCompanyId.set(companyId, status);
   }
 
   async findUserByIdentifier(identifier: string) {
@@ -79,6 +95,29 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
 
   async listMemberships(userId: string) {
     return await Promise.resolve(this.membershipsByUserId.get(userId) ?? []);
+  }
+
+  async findActiveCompanyId(userId: string) {
+    return await Promise.resolve(this.activeCompanyByUserId.get(userId) ?? null);
+  }
+
+  async findCompanyStatus(companyId: string) {
+    return await Promise.resolve(
+      this.companyStatusByCompanyId.get(companyId) ?? 'active',
+    );
+  }
+
+  async setActiveCompanyId(userId: string, companyId: string) {
+    this.activeCompanyByUserId.set(userId, companyId);
+    await Promise.resolve();
+  }
+
+  async countRecentActiveCompanySwitches() {
+    return await Promise.resolve(0);
+  }
+
+  async recordActiveCompanySwitch() {
+    await Promise.resolve();
   }
 }
 
@@ -204,6 +243,7 @@ describe('auth routes', () => {
       .set('Cookie', getSessionCookie(registerResponse.headers['set-cookie']));
 
     expect(meResponse.status).toBe(200);
+    expect(meResponse.headers['cache-control']).toBe('no-store');
     expect(meResponse.body).toEqual({
       user: {
         id: expect.any(String) as string,
@@ -211,6 +251,7 @@ describe('auth routes', () => {
         username: 'owner',
       },
       memberships: [],
+      activeCompany: null,
     });
   });
 
@@ -310,6 +351,7 @@ describe('auth routes', () => {
       .set('Cookie', getSessionCookie(loginResponse.headers['set-cookie']));
 
     expect(meResponse.status).toBe(200);
+    expect(meResponse.headers['cache-control']).toBe('no-store');
     expect(meResponse.body).toEqual({
       user: {
         id: 'user-1',
@@ -317,6 +359,110 @@ describe('auth routes', () => {
         username: 'owner',
       },
       memberships: [{ companyId: 'company-1', role: 'company-owner' }],
+      activeCompany: {
+        companyId: 'company-1',
+        status: 'active',
+      },
+    });
+  });
+
+  it('returns the persisted active company in auth/me', async () => {
+    const gateway = new InMemoryAuthGateway();
+
+    gateway.addUser({
+      id: 'user-1',
+      email: 'owner@vimcore.test',
+      username: 'owner',
+      passwordHash: 'hashed:secret123',
+    });
+    gateway.setMemberships('user-1', [
+      { companyId: 'company-1', role: 'company-owner' },
+      { companyId: 'company-2', role: 'company-user' },
+    ]);
+    gateway.setActiveCompany('user-1', 'company-2');
+    gateway.setCompanyStatus('company-2', 'active');
+
+    const app = createApp({
+      adminGateway,
+      authIdentityGateway: gateway,
+      passwordHasher,
+      sessionTokenService,
+      seedAdminEnabled: false,
+      nodeEnv: 'test',
+    });
+
+    const loginResponse = await request(app).post('/auth/login').send({
+      identifier: 'owner',
+      password: 'secret123',
+    });
+
+    const meResponse = await request(app)
+      .get('/auth/me')
+      .set('Cookie', getSessionCookie(loginResponse.headers['set-cookie']));
+
+    expect(meResponse.status).toBe(200);
+    expect(meResponse.body).toEqual({
+      user: {
+        id: 'user-1',
+        email: 'owner@vimcore.test',
+        username: 'owner',
+      },
+      memberships: [
+        { companyId: 'company-1', role: 'company-owner' },
+        { companyId: 'company-2', role: 'company-user' },
+      ],
+      activeCompany: {
+        companyId: 'company-2',
+        status: 'active',
+      },
+    });
+  });
+
+  it('falls back to the single membership when the persisted active company is no longer valid', async () => {
+    const gateway = new InMemoryAuthGateway();
+
+    gateway.addUser({
+      id: 'user-1',
+      email: 'owner@vimcore.test',
+      username: 'owner',
+      passwordHash: 'hashed:secret123',
+    });
+    gateway.setMemberships('user-1', [
+      { companyId: 'company-1', role: 'company-owner' },
+    ]);
+    gateway.setActiveCompany('user-1', 'company-999');
+    gateway.setCompanyStatus('company-1', 'active');
+
+    const app = createApp({
+      adminGateway,
+      authIdentityGateway: gateway,
+      passwordHasher,
+      sessionTokenService,
+      seedAdminEnabled: false,
+      nodeEnv: 'test',
+    });
+
+    const loginResponse = await request(app).post('/auth/login').send({
+      identifier: 'owner',
+      password: 'secret123',
+    });
+
+    const meResponse = await request(app)
+      .get('/auth/me')
+      .set('Cookie', getSessionCookie(loginResponse.headers['set-cookie']));
+
+    expect(meResponse.status).toBe(200);
+    expect(meResponse.body).toEqual({
+      user: {
+        id: 'user-1',
+        email: 'owner@vimcore.test',
+        username: 'owner',
+      },
+      memberships: [{ companyId: 'company-1', role: 'company-owner' }],
+      activeCompany: {
+        companyId: 'company-1',
+        status: 'active',
+      },
     });
   });
 

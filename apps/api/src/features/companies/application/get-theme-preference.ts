@@ -6,7 +6,7 @@ import {
 
 export const createGetThemePreference = (
   gateway: CompanyOnboardingGateway,
-  defaultPaletteId: PaletteId = 'ocean',
+  defaultPaletteId: PaletteId = 'mono',
 ) => {
   return async (userId: string): Promise<ThemePreference> => {
     const preference = await gateway.getThemePreference(userId);

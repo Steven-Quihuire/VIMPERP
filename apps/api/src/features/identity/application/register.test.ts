@@ -56,6 +56,26 @@ class AtomicOnlyAuthGateway implements AuthIdentityGateway {
   async listMemberships(): Promise<AuthMembership[]> {
     return await Promise.resolve([]);
   }
+
+  async findActiveCompanyId() {
+    return await Promise.resolve(null);
+  }
+
+  async findCompanyStatus() {
+    return await Promise.resolve('active' as const);
+  }
+
+  async setActiveCompanyId() {
+    await Promise.resolve();
+  }
+
+  async countRecentActiveCompanySwitches() {
+    return await Promise.resolve(0);
+  }
+
+  async recordActiveCompanySwitch() {
+    await Promise.resolve();
+  }
 }
 
 const passwordHasher: PasswordHasher = {
@@ -105,6 +125,7 @@ describe('createRegister', () => {
           username: 'owner',
         },
         memberships: [],
+        activeCompany: null,
       },
     });
   });

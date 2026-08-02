@@ -39,6 +39,10 @@ import { createLogin } from '../features/identity/application/login';
 import { createLogout } from '../features/identity/application/logout';
 import { createRegister } from '../features/identity/application/register';
 import { createResolveAuthSession } from '../features/identity/application/resolve-auth-session';
+import {
+  ForbiddenError,
+  TooManyRequestsError,
+} from '../features/identity/domain/auth';
 import type {
   AuthIdentityGateway,
   PasswordHasher,
@@ -98,6 +102,9 @@ type CreateAppInput = {
   provisioningStaleTimeoutMs?: number;
 };
 
+const ACTIVE_COMPANY_SWITCH_WINDOW_MS = 60 * 1000;
+const ACTIVE_COMPANY_SWITCH_LIMIT = 10;
+
 export const createAppRuntime = (input: CreateAppInput = {}) => {
   const db = createDb(input.databaseUrl);
   const app = express();
@@ -135,6 +142,41 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       ? { staleTimeoutMs: input.provisioningStaleTimeoutMs }
       : {}),
   });
+  const switchActiveCompany = async (input: {
+    userId: string;
+    companyId: string;
+    memberships: Array<{ companyId: string | null; role: string }>;
+    correlationId: string;
+    currentActiveCompanyId: string | null;
+  }) => {
+    const belongsToCompany = input.memberships.some(
+      (membership) => membership.companyId === input.companyId,
+    );
+
+    if (!belongsToCompany) {
+      throw new ForbiddenError();
+    }
+
+    if (input.currentActiveCompanyId === input.companyId) {
+      return;
+    }
+
+    const switchCount = await authIdentityGateway.countRecentActiveCompanySwitches(
+      input.userId,
+      new Date(Date.now() - ACTIVE_COMPANY_SWITCH_WINDOW_MS),
+    );
+
+    if (switchCount >= ACTIVE_COMPANY_SWITCH_LIMIT) {
+      throw new TooManyRequestsError();
+    }
+
+    await authIdentityGateway.setActiveCompanyId(input.userId, input.companyId);
+    await authIdentityGateway.recordActiveCompanySwitch({
+      userId: input.userId,
+      companyId: input.companyId,
+      correlationId: input.correlationId,
+    });
+  };
 
   app.use(express.json());
   app.use(createRequestContextMiddleware({ logger, metrics: requestMetrics }));
@@ -183,6 +225,7 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       }),
       getCurrentCompanySummary: createGetCurrentCompanySummary(companyOnboardingGateway),
       getThemePreference: createGetThemePreference(companyOnboardingGateway),
+      switchActiveCompany,
       updateThemePreference: createUpdateThemePreference(companyOnboardingGateway),
     }),
   );

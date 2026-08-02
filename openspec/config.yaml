@@ -2,14 +2,14 @@
 schema: spec-driven
 
 context: |
-  Project: vimcore (planned change identity: vimcore/erp)
-  Repo state: bootstrap in progress — /home/linux/Vimcore is still not a git repo, but the monorepo foundation now exists.
-  Tech stack: pnpm workspace + Turbo, React/Vite frontend, Express 5 + Drizzle + PostgreSQL backend, Docker Compose, TypeScript only.
-  Confirmed stack: pnpm monorepo (Turbo/Turborepo-style),
-    React frontend (screaming/clean architecture, TanStack Query, Zustand, shadcn),
-    Node + Express 5 + Drizzle + PostgreSQL backend, Docker Compose, TypeScript only.
-  Testing: Vitest is available at the root and app packages. Strict TDD is now enabled for follow-up slices.
-  Artifact store: hybrid (Engram observations + openspec/ files).
+  Project: vimcore at /home/linux/Vimcore (git repo).
+  Stack: pnpm workspace + Turbo monorepo, TypeScript only.
+  Frontend: React 19 + Vite + React Router 7 + TanStack Query + Zustand + React Hook Form + Zod + Tailwind 4.
+  Backend: Node + Express 5 + Drizzle ORM + PostgreSQL + Pino + Zod.
+  Architecture: feature-first vertical slices with domain/application/infrastructure/presentation across apps/api and apps/web.
+  Quality: ESLint 9 shared configs, TypeScript 5.9 typecheck, Prettier 3.6, Docker Compose for local Postgres.
+  Testing: Vitest at root/apps, Playwright E2E, Supertest available in api, API coverage via V8 thresholds.
+  Artifact store: hybrid (Engram observations + openspec files).
 
 rules:
   proposal:
@@ -41,7 +41,7 @@ rules:
 
 testing:
   strict_tdd: true
-  detected: "2026-07-27"
+  detected: "2026-08-01"
   runner:
     command: "pnpm test"
     framework: vitest

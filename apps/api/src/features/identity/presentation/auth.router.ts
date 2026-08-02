@@ -45,6 +45,12 @@ const authSessionSchema = z.object({
       role: z.enum(['platform-admin', 'company-owner', 'company-user']),
     }),
   ),
+  activeCompany: z
+    .object({
+      companyId: z.string().min(1),
+      status: z.enum(['active', 'suspended', 'provisioning_failed']),
+    })
+    .nullable(),
 });
 
 const getCookieValue = (cookieHeader: string | undefined, cookieName: string) => {
@@ -119,6 +125,7 @@ export const createAuthRouter = ({
       const token = getCookieValue(request.headers.cookie, sessionCookieName);
       const authSession = authSessionSchema.parse(await resolveAuthSession(token));
 
+      response.set('Cache-Control', 'no-store');
       response.status(200).json(authSession);
     } catch (error) {
       next(error);

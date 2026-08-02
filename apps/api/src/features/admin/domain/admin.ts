@@ -14,6 +14,14 @@ export type AdminCompanySignal = {
   id: string;
   name: string;
   createdAt: string;
+  legalIdentifier?: string | undefined;
+  services?: string[] | undefined;
+  country?: string | undefined;
+  city?: string | undefined;
+  exactLocation?: string | undefined;
+  contactPhone?: string | undefined;
+  contactEmail?: string | undefined;
+  erpModuleId?: string | undefined;
 };
 
 export type AdminCompanySummary = {

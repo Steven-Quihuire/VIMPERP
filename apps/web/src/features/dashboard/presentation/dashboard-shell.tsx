@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { Bell } from 'lucide-react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 
 import type { AuthSession } from '../../auth/domain/auth';
 import {
@@ -19,12 +19,13 @@ import {
 } from '../../../shared/ui/sidebar';
 import { DashboardAppSidebar } from './dashboard-app-sidebar';
 import {
+  canViewAdminSignals,
   getPrimaryMembership,
   getDashboardCompanyDetail,
   getDashboardCompanyLabel,
   getDashboardCurrentSection,
 } from '../domain/dashboard';
-import { useDashboardCurrentCompany } from './use-dashboard';
+import { getReadNotificationIds, useDashboardCurrentCompany, useDashboardNotifications, useNotificationReadVersion } from './use-dashboard';
 
 export const DashboardShell = ({
   session,
@@ -42,6 +43,12 @@ export const DashboardShell = ({
   );
   const companyLabel = getDashboardCompanyLabel(session, currentCompany.data);
   const companyDetail = getDashboardCompanyDetail(session, currentCompany.data);
+  const notifications = useDashboardNotifications(apiBaseUrl, canViewAdminSignals(session));
+  useNotificationReadVersion();
+  const readNotificationIds = getReadNotificationIds();
+  const newCompanyCount = notifications.data?.notifications.filter(
+    (notification) => notification.type === 'company.registered' && !readNotificationIds.has(notification.id),
+  ).length ?? 0;
 
   return (
     <SidebarProvider
@@ -52,9 +59,9 @@ export const DashboardShell = ({
       } as CSSProperties}
     >
       <DashboardAppSidebar
-        session={session}
-        companyLabel={companyLabel}
-        companyDetail={companyDetail}
+            session={session}
+            companyLabel={companyLabel}
+            companyDetail={companyDetail}
         {...(apiBaseUrl ? { apiBaseUrl } : {})}
       />
       <SidebarInset className="h-dvh max-h-dvh overflow-hidden">
@@ -76,9 +83,14 @@ export const DashboardShell = ({
             <div className="hidden text-right text-xs text-muted-foreground md:block">
               <p>{companyDetail}</p>
             </div>
-            <Button variant="ghost" size="icon" aria-label="Notificaciones">
-              <Bell />
-            </Button>
+            <Link to="/dashboard/notifications" aria-label="Abrir notificaciones">
+              <Button variant="ghost" size="icon" className="relative" aria-label="Notificaciones">
+                <Bell />
+                {newCompanyCount > 0 ? (
+                  <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-red-500" />
+                ) : null}
+              </Button>
+            </Link>
           </div>
         </header>
 

@@ -135,16 +135,16 @@ describe('App dashboard shell', () => {
     render(<App initialEntries={['/dashboard/admin/provisioning-runs']} />);
 
     expect(
-      await screen.findByRole('heading', { name: 'Provisioning runs' }),
+      await screen.findByRole('heading', { name: 'Procesos de alta' }),
     ).toBeInTheDocument();
     expect(await screen.findByText('Company owner already exists')).toBeInTheDocument();
     expect(
-      await screen.findByRole('link', { name: 'Open provisioning run run-1' }),
+      await screen.findByRole('link', { name: 'Ver proceso' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: 'Application errors' }),
+      screen.getByRole('link', { name: 'Errores de aplicación' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Audit events' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Eventos de auditoría' })).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /retry|delete/i }),
     ).not.toBeInTheDocument();
@@ -152,7 +152,7 @@ describe('App dashboard shell', () => {
     render(<App initialEntries={['/dashboard/admin/provisioning-runs/run-1']} />);
 
     expect(
-      await screen.findByRole('heading', { name: 'Provisioning run detail' }),
+      await screen.findByRole('heading', { name: 'Detalle del proceso' }),
     ).toBeInTheDocument();
     expect(await screen.findByText('company-creation')).toBeInTheDocument();
     expect(await screen.findByText(/duplicate-owner/)).toBeInTheDocument();
@@ -282,18 +282,18 @@ describe('App dashboard shell', () => {
     render(<App initialEntries={['/dashboard/admin/application-errors']} />);
 
     expect(
-      await screen.findByRole('heading', { name: 'Application errors' }),
+      await screen.findByRole('heading', { name: 'Errores de aplicación' }),
     ).toBeInTheDocument();
     expect(await screen.findByText('Provisioning failed')).toBeInTheDocument();
     expect(
-      await screen.findByRole('link', { name: 'Open application error error-1' }),
+      await screen.findByRole('link', { name: 'Ver error' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /retry|delete/i })).not.toBeInTheDocument();
 
     render(<App initialEntries={['/dashboard/admin/application-errors/error-1']} />);
 
     expect(
-      await screen.findByRole('heading', { name: 'Application error detail' }),
+      await screen.findByRole('heading', { name: 'Detalle del error de aplicación' }),
     ).toBeInTheDocument();
     expect(await screen.findByText('stack line 1')).toBeInTheDocument();
     expect(await screen.findByText(/company-onboarding/)).toBeInTheDocument();
@@ -301,18 +301,18 @@ describe('App dashboard shell', () => {
     render(<App initialEntries={['/dashboard/admin/audit-events']} />);
 
     expect(
-      await screen.findByRole('heading', { name: 'Audit events' }),
+      await screen.findByRole('heading', { name: 'Eventos de auditoría' }),
     ).toBeInTheDocument();
     expect(await screen.findByText('company.created')).toBeInTheDocument();
     expect(
-      await screen.findByRole('link', { name: 'Open audit event audit-1' }),
+      await screen.findByRole('link', { name: 'Ver evento' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /retry|delete/i })).not.toBeInTheDocument();
 
     render(<App initialEntries={['/dashboard/admin/audit-events/audit-1']} />);
 
     expect(
-      await screen.findByRole('heading', { name: 'Audit event detail' }),
+      await screen.findByRole('heading', { name: 'Detalle del evento de auditoría' }),
     ).toBeInTheDocument();
     expect(
       await screen.findAllByText((_, element) =>
@@ -369,7 +369,7 @@ describe('App dashboard shell', () => {
     render(<App initialEntries={['/dashboard/admin/provisioning-runs']} />);
 
     expect(await screen.findByRole('heading', { name: 'ERP dashboard' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Provisioning runs' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Procesos de alta' })).not.toBeInTheDocument();
     expect(
       fetchMock.mock.calls.some(([input]) => readUrl(input).includes('/admin/')),
     ).toBe(false);
@@ -428,26 +428,26 @@ describe('App dashboard shell', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     render(<App initialEntries={['/dashboard/admin/provisioning-runs']} />);
-    expect(await screen.findByText('No provisioning runs found')).toBeInTheDocument();
+    expect(await screen.findByText('No hay procesos de alta')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'No provisioning runs match the current filters. Retry and delete actions are not available in the MVP.',
+        'No hay procesos que coincidan con los filtros actuales.',
       ),
     ).toBeInTheDocument();
 
     render(<App initialEntries={['/dashboard/admin/application-errors']} />);
-    expect(await screen.findByText('No application errors found')).toBeInTheDocument();
+    expect(await screen.findByText('No hay errores registrados')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'No application errors match the current filters. Retry and delete actions are not available in the MVP.',
+        'No hay errores que coincidan con los filtros actuales.',
       ),
     ).toBeInTheDocument();
 
     render(<App initialEntries={['/dashboard/admin/audit-events']} />);
-    expect(await screen.findByText('No audit events found')).toBeInTheDocument();
+    expect(await screen.findByText('No hay eventos de auditoría')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'No audit events match the current filters. Retry and delete actions are not available in the MVP.',
+        'No hay eventos que coincidan con los filtros actuales.',
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /retry|delete/i })).not.toBeInTheDocument();
@@ -556,7 +556,7 @@ describe('App dashboard shell', () => {
     expect(screen.getByRole('link', { name: 'Open CRM module' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open Sales module' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open Inventory module' })).toBeInTheDocument();
-    expect(screen.queryByText('Platform overview')).not.toBeInTheDocument();
+    expect(screen.queryByText('Todo bajo control')).not.toBeInTheDocument();
 
     expect(fetchMock).not.toHaveBeenCalledWith(
       '/api/admin/companies/summary',
@@ -652,9 +652,77 @@ describe('App dashboard shell', () => {
       ).toBe(true);
     });
 
-    expect(await screen.findByRole('heading', { name: 'Platform overview' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Todo bajo control' })).toBeInTheDocument();
     expect(await screen.findByText('Northwind registered')).toBeInTheDocument();
-    expect(await screen.findByText('2')).toBeInTheDocument();
+    expect(await screen.findByText('Actividad operativa')).toBeInTheDocument();
+  });
+
+  it('renders the companies alias inside the dashboard shell', async () => {
+    setDesktopBrowser(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0',
+      false,
+    );
+
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = readUrl(input);
+
+      if (url.endsWith('/auth/me')) {
+        return Promise.resolve(
+          createJsonResponse(
+            {
+              user: {
+                id: 'admin-1',
+                email: 'admin@vimcore.test',
+                username: 'admin',
+              },
+              memberships: [{ companyId: null, role: 'platform-admin' }],
+            },
+            200,
+          ),
+        );
+      }
+
+      if (url.endsWith('/me/preferences')) {
+        return Promise.resolve(createJsonResponse({ paletteId: 'violet' }, 200));
+      }
+
+      if (url.endsWith('/admin/companies/summary')) {
+        return Promise.resolve(
+          createJsonResponse(
+            {
+              totalCompanies: 1,
+              notificationCount: 0,
+              auditEventCount: 0,
+              companies: [
+                {
+                  id: 'company-1',
+                  name: 'Northwind',
+                  createdAt: '2026-07-27T10:00:00.000Z',
+                },
+              ],
+            },
+            200,
+          ),
+        );
+      }
+
+      if (url.endsWith('/admin/notifications')) {
+        return Promise.resolve(createJsonResponse({ notifications: [] }, 200));
+      }
+
+      throw new Error(`unexpected request: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App initialEntries={['/companies']} />);
+
+    expect(await screen.findByRole('heading', { name: 'Empresas' })).toBeInTheDocument();
+    expect((await screen.findAllByText('Northwind')).length).toBeGreaterThan(0);
+    expect(screen.getByRole('link', { name: 'Empresas' })).toHaveAttribute(
+      'href',
+      '/dashboard/admin/companies',
+    );
   });
 
   it('blocks mobile browsers with desktop guidance', async () => {

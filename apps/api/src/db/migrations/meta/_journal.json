@@ -50,6 +50,20 @@
       "when": 1785446196365,
       "tag": "0006_item_catalog",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1785615000000,
+      "tag": "0007_onboarding_preferences",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785633705620,
+      "tag": "0008_tiny_scrambler",
+      "breakpoints": true
     }
   ]
 }

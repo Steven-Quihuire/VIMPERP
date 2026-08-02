@@ -20,6 +20,19 @@ export type AuthMembership = {
   role: AuthRole;
 };
 
+export const companyLifecycleValues = [
+  'active',
+  'suspended',
+  'provisioning_failed',
+] as const;
+
+export type CompanyLifecycle = (typeof companyLifecycleValues)[number];
+
+export type ActiveCompany = {
+  companyId: string;
+  status: CompanyLifecycle;
+};
+
 export type AuthSessionRecord = {
   token: string;
   userId: string;
@@ -29,6 +42,7 @@ export type AuthSessionRecord = {
 export type AuthSession = {
   user: PublicAuthUser;
   memberships: AuthMembership[];
+  activeCompany: ActiveCompany | null;
 };
 
 export type AuthIdentityGateway = {
@@ -43,6 +57,15 @@ export type AuthIdentityGateway = {
   findSession: (token: string) => Promise<AuthSessionRecord | null>;
   deleteSession: (token: string) => Promise<void>;
   listMemberships: (userId: string) => Promise<AuthMembership[]>;
+  findActiveCompanyId: (userId: string) => Promise<string | null>;
+  findCompanyStatus: (companyId: string) => Promise<CompanyLifecycle>;
+  setActiveCompanyId: (userId: string, companyId: string) => Promise<void>;
+  countRecentActiveCompanySwitches: (userId: string, since: Date) => Promise<number>;
+  recordActiveCompanySwitch: (input: {
+    userId: string;
+    companyId: string;
+    correlationId: string;
+  }) => Promise<void>;
 };
 
 export type PasswordHasher = {
@@ -74,6 +97,14 @@ export class ForbiddenError extends Error {
   readonly code = 'FORBIDDEN';
 
   constructor(message = 'Forbidden') {
+    super(message);
+  }
+}
+
+export class TooManyRequestsError extends Error {
+  readonly code = 'TOO_MANY_REQUESTS';
+
+  constructor(message = 'Too many requests') {
     super(message);
   }
 }
