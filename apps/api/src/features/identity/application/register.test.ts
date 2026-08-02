@@ -126,6 +126,7 @@ describe('createRegister', () => {
         },
         memberships: [],
         activeCompany: null,
+        capabilities: [],
       },
     });
   });

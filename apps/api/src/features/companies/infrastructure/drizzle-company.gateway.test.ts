@@ -19,7 +19,7 @@ const createFakeDb = () => {
   const emptyQuery = {
     from: () => ({
       where: () => ({
-        limit: async () => [],
+        limit: () => Promise.resolve([]),
       }),
     }),
   };
@@ -36,7 +36,7 @@ const createFakeDb = () => {
       set: (values: unknown) => {
         writes.push({ table, values });
         return {
-          where: async () => [],
+          where: () => Promise.resolve([]),
         };
       },
     }),
@@ -75,8 +75,8 @@ describe('createDrizzleCompanyOnboardingGateway', () => {
         phone: '0991234567',
         email: 'ops@vimcore.test',
       },
-       paletteId: 'ocean',
-       erpModuleId: 'inventory',
+      paletteId: 'ocean',
+      erpModuleId: 'inventory',
       branches: [{ name: 'HQ', locale: 'es-MX' }],
     });
 

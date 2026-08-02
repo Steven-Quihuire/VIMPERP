@@ -6,7 +6,16 @@ import type {
   CompanyProvisioningStartResult,
   CreateCompanyInput,
   ProvisioningRecorder,
+  ProvisioningStep,
 } from '../domain/company';
+
+const expectFingerprintDetail = (
+  detail: ProvisioningStep['detail'],
+  expected: Record<string, unknown>,
+) => {
+  expect(detail).toMatchObject(expected);
+  expect(typeof detail?.payloadFingerprint).toBe('string');
+};
 
 const buildInput = (): CreateCompanyInput => ({
   ownerUserId: 'user-1',
@@ -63,15 +72,17 @@ describe('createCreateCompany', () => {
     const createCompany = createCreateCompany({ gateway, recorder });
 
     const result = await createCompany(buildInput());
+    const startRunInput = vi.mocked(recorder.startRun).mock.calls[0]?.[0];
+    const succeedRunInput = vi.mocked(recorder.succeedRun).mock.calls[0]?.[0];
 
-    expect(recorder.startRun).toHaveBeenCalledWith({
+    expect(startRunInput).toMatchObject({
       actorUserId: 'user-1',
       correlationId: 'corr-1',
       idempotencyKey: 'idem-key-1',
-      payloadFingerprint: expect.any(String),
       process: 'company-onboarding',
       requestId: 'req-1',
     });
+    expect(typeof startRunInput?.payloadFingerprint).toBe('string');
     expect(gateway.createCompany).toHaveBeenCalledWith({
       ...buildInput(),
       name: 'Vimcore Labs',
@@ -89,19 +100,15 @@ describe('createCreateCompany', () => {
       idempotencyKey: 'idem-key-1',
       branches: [{ name: 'HQ', locale: 'es-MX' }, { name: 'Remote' }],
     });
-    expect(recorder.succeedRun).toHaveBeenCalledWith({
-      runId: 'run-1',
-      steps: [
-        {
-          detail: expect.objectContaining({
-            companyId: 'company-1',
-            paletteId: 'ocean',
-            payloadFingerprint: expect.any(String),
-          }),
-          name: 'company-creation',
-          status: 'succeeded',
-        },
-      ],
+    expect(succeedRunInput?.runId).toBe('run-1');
+    expect(succeedRunInput?.steps).toHaveLength(1);
+    expect(succeedRunInput?.steps[0]).toMatchObject({
+      name: 'company-creation',
+      status: 'succeeded',
+    });
+    expectFingerprintDetail(succeedRunInput?.steps[0]?.detail, {
+      companyId: 'company-1',
+      paletteId: 'ocean',
     });
     expect(recorder.failRun).not.toHaveBeenCalled();
     expect(result).toEqual({ companyId: 'company-1', paletteId: 'ocean' });
@@ -175,22 +182,19 @@ describe('createCreateCompany', () => {
     await expect(createCompany(buildInput())).rejects.toThrow(
       'duplicate legal identifier',
     );
+    const failRunInput = vi.mocked(recorder.failRun).mock.calls[0]?.[0];
 
     expect(recorder.startRun).toHaveBeenCalledTimes(1);
     expect(recorder.succeedRun).not.toHaveBeenCalled();
-    expect(recorder.failRun).toHaveBeenCalledWith({
-      errorSummary: 'duplicate legal identifier',
-      runId: 'run-1',
-      steps: [
-        {
-          detail: expect.objectContaining({
-            message: 'duplicate legal identifier',
-            payloadFingerprint: expect.any(String),
-          }),
-          name: 'company-creation',
-          status: 'failed',
-        },
-      ],
+    expect(failRunInput?.errorSummary).toBe('duplicate legal identifier');
+    expect(failRunInput?.runId).toBe('run-1');
+    expect(failRunInput?.steps).toHaveLength(1);
+    expect(failRunInput?.steps[0]).toMatchObject({
+      name: 'company-creation',
+      status: 'failed',
+    });
+    expectFingerprintDetail(failRunInput?.steps[0]?.detail, {
+      message: 'duplicate legal identifier',
     });
   });
 
@@ -242,20 +246,17 @@ describe('createCreateCompany', () => {
     const createCompany = createCreateCompany({ gateway, recorder });
 
     await expect(createCompany(buildInput())).rejects.toBe('boom');
+    const failRunInput = vi.mocked(recorder.failRun).mock.calls[0]?.[0];
 
-    expect(recorder.failRun).toHaveBeenCalledWith({
-      errorSummary: 'Unexpected server error',
-      runId: 'run-1',
-      steps: [
-        {
-          detail: expect.objectContaining({
-            message: 'Unexpected server error',
-            payloadFingerprint: expect.any(String),
-          }),
-          name: 'company-creation',
-          status: 'failed',
-        },
-      ],
+    expect(failRunInput?.errorSummary).toBe('Unexpected server error');
+    expect(failRunInput?.runId).toBe('run-1');
+    expect(failRunInput?.steps).toHaveLength(1);
+    expect(failRunInput?.steps[0]).toMatchObject({
+      name: 'company-creation',
+      status: 'failed',
+    });
+    expectFingerprintDetail(failRunInput?.steps[0]?.detail, {
+      message: 'Unexpected server error',
     });
   });
 

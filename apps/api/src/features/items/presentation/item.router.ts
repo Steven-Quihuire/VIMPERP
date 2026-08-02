@@ -203,7 +203,8 @@ export const createItemRouter = ({
     try {
       const body = createItemBodySchema.parse(request.body);
       const context = getRouteContext(response, 'catalog.write');
-      const { companyId: _ignoredCompanyId, ...itemBody } = body;
+      const { companyId: ignoredCompanyId, ...itemBody } = body;
+      void ignoredCompanyId;
       const result = await createItem({
         ...context,
         ...itemBody,
