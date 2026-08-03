@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Bell, Building2, CircleAlert } from 'lucide-react';
 
 import {
@@ -28,7 +28,10 @@ export const DashboardNotificationsPage = ({
 }) => {
   const isPlatformAdmin = session ? canViewAdminSignals(session) : true;
   const notifications = useDashboardNotifications(apiBaseUrl, isPlatformAdmin);
-  const items = notifications.data?.notifications ?? [];
+  const items = useMemo(
+    () => notifications.data?.notifications ?? [],
+    [notifications.data?.notifications],
+  );
 
   useEffect(() => {
     markNotificationsAsRead(items.map((notification) => notification.id));

@@ -51,8 +51,9 @@ const parseCompanyServices = (value: string | null) => {
   }
 
   try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) && parsed.every((service) => typeof service === 'string')
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) &&
+      parsed.every((service) => typeof service === 'string')
       ? parsed
       : [];
   } catch {

@@ -13,7 +13,9 @@ export const getReadNotificationIds = () => {
   if (typeof window === 'undefined') return new Set<string>();
 
   try {
-    return new Set<string>(JSON.parse(window.localStorage.getItem(notificationReadStorageKey) ?? '[]'));
+    return new Set<string>(
+      (JSON.parse(window.localStorage.getItem(notificationReadStorageKey) ?? '[]') as string[]),
+    );
   } catch {
     return new Set<string>();
   }

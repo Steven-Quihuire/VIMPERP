@@ -74,6 +74,8 @@ export const sessionsTable = pgTable('sessions', {
 export const membershipsTable = pgTable('memberships', {
   userId: text('user_id').notNull(),
   companyId: text('company_id'),
+  divisionId: text('division_id'),
+  localId: text('local_id'),
   role: authRoleEnum('role').notNull(),
 });
 
@@ -84,9 +86,28 @@ export const companiesTable = pgTable('companies', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
 });
 
+export const divisionsTable = pgTable(
+  'divisions',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id),
+    name: text('name').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('divisions_company_name_idx').on(
+      table.companyId,
+      table.name,
+    ),
+  ],
+);
+
 export const userPreferencesTable = pgTable('user_preferences', {
   userId: text('user_id').primaryKey(),
   activeCompanyId: text('active_company_id').references(() => companiesTable.id),
+  activeLocalId: text('active_local_id'),
 });
 
 export const companyProfilesTable = pgTable('company_profiles', {
@@ -127,14 +148,16 @@ export const itemCategoriesTable = pgTable(
     parentId: uuid('parent_id').references(
       (): AnyPgColumn => itemCategoriesTable.id,
     ),
+    localId: text('local_id'),
     name: text('name').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (table) => [
-    uniqueIndex('item_categories_company_parent_name_idx').on(
+    uniqueIndex('item_categories_company_local_parent_name_idx').on(
       table.companyId,
+      table.localId,
       table.parentId,
       table.name,
     ),
@@ -150,6 +173,7 @@ export const itemsTable = pgTable(
       .references(() => companiesTable.id),
     categoryId: uuid('category_id').references(() => itemCategoriesTable.id),
     sku: text('sku'),
+    localId: text('local_id'),
     name: text('name').notNull(),
     type: itemTypeEnum('type').notNull().default('product'),
     unit: itemUnitEnum('unit').notNull().default('unit'),
@@ -169,8 +193,8 @@ export const itemsTable = pgTable(
       .defaultNow(),
   },
   (table) => [
-    uniqueIndex('items_company_sku_idx')
-      .on(table.companyId, table.sku)
+    uniqueIndex('items_company_local_sku_idx')
+      .on(table.companyId, table.localId, table.sku)
       .where(sql`${table.sku} IS NOT NULL`),
   ],
 );
@@ -178,6 +202,7 @@ export const itemsTable = pgTable(
 export const branchesTable = pgTable('branches', {
   id: text('id').primaryKey(),
   companyId: text('company_id').notNull(),
+  divisionId: text('division_id').references(() => divisionsTable.id),
   name: text('name').notNull(),
   locale: text('locale'),
 });
@@ -207,6 +232,8 @@ export const auditEventsTable = pgTable(
     id: text('id').primaryKey(),
     actorUserId: text('actor_user_id').notNull(),
     companyId: text('company_id').notNull(),
+    divisionId: text('division_id'),
+    localId: text('local_id'),
     type: text('type').notNull(),
     correlationId: text('correlation_id'),
     entityType: text('entity_type'),
@@ -222,6 +249,7 @@ export const auditEventsTable = pgTable(
       table.createdAt,
     ),
     index('audit_events_correlation_id_idx').on(table.correlationId),
+    index('audit_events_local_id_idx').on(table.localId),
   ],
 );
 
