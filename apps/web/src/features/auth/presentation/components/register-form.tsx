@@ -12,6 +12,7 @@ import {
 import { Input } from '@/shared/ui/input';
 import { Separator } from '@/shared/ui/separator';
 
+import { Link } from 'react-router-dom';
 import type { RegisterInput } from '../../domain/auth';
 import { registerCopy } from '../register-copy';
 
@@ -401,6 +402,15 @@ export function RegisterForm({
           </FieldGroup>
         </div>
       </div>
+      <p className="text-center text-gray-600 text-xs">
+        ¿Necesitas crear una cuenta?{' '}
+        <Link
+          className="font-medium text-gray-900 transition-all duration-500 ease-in-out hover:underline"
+          to="/login"
+        >
+          Ingresa a tu sistema
+        </Link>
+      </p>
     </form>
   );
 }

@@ -66,6 +66,7 @@ export type AdminProvisioningRunSummary = {
   correlationId: string;
   requestId: string;
   actorUserId: string;
+  companyName: string | null;
   process: string;
   status: AdminProvisioningRunStatus;
   attempt: number;
@@ -137,7 +138,9 @@ export type AdminGateway = {
   listApplicationErrors: (
     filters: AdminApplicationErrorListFilters,
   ) => Promise<AdminCursorPage<AdminApplicationErrorSummary>>;
-  getApplicationError: (errorId: string) => Promise<AdminApplicationErrorDetail>;
+  getApplicationError: (
+    errorId: string,
+  ) => Promise<AdminApplicationErrorDetail>;
   listAuditEvents: (
     filters: AdminAuditEventListFilters,
   ) => Promise<AdminCursorPage<AdminAuditEventSummary>>;

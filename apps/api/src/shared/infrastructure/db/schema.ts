@@ -104,9 +104,45 @@ export const divisionsTable = pgTable(
   ],
 );
 
+export const privacyConsentsTable = pgTable(
+  'privacy_consents',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    companyId: text('company_id').notNull(),
+    policyVersion: text('policy_version').notNull(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('privacy_consents_user_company_version_idx').on(
+      table.userId,
+      table.companyId,
+      table.policyVersion,
+    ),
+  ],
+);
+
+export const privacyPolicyAcceptancesTable = pgTable(
+  'privacy_policy_acceptances',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    policyVersion: text('policy_version').notNull(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('privacy_policy_acceptances_user_version_idx').on(
+      table.userId,
+      table.policyVersion,
+    ),
+  ],
+);
+
 export const userPreferencesTable = pgTable('user_preferences', {
   userId: text('user_id').primaryKey(),
-  activeCompanyId: text('active_company_id').references(() => companiesTable.id),
+  activeCompanyId: text('active_company_id').references(
+    () => companiesTable.id,
+  ),
   activeLocalId: text('active_local_id'),
 });
 
@@ -261,6 +297,7 @@ export const provisioningRunsTable = pgTable(
     requestId: text('request_id').notNull(),
     actorUserId: text('actor_user_id').notNull(),
     process: text('process').notNull(),
+    companyName: text('company_name'),
     status: provisioningStatusEnum('status').notNull(),
     attempt: integer('attempt').notNull().default(1),
     idempotencyKey: text('idempotency_key'),

@@ -9,17 +9,24 @@ import {
   companyServicesTable,
   membershipsTable,
   notificationsTable,
+  privacyConsentsTable,
+  privacyPolicyAcceptancesTable,
   themePreferencesTable,
   userPreferencesTable,
 } from '../../../shared/infrastructure/db/schema';
 import type { AppDb } from '../../../shared/infrastructure/db/client';
 
-const createFakeDb = () => {
+const createFakeDb = ({ privacyPolicyAccepted = true } = {}) => {
   const writes: Array<{ table: unknown; values: unknown }> = [];
   const emptyQuery = {
-    from: () => ({
+    from: (table: unknown) => ({
       where: () => ({
-        limit: () => Promise.resolve([]),
+        limit: () =>
+          Promise.resolve(
+            table === privacyPolicyAcceptancesTable && privacyPolicyAccepted
+              ? [{ id: 'fixed-id' }]
+              : [],
+          ),
       }),
     }),
   };
@@ -51,6 +58,43 @@ const createFakeDb = () => {
 };
 
 describe('createDrizzleCompanyOnboardingGateway', () => {
+  it('rejects company creation when the privacy policy was not accepted on the server', async () => {
+    const { db, writes } = createFakeDb({ privacyPolicyAccepted: false });
+    const gateway = createDrizzleCompanyOnboardingGateway(db, {
+      createId: () => 'fixed-id',
+      now: () => new Date('2026-07-28T12:00:00.000Z'),
+    });
+
+    await expect(
+      gateway.createCompany({
+        ownerUserId: 'user-1',
+        correlationId: 'corr-1',
+        requestId: 'req-1',
+        idempotencyKey: 'idem-1',
+        name: 'Vimcore Labs',
+        legalIdentifier: 'RFC-123456',
+        services: ['Implementation'],
+        address: {
+          country: 'Mexico',
+          city: 'Monterrey',
+          exactLocation: 'San Pedro 123',
+        },
+        contact: {
+          phone: '0991234567',
+          email: 'ops@vimcore.test',
+        },
+        paletteId: 'ocean',
+        erpModuleId: 'inventory',
+        privacyPolicyVersion: '2025-07-09',
+        branches: [],
+      }),
+    ).rejects.toThrow(
+      'Debes aceptar la política de privacidad antes de registrar la empresa.',
+    );
+
+    expect(writes).toEqual([]);
+  });
+
   it('keeps company creation atomic while dual-writing normalized services and structured audit metadata', async () => {
     const { db, writes } = createFakeDb();
     const gateway = createDrizzleCompanyOnboardingGateway(db, {
@@ -77,6 +121,7 @@ describe('createDrizzleCompanyOnboardingGateway', () => {
       },
       paletteId: 'ocean',
       erpModuleId: 'inventory',
+      privacyPolicyVersion: '2025-07-09',
       branches: [{ name: 'HQ', locale: 'es-MX' }],
     });
 
@@ -89,6 +134,16 @@ describe('createDrizzleCompanyOnboardingGateway', () => {
           id: 'fixed-id',
           name: 'Vimcore Labs',
           status: 'active',
+        },
+      },
+      {
+        table: privacyConsentsTable,
+        values: {
+          acceptedAt: new Date('2026-07-28T12:00:00.000Z'),
+          companyId: 'fixed-id',
+          id: 'fixed-id',
+          policyVersion: '2025-07-09',
+          userId: 'user-1',
         },
       },
       {

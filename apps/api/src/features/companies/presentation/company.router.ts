@@ -7,6 +7,7 @@ import {
   MAX_COMPANY_SERVICES,
   paletteValues,
   erpModuleValues,
+  PRIVACY_POLICY_VERSION,
   type PaletteId,
 } from '../domain/company';
 
@@ -34,6 +35,7 @@ const createCompanyBodySchema = z.object({
   }),
   paletteId: paletteSchema.default('mono'),
   erpModuleId: erpModuleSchema.default('inventory'),
+  privacyPolicyVersion: z.literal(PRIVACY_POLICY_VERSION),
   branches: z
     .array(
       z.object({
@@ -57,6 +59,10 @@ const currentCompanySummarySchema = z.object({
   name: z.string().min(1),
 });
 
+const privacyPolicyConsentSchema = z.object({
+  policyVersion: z.literal(PRIVACY_POLICY_VERSION),
+});
+
 type AuthenticatedResponseLocals = {
   auth: AuthSession;
   requestContext?: {
@@ -78,12 +84,17 @@ const getIdempotencyKey = (headerValue: string | string[] | undefined) => {
 export const createCompanyRouter = ({
   requireAuth,
   createCompany,
+  recordPrivacyPolicyAcceptance,
   getCurrentCompanySummary,
   getThemePreference,
   switchActiveCompany,
   updateThemePreference,
 }: {
   requireAuth: RequestHandler;
+  recordPrivacyPolicyAcceptance: (input: {
+    userId: string;
+    policyVersion: typeof PRIVACY_POLICY_VERSION;
+  }) => Promise<void>;
   createCompany: (input: {
     correlationId: string;
     ownerUserId: string;
@@ -103,6 +114,7 @@ export const createCompanyRouter = ({
     };
     paletteId: PaletteId;
     erpModuleId: (typeof erpModuleValues)[number];
+    privacyPolicyVersion: typeof PRIVACY_POLICY_VERSION;
     branches: Array<{ name: string; locale?: string | undefined }>;
   }) => Promise<{ companyId: string; paletteId: PaletteId }>;
   getCurrentCompanySummary: (activeCompanyId: string | null) => Promise<{
@@ -123,6 +135,26 @@ export const createCompanyRouter = ({
   }) => Promise<{ paletteId: PaletteId }>;
 }): Router => {
   const router = Router();
+
+  router.post(
+    '/me/privacy-consent',
+    requireAuth,
+    async (request, response, next) => {
+      try {
+        const body = privacyPolicyConsentSchema.parse(request.body);
+        const auth = (response.locals as AuthenticatedResponseLocals).auth;
+
+        await recordPrivacyPolicyAcceptance({
+          userId: auth.user.id,
+          policyVersion: body.policyVersion,
+        });
+
+        response.status(204).send();
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
 
   router.post('/companies', requireAuth, async (request, response, next) => {
     try {

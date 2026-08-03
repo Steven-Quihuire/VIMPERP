@@ -23,11 +23,12 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { sileo } from 'sileo';
 
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
+import { Checkbox } from '@/shared/ui/checkbox';
 import {
   Card,
   CardContent,
@@ -37,6 +38,14 @@ import {
 } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/shared/ui/dialog';
 import type { AuthSession } from '../../auth/domain/auth';
 import type { erpModuleValues } from '../domain/onboarding';
 import {
@@ -44,6 +53,7 @@ import {
   normalizeServices,
   onboardingSteps,
   paletteValues,
+  PRIVACY_POLICY_VERSION,
 } from '../domain/onboarding';
 import { useOnboardingStore } from '../infrastructure/onboarding-store';
 import { useCreateCompany } from './use-onboarding';
@@ -296,6 +306,9 @@ export const OnboardingPage = ({
   const createCompany = useCreateCompany(apiBaseUrl);
   const isSubmittingRef = useRef(false);
   const [companyNameSuggestions] = useState(getRandomCompanySuggestions);
+  const [isPrivacyDialogOpen, setIsPrivacyDialogOpen] = useState(false);
+  const [hasAcceptedPrivacyPolicy, setHasAcceptedPrivacyPolicy] =
+    useState(false);
 
   useEffect(() => {
     hydrate(session);
@@ -331,12 +344,8 @@ export const OnboardingPage = ({
     return advanced;
   };
 
-  const finishOnboarding = async () => {
+  const submitCompanyRegistration = async () => {
     if (isSubmittingRef.current || createCompany.isPending) {
-      return;
-    }
-
-    if (!advanceToNextStep()) {
       return;
     }
 
@@ -358,6 +367,7 @@ export const OnboardingPage = ({
         },
         paletteId: draft.paletteId,
         erpModuleId: draft.erpModuleId,
+        privacyPolicyVersion: PRIVACY_POLICY_VERSION,
       });
 
       reset(session);
@@ -380,6 +390,32 @@ export const OnboardingPage = ({
     } finally {
       isSubmittingRef.current = false;
     }
+  };
+
+  const requestCompanyRegistration = () => {
+    if (!advanceToNextStep()) {
+      return;
+    }
+
+    setHasAcceptedPrivacyPolicy(false);
+    setIsPrivacyDialogOpen(true);
+  };
+
+  const confirmCompanyRegistration = () => {
+    if (!hasAcceptedPrivacyPolicy) {
+      sileo.warning({
+        title: 'Acepta la política de privacidad',
+        description: 'Necesitas aceptar la política para registrar tu empresa.',
+        fill: '#171717',
+        styles: {
+          description: '!text-white',
+        },
+      });
+      return;
+    }
+
+    setIsPrivacyDialogOpen(false);
+    void submitCompanyRegistration();
   };
 
   const renderStep = () => {
@@ -983,7 +1019,7 @@ export const OnboardingPage = ({
                   <Button
                     className="cursor-pointer rounded-3xl px-4 flex items-center justify-center"
                     type="button"
-                    onClick={() => void finishOnboarding()}
+                    onClick={requestCompanyRegistration}
                     disabled={createCompany.isPending}
                   >
                     {createCompany.isPending ? (
@@ -993,7 +1029,7 @@ export const OnboardingPage = ({
                       </>
                     ) : (
                       <>
-                        Registrar Empresa <Check className="size-4" />
+                        Revisar y registrar <Check className="size-4" />
                       </>
                     )}
                   </Button>
@@ -1029,6 +1065,64 @@ export const OnboardingPage = ({
           </div>
         </div>
       ) : null}
+      <Dialog open={isPrivacyDialogOpen} onOpenChange={setIsPrivacyDialogOpen}>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Protegemos tu información</DialogTitle>
+            <DialogDescription>
+              Para registrar tu empresa debes aceptar nuestra política de
+              privacidad y cookies.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-5 py-2">
+            <div className="rounded-xl border bg-muted/40 p-4 text-sm leading-6 text-muted-foreground">
+              Revisa cómo usamos y protegemos tus datos antes de crear tu
+              espacio de trabajo.
+              <Link
+                className="ml-1 font-medium text-primary underline underline-offset-4 hover:text-primary/80"
+                to="/privacy-policy"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Leer política de privacidad
+              </Link>
+            </div>
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="privacy-policy-consent"
+                checked={hasAcceptedPrivacyPolicy}
+                onCheckedChange={(checked) =>
+                  setHasAcceptedPrivacyPolicy(checked === true)
+                }
+                aria-describedby="privacy-policy-consent-description"
+              />
+              <Label
+                className="cursor-pointer text-sm font-normal leading-6"
+                htmlFor="privacy-policy-consent"
+                id="privacy-policy-consent-description"
+              >
+                Acepto la política de privacidad y cookies de LunaSol.
+              </Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsPrivacyDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={confirmCompanyRegistration}
+              disabled={!hasAcceptedPrivacyPolicy}
+            >
+              Aceptar y registrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 };

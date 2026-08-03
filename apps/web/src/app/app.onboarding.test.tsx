@@ -73,7 +73,9 @@ describe('App onboarding flow', () => {
       if (url.endsWith('/auth/me')) {
         return Promise.resolve(
           createJsonResponse(
-            createSessionResponse({ user: { id: 'user-1', email: 'owner@vimcore.test', username: '' } }),
+            createSessionResponse({
+              user: { id: 'user-1', email: 'owner@vimcore.test', username: '' },
+            }),
             200,
           ),
         );
@@ -160,10 +162,7 @@ describe('App onboarding flow', () => {
 
       if (url.endsWith('/auth/me')) {
         return Promise.resolve(
-          createJsonResponse(
-            createSessionResponse(),
-            200,
-          ),
+          createJsonResponse(createSessionResponse(), 200),
         );
       }
 
@@ -296,10 +295,7 @@ describe('App onboarding flow', () => {
 
         if (authCalls === 1) {
           return Promise.resolve(
-            createJsonResponse(
-              createSessionResponse(),
-              200,
-            ),
+            createJsonResponse(createSessionResponse(), 200),
           );
         }
 
@@ -332,6 +328,14 @@ describe('App onboarding flow', () => {
         return Promise.resolve(createJsonResponse({ paletteId: 'ocean' }, 200));
       }
 
+      if (url.endsWith('/me/privacy-consent')) {
+        expect(init?.method).toBe('POST');
+        expect(init?.body).toEqual(
+          expect.stringContaining('"policyVersion":"2025-07-09"'),
+        );
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+
       if (url.endsWith('/me/company')) {
         return Promise.resolve(
           createJsonResponse(
@@ -361,7 +365,27 @@ describe('App onboarding flow', () => {
     expect(screen.getByLabelText('Preview company contact')).toHaveTextContent(
       'ops@vimcore.test',
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar Empresa' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Revisar y registrar' }),
+    );
+    expect(
+      fetchMock.mock.calls.some(([input]) =>
+        readUrl(input).endsWith('/companies'),
+      ),
+    ).toBe(false);
+    expect(
+      fetchMock.mock.calls.some(([input]) =>
+        readUrl(input).endsWith('/me/privacy-consent'),
+      ),
+    ).toBe(false);
+    fireEvent.click(
+      screen.getByRole('checkbox', {
+        name: 'Acepto la política de privacidad y cookies de LunaSol.',
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Aceptar y registrar' }),
+    );
 
     expect(
       await screen.findByRole('heading', { name: 'ERP dashboard' }),
@@ -382,11 +406,13 @@ describe('App onboarding flow', () => {
 
       if (url.endsWith('/auth/me')) {
         return Promise.resolve(
-          createJsonResponse(
-            createSessionResponse(),
-            200,
-          ),
+          createJsonResponse(createSessionResponse(), 200),
         );
+      }
+
+      if (url.endsWith('/me/privacy-consent')) {
+        expect(init?.method).toBe('POST');
+        return Promise.resolve(new Response(null, { status: 204 }));
       }
 
       if (url.endsWith('/companies')) {
@@ -410,15 +436,24 @@ describe('App onboarding flow', () => {
     ).toBeInTheDocument();
 
     completeRequiredOnboardingFields();
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar Empresa' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Registrar Empresa' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Revisar y registrar' }),
+    );
+    fireEvent.click(
+      screen.getByRole('checkbox', {
+        name: 'Acepto la política de privacidad y cookies de LunaSol.',
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Aceptar y registrar' }),
+    );
 
     await waitFor(() => {
       expect(
         screen.getByRole('button', { name: 'Creando empresa...' }),
       ).toBeDisabled();
     });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(resolveCreateCompany).toBeDefined();
   });
 

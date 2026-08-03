@@ -112,7 +112,9 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
   }
 
   async findActiveCompanyId(userId: string) {
-    return await Promise.resolve(this.activeCompanyByUserId.get(userId) ?? null);
+    return await Promise.resolve(
+      this.activeCompanyByUserId.get(userId) ?? null,
+    );
   }
 
   async findCompanyStatus(companyId: string) {
@@ -127,7 +129,9 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
   }
 
   async countRecentActiveCompanySwitches(userId: string) {
-    return await Promise.resolve(this.recentSwitchCountByUserId.get(userId) ?? 0);
+    return await Promise.resolve(
+      this.recentSwitchCountByUserId.get(userId) ?? 0,
+    );
   }
 
   async recordActiveCompanySwitch(input: {
@@ -135,7 +139,10 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
     companyId: string;
     correlationId: string;
   }) {
-    this.switchEvents.push({ userId: input.userId, companyId: input.companyId });
+    this.switchEvents.push({
+      userId: input.userId,
+      companyId: input.companyId,
+    });
     this.recentSwitchCountByUserId.set(
       input.userId,
       (this.recentSwitchCountByUserId.get(input.userId) ?? 0) + 1,
@@ -152,10 +159,15 @@ class InMemoryCompanyGateway implements CompanyOnboardingGateway {
 
   constructor(private readonly authGateway: InMemoryAuthGateway) {}
 
+  async recordPrivacyPolicyAcceptance() {
+    await Promise.resolve();
+  }
+
   async createCompany(input: CreateCompanyInput) {
     if (
       this.companies.some(
-        (company) => company.legalIdentifier.trim() === input.legalIdentifier.trim(),
+        (company) =>
+          company.legalIdentifier.trim() === input.legalIdentifier.trim(),
       )
     ) {
       throw new DuplicateCompanyError();
@@ -183,7 +195,9 @@ class InMemoryCompanyGateway implements CompanyOnboardingGateway {
   async getCurrentCompanySummary(
     activeCompanyId: string | null,
   ): Promise<CurrentCompanySummary | null> {
-    const company = this.companies.find((entry) => entry.companyId === activeCompanyId);
+    const company = this.companies.find(
+      (entry) => entry.companyId === activeCompanyId,
+    );
 
     if (!company) {
       return await Promise.resolve(null);
@@ -206,20 +220,36 @@ class InMemoryCompanyGateway implements CompanyOnboardingGateway {
   }
 }
 
-const createProvisioningRecorder = (): ProvisioningRecorder & ApplicationErrorRecorder => {
-  const runs = new Map<string, { fingerprint: string; result: { companyId: string; paletteId: PaletteId } | null }>();
+const createProvisioningRecorder = (): ProvisioningRecorder &
+  ApplicationErrorRecorder => {
+  const runs = new Map<
+    string,
+    {
+      fingerprint: string;
+      result: { companyId: string; paletteId: PaletteId } | null;
+    }
+  >();
 
   return {
     startRun: async ({ idempotencyKey, payloadFingerprint }) => {
       if (!idempotencyKey) {
-        return await Promise.resolve({ kind: 'started', runId: 'run-1' } satisfies CompanyProvisioningStartResult);
+        return await Promise.resolve({
+          kind: 'started',
+          runId: 'run-1',
+        } satisfies CompanyProvisioningStartResult);
       }
 
       const existing = runs.get(idempotencyKey);
 
       if (!existing) {
-        runs.set(idempotencyKey, { fingerprint: payloadFingerprint, result: null });
-        return await Promise.resolve({ kind: 'started', runId: idempotencyKey } satisfies CompanyProvisioningStartResult);
+        runs.set(idempotencyKey, {
+          fingerprint: payloadFingerprint,
+          result: null,
+        });
+        return await Promise.resolve({
+          kind: 'started',
+          runId: idempotencyKey,
+        } satisfies CompanyProvisioningStartResult);
       }
 
       if (existing.fingerprint !== payloadFingerprint) {
@@ -234,11 +264,18 @@ const createProvisioningRecorder = (): ProvisioningRecorder & ApplicationErrorRe
         } satisfies CompanyProvisioningStartResult);
       }
 
-      return await Promise.resolve({ kind: 'started', runId: idempotencyKey } satisfies CompanyProvisioningStartResult);
+      return await Promise.resolve({
+        kind: 'started',
+        runId: idempotencyKey,
+      } satisfies CompanyProvisioningStartResult);
     },
     succeedRun: async ({ runId, steps }) => {
       const stepDetail = steps[0]?.detail as
-        | { companyId?: string; paletteId?: PaletteId; payloadFingerprint?: string }
+        | {
+            companyId?: string;
+            paletteId?: PaletteId;
+            payloadFingerprint?: string;
+          }
         | undefined;
 
       if (stepDetail?.companyId && stepDetail.paletteId) {
@@ -354,6 +391,7 @@ describe('company onboarding routes', () => {
           email: 'ops@vimcore.test',
         },
         paletteId: 'ocean',
+        privacyPolicyVersion: '2025-07-09',
       });
 
     expect(response.status).toBe(201);
@@ -447,6 +485,7 @@ describe('company onboarding routes', () => {
           email: 'ops@vimcore.test',
         },
         paletteId: 'ocean',
+        privacyPolicyVersion: '2025-07-09',
       });
 
     expect(response.status).toBe(400);
@@ -475,6 +514,7 @@ describe('company onboarding routes', () => {
           email: 'ops@vimcore.test',
         },
         paletteId: 'ocean',
+        privacyPolicyVersion: '2025-07-09',
       });
 
     expect(response.status).toBe(400);
@@ -503,6 +543,7 @@ describe('company onboarding routes', () => {
           email: 'ops@vimcore.test',
         },
         paletteId: 'ocean',
+        privacyPolicyVersion: '2025-07-09',
       });
 
     const patchResponse = await request(app)
@@ -612,7 +653,8 @@ describe('company onboarding routes', () => {
   });
 
   it('replays the original company response when the same idempotency key is retried with the same payload', async () => {
-    const { app, companyGateway, sessionCookie } = await createAuthenticatedApp();
+    const { app, companyGateway, sessionCookie } =
+      await createAuthenticatedApp();
     const payload = {
       name: 'Vimcore Labs',
       legalIdentifier: 'RFC-123456',
@@ -627,6 +669,7 @@ describe('company onboarding routes', () => {
         email: 'ops@vimcore.test',
       },
       paletteId: 'ocean',
+      privacyPolicyVersion: '2025-07-09',
     };
 
     const firstResponse = await request(app)
@@ -668,6 +711,7 @@ describe('company onboarding routes', () => {
           email: 'ops@vimcore.test',
         },
         paletteId: 'ocean',
+        privacyPolicyVersion: '2025-07-09',
       });
 
     const secondResponse = await request(app)
@@ -688,11 +732,14 @@ describe('company onboarding routes', () => {
           email: 'ops@vimcore.test',
         },
         paletteId: 'forest',
+        privacyPolicyVersion: '2025-07-09',
       });
 
     expect(firstResponse.status).toBe(201);
     expect(secondResponse.status).toBe(409);
-    expect((secondResponse.body as { error: { code: string } }).error.code).toBe('CONFLICT');
+    expect(
+      (secondResponse.body as { error: { code: string } }).error.code,
+    ).toBe('CONFLICT');
   });
 
   it('returns a sanitized conflict when the company legal identifier already exists', async () => {
@@ -716,6 +763,7 @@ describe('company onboarding routes', () => {
           email: 'ops@vimcore.test',
         },
         paletteId: 'ocean',
+        privacyPolicyVersion: '2025-07-09',
       });
 
     const duplicateResponse = await request(app)
@@ -736,13 +784,15 @@ describe('company onboarding routes', () => {
           email: 'ops2@vimcore.test',
         },
         paletteId: 'forest',
+        privacyPolicyVersion: '2025-07-09',
       });
 
     expect(duplicateResponse.status).toBe(409);
     expect(duplicateResponse.body).toEqual({
       error: {
         code: 'CONFLICT',
-        message: 'The company is already registered.',
+        message:
+          'El RUC o número de identificación ingresado ya pertenece a otra empresa. Usa uno diferente.',
       },
     });
   });

@@ -148,6 +148,7 @@ class InMemoryAdminGateway implements AdminGateway {
           correlationId: 'corr-run',
           requestId: 'req-run',
           actorUserId: 'platform-admin-1',
+          companyName: 'Vimcore Labs',
           process: 'company-onboarding',
           status: 'failed',
           attempt: 1,
@@ -167,6 +168,7 @@ class InMemoryAdminGateway implements AdminGateway {
       correlationId: 'corr-run',
       requestId: 'req-run',
       actorUserId: 'platform-admin-1',
+      companyName: 'Vimcore Labs',
       process: 'company-onboarding',
       status: 'failed',
       attempt: 1,
@@ -266,7 +268,8 @@ class InMemoryAdminGateway implements AdminGateway {
 
 const passwordHasher: PasswordHasher = {
   hash: async (value) => await Promise.resolve(`hashed:${value}`),
-  verify: async (hash, value) => await Promise.resolve(hash === `hashed:${value}`),
+  verify: async (hash, value) =>
+    await Promise.resolve(hash === `hashed:${value}`),
 };
 
 const sessionTokenService: SessionTokenService = {
@@ -302,8 +305,10 @@ const getSessionCookie = (headers: string | string[] | undefined): string => {
 const createAuthenticatedApp = async (role: AuthMembership['role']) => {
   const gateway = new InMemoryAuthGateway();
   const adminGateway = new InMemoryAdminGateway();
-  const username = role === 'platform-admin' ? 'platform-admin' : 'company-owner';
-  const userId = role === 'platform-admin' ? 'platform-admin-1' : 'company-owner-1';
+  const username =
+    role === 'platform-admin' ? 'platform-admin' : 'company-owner';
+  const userId =
+    role === 'platform-admin' ? 'platform-admin-1' : 'company-owner-1';
 
   gateway.addUser({
     id: userId,
@@ -336,9 +341,11 @@ const createAuthenticatedApp = async (role: AuthMembership['role']) => {
   };
 };
 
-const createPlatformAdminApp = async () => await createAuthenticatedApp('platform-admin');
+const createPlatformAdminApp = async () =>
+  await createAuthenticatedApp('platform-admin');
 
-const createCompanyOwnerApp = async () => await createAuthenticatedApp('company-owner');
+const createCompanyOwnerApp = async () =>
+  await createAuthenticatedApp('company-owner');
 
 describe('admin routes', () => {
   it('returns company summary signals for platform admins', async () => {
@@ -413,6 +420,7 @@ describe('admin routes', () => {
           correlationId: 'corr-run',
           requestId: 'req-run',
           actorUserId: 'platform-admin-1',
+          companyName: 'Vimcore Labs',
           process: 'company-onboarding',
           status: 'failed',
           attempt: 1,
@@ -446,6 +454,7 @@ describe('admin routes', () => {
       correlationId: 'corr-run',
       requestId: 'req-run',
       actorUserId: 'platform-admin-1',
+      companyName: 'Vimcore Labs',
       process: 'company-onboarding',
       status: 'failed',
       attempt: 1,
@@ -627,9 +636,7 @@ describe('admin routes', () => {
   ])('returns 403 for company users hitting %s', async (path) => {
     const { app, sessionCookie } = await createCompanyOwnerApp();
 
-    const response = await request(app)
-      .get(path)
-      .set('Cookie', sessionCookie);
+    const response = await request(app).get(path).set('Cookie', sessionCookie);
 
     expect(response.status).toBe(403);
     expect(response.body).toEqual({

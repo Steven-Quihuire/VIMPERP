@@ -1,6 +1,7 @@
 import type { DashboardCursorPage } from './admin-query';
 
-export type ProvisioningRunStatus = 'running' | 'succeeded' | 'failed' | 'incomplete';
+export type ProvisioningRunStatus =
+  'running' | 'succeeded' | 'failed' | 'incomplete';
 
 export type ProvisioningRunListFilters = {
   status?: ProvisioningRunStatus | undefined;
@@ -23,6 +24,7 @@ export type ProvisioningRunSummary = {
   correlationId: string;
   requestId: string;
   actorUserId: string;
+  companyName: string | null;
   process: string;
   status: ProvisioningRunStatus;
   attempt: number;

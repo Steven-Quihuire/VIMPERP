@@ -26,6 +26,7 @@ const createPayloadFingerprint = (input: CreateCompanyInput) => {
     },
     paletteId: input.paletteId,
     erpModuleId: input.erpModuleId,
+    privacyPolicyVersion: input.privacyPolicyVersion,
     branches: input.branches.map((branch) => ({
       name: branch.name.trim(),
       locale: branch.locale?.trim() ?? null,
@@ -77,6 +78,7 @@ export const createCreateCompany = ({
     const payloadFingerprint = createPayloadFingerprint(input);
     const startResult = await recorder.startRun({
       actorUserId: input.ownerUserId,
+      companyName: input.name.trim(),
       correlationId: input.correlationId,
       idempotencyKey: input.idempotencyKey,
       payloadFingerprint,

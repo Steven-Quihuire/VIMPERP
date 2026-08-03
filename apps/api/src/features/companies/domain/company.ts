@@ -31,6 +31,7 @@ export const erpModuleValues = [
 export type ErpModuleId = (typeof erpModuleValues)[number];
 
 export const MAX_COMPANY_SERVICES = 5;
+export const PRIVACY_POLICY_VERSION = '2025-07-09';
 
 export const isValidEcuadorianMobile = (value: string) =>
   /^09\d{8}$/.test(value);
@@ -79,6 +80,7 @@ export type CreateCompanyInput = {
   };
   paletteId: PaletteId;
   erpModuleId: ErpModuleId;
+  privacyPolicyVersion: typeof PRIVACY_POLICY_VERSION;
   branches: CompanyBranchDraft[];
 };
 
@@ -112,6 +114,7 @@ export type ProvisioningRecorder = {
   startRun: (input: {
     actorUserId: string;
     correlationId: string;
+    companyName: string;
     process: string;
     requestId: string;
     idempotencyKey: string | null;
@@ -138,19 +141,37 @@ export class CompanyConflictError extends Error {
 }
 
 export class DuplicateCompanyError extends CompanyConflictError {
-  constructor(message = 'The company is already registered.') {
+  constructor(
+    message = 'El RUC o número de identificación ingresado ya pertenece a otra empresa. Usa uno diferente.',
+  ) {
     super(message);
   }
 }
 
 export class CompanyIdempotencyConflictError extends CompanyConflictError {
-  constructor(message = 'Idempotency key already used with a different company payload') {
+  constructor(
+    message = 'Idempotency key already used with a different company payload',
+  ) {
+    super(message);
+  }
+}
+
+export class PrivacyPolicyNotAcceptedError extends Error {
+  readonly code = 'PRIVACY_POLICY_NOT_ACCEPTED';
+
+  constructor(
+    message = 'Debes aceptar la política de privacidad antes de registrar la empresa.',
+  ) {
     super(message);
   }
 }
 
 export type CompanyOnboardingGateway = {
   createCompany: (input: CreateCompanyInput) => Promise<CreateCompanyResult>;
+  recordPrivacyPolicyAcceptance: (input: {
+    userId: string;
+    policyVersion: typeof PRIVACY_POLICY_VERSION;
+  }) => Promise<void>;
   getCurrentCompanySummary: (
     activeCompanyId: string | null,
   ) => Promise<CurrentCompanySummary | null>;

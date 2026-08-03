@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AuthSession } from '../../auth/domain/auth';
@@ -68,7 +69,9 @@ const createWrapper = () => {
   });
 
   return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <MemoryRouter>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    </MemoryRouter>
   );
 };
 
@@ -111,9 +114,9 @@ describe('CategoriesPage', () => {
   it('renders categories as a parent-child tree', () => {
     render(<CategoriesPage session={session} />, { wrapper: createWrapper() });
 
-    expect(screen.getByRole('button', { name: 'Edit Furniture' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Edit Office chairs' })).toBeInTheDocument();
-    expect(screen.getByText('Parent: Furniture')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Editar Furniture' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Editar Office chairs' })).toBeInTheDocument();
+    expect(screen.getByText('Categoría padre: Furniture')).toBeInTheDocument();
     expect(screen.getAllByText('Furniture')).not.toHaveLength(0);
   });
 
@@ -128,14 +131,14 @@ describe('CategoriesPage', () => {
 
     render(<CategoriesPage session={session} />, { wrapper: createWrapper() });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Category' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save category' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar categoría' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar categoría' }));
 
-    expect(await screen.findByText('Name is required.')).toBeInTheDocument();
+    expect(await screen.findByText('El nombre es obligatorio.')).toBeInTheDocument();
     expect(createCategory).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Lighting' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save category' }));
+    fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Lighting' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar categoría' }));
 
     await waitFor(() => {
       expect(createCategory).toHaveBeenCalledWith({
@@ -158,9 +161,9 @@ describe('CategoriesPage', () => {
       wrapper: createWrapper(),
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Category' }));
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Lighting' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save category' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar categoría' }));
+    fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Lighting' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar categoría' }));
 
     await waitFor(() => {
       expect(createCategory).toHaveBeenCalledWith({
@@ -189,7 +192,7 @@ describe('CategoriesPage', () => {
 
     rerender(<CategoriesPage session={session} />);
 
-    expect(screen.getByRole('button', { name: 'Edit Lighting' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Editar Lighting' })).toBeInTheDocument();
   });
 
   it('validates and submits the edit category form', async () => {
@@ -203,17 +206,17 @@ describe('CategoriesPage', () => {
 
     render(<CategoriesPage session={session} />, { wrapper: createWrapper() });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit Office chairs' }));
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: '' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Editar Office chairs' }));
+    fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
 
-    expect(await screen.findByText('Name is required.')).toBeInTheDocument();
+    expect(await screen.findByText('El nombre es obligatorio.')).toBeInTheDocument();
     expect(updateCategory).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Executive chairs' } });
-    fireEvent.click(screen.getByRole('combobox', { name: 'Parent category' }));
+    fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Executive chairs' } });
+    fireEvent.click(screen.getByRole('combobox', { name: 'Categoría padre' }));
     fireEvent.click(screen.getByRole('option', { name: 'Sin categoría padre' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
 
     await waitFor(() => {
       expect(updateCategory).toHaveBeenCalledWith({
@@ -239,9 +242,9 @@ describe('CategoriesPage', () => {
 
     render(<CategoriesPage session={session} />, { wrapper: createWrapper() });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit Office chairs' }));
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Office chairs' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Editar Office chairs' }));
+    fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Office chairs' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
 
     expect(
       await screen.findByText('No se puede asignar una categoría como hija de su propia descendencia.'),
@@ -258,7 +261,7 @@ describe('CategoriesPage', () => {
 
     render(<CategoriesPage session={session} />, { wrapper: createWrapper() });
 
-    expect(screen.getByText('No hay categorías todavía. Creá la primera.')).toBeInTheDocument();
+    expect(screen.getByText('No hay categorías registradas en tu empresa.')).toBeInTheDocument();
   });
 
   it('renders loading skeletons while categories load', () => {

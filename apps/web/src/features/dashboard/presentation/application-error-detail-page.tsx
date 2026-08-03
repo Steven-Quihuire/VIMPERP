@@ -20,7 +20,9 @@ export const ApplicationErrorDetailPage = ({
     <main>
       <h1>Detalle del error de aplicación</h1>
       <p>
-        <Link to="/dashboard/admin/application-errors">Volver a errores de aplicación</Link>
+        <Link to="/dashboard/admin/application-errors">
+          Volver a errores de aplicación
+        </Link>
       </p>
 
       {detailQuery.isLoading ? <p>Cargando detalle del error...</p> : null}
@@ -46,7 +48,10 @@ export const ApplicationErrorDetailPage = ({
             </div>
           </dl>
 
-          <JsonRecordView label="Sanitized context" value={detailQuery.data.context} />
+          <JsonRecordView
+            label="Sanitized context"
+            value={detailQuery.data.context}
+          />
         </>
       ) : null}
     </main>

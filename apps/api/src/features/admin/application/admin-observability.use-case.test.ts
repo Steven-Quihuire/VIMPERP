@@ -26,6 +26,7 @@ const createAdminGateway = (): AdminGateway => ({
         correlationId: 'corr-run',
         requestId: 'req-run',
         actorUserId: 'user-1',
+        companyName: 'Vimcore Labs',
         process: 'company-onboarding',
         status: 'succeeded',
         attempt: 1,
@@ -42,6 +43,7 @@ const createAdminGateway = (): AdminGateway => ({
     correlationId: 'corr-run',
     requestId: 'req-run',
     actorUserId: 'user-1',
+    companyName: 'Vimcore Labs',
     process: 'company-onboarding',
     status: 'succeeded',
     attempt: 1,
@@ -174,8 +176,10 @@ describe('admin observability use cases', () => {
   it('gets provisioning run and application error details through the admin gateway', async () => {
     const adminGateway = createAdminGateway();
 
-    const getProvisioningRunDetail = createGetProvisioningRunDetail(adminGateway);
-    const getApplicationErrorDetail = createGetApplicationErrorDetail(adminGateway);
+    const getProvisioningRunDetail =
+      createGetProvisioningRunDetail(adminGateway);
+    const getApplicationErrorDetail =
+      createGetApplicationErrorDetail(adminGateway);
 
     await expect(getProvisioningRunDetail('run-1')).resolves.toEqual(
       expect.objectContaining({

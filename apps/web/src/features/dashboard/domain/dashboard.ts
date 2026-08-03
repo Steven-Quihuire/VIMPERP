@@ -10,7 +10,10 @@ export type DashboardModule = {
   label: string;
 };
 
-const dashboardRoleLabels: Record<AuthSession['memberships'][number]['role'], string> = {
+const dashboardRoleLabels: Record<
+  AuthSession['memberships'][number]['role'],
+  string
+> = {
   'platform-admin': 'Administrador de plataforma',
   'company-owner': 'Responsable de empresa',
   'company-user': 'Usuario de empresa',
@@ -57,11 +60,7 @@ export type DashboardNotification = {
 };
 
 export type AdminWorkspaceLink = {
-  id:
-    | 'companies'
-    | 'provisioning-runs'
-    | 'application-errors'
-    | 'audit-events';
+  id: 'companies' | 'provisioning-runs' | 'application-errors' | 'audit-events';
   label: string;
   href: string;
   description: string;
@@ -80,46 +79,49 @@ const platformAdminModules: DashboardModule[] = [
 
 export const adminWorkspaceLinks: AdminWorkspaceLink[] = [
   {
-    id: 'companies',
-    label: 'Empresas',
-    href: '/dashboard/admin/companies',
-    description: 'Consulta la información completa de las empresas registradas.',
-  },
-  {
     id: 'provisioning-runs',
-    label: 'Procesos de alta',
+    label: 'Empresas registradas',
     href: '/dashboard/admin/provisioning-runs',
-    description: 'Revisa el estado de los procesos de alta y sus pasos registrados.',
+    description:
+      'Revisa el estado de los procesos de alta y sus pasos registrados.',
   },
   {
     id: 'application-errors',
     label: 'Errores de aplicación',
     href: '/dashboard/admin/application-errors',
-    description: 'Investiga fallos técnicos asociados a identificadores de correlación.',
+    description:
+      'Investiga fallos técnicos asociados a identificadores de correlación.',
   },
   {
     id: 'audit-events',
     label: 'Eventos de auditoría',
     href: '/dashboard/admin/audit-events',
-    description: 'Consulta la trazabilidad estructurada de la actividad de la plataforma.',
+    description:
+      'Consulta la trazabilidad estructurada de la actividad de la plataforma.',
   },
 ];
 
 export const canViewAdminSignals = (session: AuthSession) =>
-  session.memberships.some((membership) => membership.role === 'platform-admin');
+  session.memberships.some(
+    (membership) => membership.role === 'platform-admin',
+  );
 
-export const getActiveMembership = (session: AuthSession): AuthMembership | null => {
+export const getActiveMembership = (
+  session: AuthSession,
+): AuthMembership | null => {
   if (session.activeCompany) {
     return (
       session.memberships.find(
-        (membership) => membership.companyId === session.activeCompany?.companyId,
+        (membership) =>
+          membership.companyId === session.activeCompany?.companyId,
       ) ?? null
     );
   }
 
   return (
-    session.memberships.find((membership) => membership.role === 'platform-admin') ??
-    null
+    session.memberships.find(
+      (membership) => membership.role === 'platform-admin',
+    ) ?? null
   );
 };
 
@@ -168,7 +170,7 @@ export const getDashboardCompanyDetail = (
   if (session.activeCompany) {
     return activeMembership
       ? `${dashboardRoleLabels[activeMembership.role]} · ${getDashboardStatusLabel(session.activeCompany.status)}`
-      : company?.name ?? session.user.email;
+      : (company?.name ?? session.user.email);
   }
 
   if (canViewAdminSignals(session)) {

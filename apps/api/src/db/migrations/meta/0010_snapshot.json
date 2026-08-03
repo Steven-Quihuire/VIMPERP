@@ -1,6 +1,6 @@
 {
-  "id": "8995b5f3-1658-4938-a246-23de21e83697",
-  "prevId": "35981ab2-5c01-407e-8c45-8cf24477c85f",
+  "id": "e11fafb1-98f9-414b-9550-e4318c2de3e9",
+  "prevId": "5595b8ed-4d6f-4248-a10e-ff82b1466e65",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -145,18 +145,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "division_id": {
-          "name": "division_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "local_id": {
-          "name": "local_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "type": {
           "name": "type",
           "type": "text",
@@ -242,21 +230,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "audit_events_local_id_idx": {
-          "name": "audit_events_local_id_idx",
-          "columns": [
-            {
-              "expression": "local_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {},
@@ -282,12 +255,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "division_id": {
-          "name": "division_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "name": {
           "name": "name",
           "type": "text",
@@ -302,21 +269,7 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {
-        "branches_division_id_divisions_id_fk": {
-          "name": "branches_division_id_divisions_id_fk",
-          "tableFrom": "branches",
-          "tableTo": "divisions",
-          "columnsFrom": [
-            "division_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -489,79 +442,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.divisions": {
-      "name": "divisions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "company_id": {
-          "name": "company_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "divisions_company_name_idx": {
-          "name": "divisions_company_name_idx",
-          "columns": [
-            {
-              "expression": "company_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "name",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "divisions_company_id_companies_id_fk": {
-          "name": "divisions_company_id_companies_id_fk",
-          "tableFrom": "divisions",
-          "tableTo": "companies",
-          "columnsFrom": [
-            "company_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.item_categories": {
       "name": "item_categories",
       "schema": "",
@@ -585,12 +465,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "local_id": {
-          "name": "local_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "name": {
           "name": "name",
           "type": "text",
@@ -606,17 +480,11 @@
         }
       },
       "indexes": {
-        "item_categories_company_local_parent_name_idx": {
-          "name": "item_categories_company_local_parent_name_idx",
+        "item_categories_company_parent_name_idx": {
+          "name": "item_categories_company_parent_name_idx",
           "columns": [
             {
               "expression": "company_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "local_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -703,12 +571,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "local_id": {
-          "name": "local_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "name": {
           "name": "name",
           "type": "text",
@@ -775,17 +637,11 @@
         }
       },
       "indexes": {
-        "items_company_local_sku_idx": {
-          "name": "items_company_local_sku_idx",
+        "items_company_sku_idx": {
+          "name": "items_company_sku_idx",
           "columns": [
             {
               "expression": "company_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "local_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -850,18 +706,6 @@
         },
         "company_id": {
           "name": "company_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "division_id": {
-          "name": "division_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "local_id": {
-          "name": "local_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -936,6 +780,136 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.privacy_consents": {
+      "name": "privacy_consents",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "policy_version": {
+          "name": "policy_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accepted_at": {
+          "name": "accepted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "privacy_consents_user_company_version_idx": {
+          "name": "privacy_consents_user_company_version_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "policy_version",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.privacy_policy_acceptances": {
+      "name": "privacy_policy_acceptances",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "policy_version": {
+          "name": "policy_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accepted_at": {
+          "name": "accepted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "privacy_policy_acceptances_user_version_idx": {
+          "name": "privacy_policy_acceptances_user_version_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "policy_version",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -1256,12 +1230,6 @@
         },
         "active_company_id": {
           "name": "active_company_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "active_local_id": {
-          "name": "active_local_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false

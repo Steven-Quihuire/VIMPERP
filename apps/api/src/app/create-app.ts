@@ -222,6 +222,8 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
         gateway: companyOnboardingGateway,
         recorder: provisioningRecorder,
       }),
+      recordPrivacyPolicyAcceptance:
+        companyOnboardingGateway.recordPrivacyPolicyAcceptance,
       getCurrentCompanySummary: createGetCurrentCompanySummary(companyOnboardingGateway),
       getThemePreference: createGetThemePreference(companyOnboardingGateway),
       switchActiveCompany,

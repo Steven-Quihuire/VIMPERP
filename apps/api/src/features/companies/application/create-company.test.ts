@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createCreateCompany } from './create-company';
+import { PRIVACY_POLICY_VERSION } from '../domain/company';
 import type {
   CompanyOnboardingGateway,
   CompanyProvisioningStartResult,
@@ -36,6 +37,7 @@ const buildInput = (): CreateCompanyInput => ({
   idempotencyKey: 'idem-key-1',
   paletteId: 'ocean',
   erpModuleId: 'inventory',
+  privacyPolicyVersion: PRIVACY_POLICY_VERSION,
   branches: [{ name: ' HQ ', locale: ' es-MX ' }, { name: ' Remote ' }],
 });
 
@@ -65,6 +67,7 @@ describe('createCreateCompany', () => {
         companyId: 'company-1',
         paletteId: 'ocean',
       }),
+      recordPrivacyPolicyAcceptance: vi.fn(),
       getCurrentCompanySummary: vi.fn(),
       getThemePreference: vi.fn(),
       saveThemePreference: vi.fn(),
@@ -124,6 +127,7 @@ describe('createCreateCompany', () => {
         companyId: 'company-1',
         paletteId: 'ocean',
       }),
+      recordPrivacyPolicyAcceptance: vi.fn(),
       getCurrentCompanySummary: vi.fn(),
       getThemePreference: vi.fn(),
       saveThemePreference: vi.fn(),
@@ -144,6 +148,7 @@ describe('createCreateCompany', () => {
         companyId: 'company-1',
         paletteId: 'ocean',
       }),
+      recordPrivacyPolicyAcceptance: vi.fn(),
       getCurrentCompanySummary: vi.fn(),
       getThemePreference: vi.fn(),
       saveThemePreference: vi.fn(),
@@ -173,6 +178,7 @@ describe('createCreateCompany', () => {
     const gatewayError = new Error('duplicate legal identifier');
     const gateway: CompanyOnboardingGateway = {
       createCompany: vi.fn().mockRejectedValue(gatewayError),
+      recordPrivacyPolicyAcceptance: vi.fn(),
       getCurrentCompanySummary: vi.fn(),
       getThemePreference: vi.fn(),
       saveThemePreference: vi.fn(),
@@ -205,6 +211,7 @@ describe('createCreateCompany', () => {
     );
     const gateway: CompanyOnboardingGateway = {
       createCompany: vi.fn().mockRejectedValue(gatewayError),
+      recordPrivacyPolicyAcceptance: vi.fn(),
       getCurrentCompanySummary: vi.fn(),
       getThemePreference: vi.fn(),
       saveThemePreference: vi.fn(),
@@ -239,6 +246,7 @@ describe('createCreateCompany', () => {
     const recorder = createRecorder();
     const gateway: CompanyOnboardingGateway = {
       createCompany: vi.fn().mockRejectedValue('boom'),
+      recordPrivacyPolicyAcceptance: vi.fn(),
       getCurrentCompanySummary: vi.fn(),
       getThemePreference: vi.fn(),
       saveThemePreference: vi.fn(),
@@ -269,6 +277,7 @@ describe('createCreateCompany', () => {
     });
     const gateway: CompanyOnboardingGateway = {
       createCompany: vi.fn(),
+      recordPrivacyPolicyAcceptance: vi.fn(),
       getCurrentCompanySummary: vi.fn(),
       getThemePreference: vi.fn(),
       saveThemePreference: vi.fn(),
@@ -286,10 +295,13 @@ describe('createCreateCompany', () => {
   it('rethrows payload-conflict rejections from the recorder before any company write occurs', async () => {
     const recorder = createRecorder();
     vi.mocked(recorder.startRun).mockRejectedValue(
-      new Error('Idempotency key already used with a different company payload'),
+      new Error(
+        'Idempotency key already used with a different company payload',
+      ),
     );
     const gateway: CompanyOnboardingGateway = {
       createCompany: vi.fn(),
+      recordPrivacyPolicyAcceptance: vi.fn(),
       getCurrentCompanySummary: vi.fn(),
       getThemePreference: vi.fn(),
       saveThemePreference: vi.fn(),

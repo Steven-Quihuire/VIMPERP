@@ -13,7 +13,8 @@ const createFakeDb = ({ sweepCount = 0 }: { sweepCount?: number } = {}) => {
   const updates: Array<{ table: unknown; values: unknown }> = [];
   const execute = vi.fn().mockResolvedValue({ rowCount: sweepCount });
   const updateResult = {
-    then: (resolve: (value: unknown[]) => unknown) => Promise.resolve(resolve([])),
+    then: (resolve: (value: unknown[]) => unknown) =>
+      Promise.resolve(resolve([])),
     catch: () => Promise.resolve([]),
   };
 
@@ -49,6 +50,7 @@ describe('createDrizzleProvisioningRecorder', () => {
     const result = await recorder.startRun({
       actorUserId: 'user-1',
       correlationId: 'corr-1',
+      companyName: 'Vimcore Labs',
       idempotencyKey: null,
       payloadFingerprint: 'fingerprint-1',
       process: 'company-onboarding',
@@ -62,6 +64,7 @@ describe('createDrizzleProvisioningRecorder', () => {
         values: {
           actorUserId: 'user-1',
           attempt: 1,
+          companyName: 'Vimcore Labs',
           correlationId: 'corr-1',
           createdAt: new Date('2026-07-28T12:00:00.000Z'),
           errorSummary: null,
@@ -164,7 +167,11 @@ describe('createDrizzleProvisioningRecorder', () => {
 
     await recorder.record({
       code: 'E_UPSTREAM',
-      context: { process: 'http-request', route: '/companies', statusCode: 500 },
+      context: {
+        process: 'http-request',
+        route: '/companies',
+        statusCode: 500,
+      },
       correlationId: 'corr-1',
       createdAt: new Date('2026-07-28T12:09:00.000Z'),
       fingerprint: 'fingerprint-1',
@@ -174,13 +181,19 @@ describe('createDrizzleProvisioningRecorder', () => {
       status: '500',
     });
 
-    const updated = await recorder.sweepStaleRuns(new Date('2026-07-28T11:55:00.000Z'));
+    const updated = await recorder.sweepStaleRuns(
+      new Date('2026-07-28T11:55:00.000Z'),
+    );
 
     expect(inserts).toContainEqual({
       table: applicationErrorsTable,
       values: {
         code: 'E_UPSTREAM',
-        context: { process: 'http-request', route: '/companies', statusCode: 500 },
+        context: {
+          process: 'http-request',
+          route: '/companies',
+          statusCode: 500,
+        },
         correlationId: 'corr-1',
         createdAt: new Date('2026-07-28T12:09:00.000Z'),
         fingerprint: 'fingerprint-1',

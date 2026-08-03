@@ -98,7 +98,9 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
   }
 
   async findActiveCompanyId(userId: string) {
-    return await Promise.resolve(this.activeCompanyByUserId.get(userId) ?? null);
+    return await Promise.resolve(
+      this.activeCompanyByUserId.get(userId) ?? null,
+    );
   }
 
   async findCompanyStatus(companyId: string) {
@@ -148,6 +150,7 @@ const adminGateway: AdminGateway = {
       correlationId: 'corr-1',
       requestId: 'req-1',
       actorUserId: 'user-1',
+      companyName: 'Vimcore Labs',
       process: 'company-onboarding',
       status: 'succeeded',
       attempt: 1,

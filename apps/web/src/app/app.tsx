@@ -11,6 +11,7 @@ import { Toaster } from 'sileo';
 
 import { LoginPage } from '../features/auth/presentation/login-page';
 import { RegisterPage } from '../features/auth/presentation/register-page';
+import { AuthLayout } from '../features/auth/presentation/auth-layout';
 import { useAuth } from '../features/auth/presentation/use-auth';
 import {
   hasBlockedActiveCompany,
@@ -34,6 +35,7 @@ import { DesktopGate } from '../features/desktop-access/presentation/desktop-gat
 import { CategoriesPage } from '../features/items/presentation/categories-page';
 import { ItemCatalogPage } from '../features/items/presentation/item-catalog-page';
 import { LandingPage } from '../features/landing/presentation/landing-page';
+import { PrivacyPolicyPage } from '../features/legal/presentation/privacy-policy-page';
 import { needsCompanyOnboarding } from '../features/onboarding/domain/onboarding';
 import { OnboardingPage } from '../features/onboarding/presentation/onboarding-page';
 import { ThemeProvider } from '../features/theme/presentation/theme-provider';
@@ -240,14 +242,16 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
   <Routes>
     <Route path="/" element={<RootLayout />}>
       <Route index element={<LandingPage />} />
-      <Route
-        path="/login"
-        element={<LoginRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
-      />
-      <Route
-        path="/register"
-        element={<RegisterRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
-      />
+      <Route element={<AuthLayout />}>
+        <Route
+          path="login"
+          element={<LoginRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="register"
+          element={<RegisterRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+      </Route>
       <Route
         path="/dashboard"
         element={
@@ -362,6 +366,7 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
           <ProtectedOnboarding {...(apiBaseUrl ? { apiBaseUrl } : {})} />
         }
       />
+      <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
     </Route>
   </Routes>
 );

@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import {
   Boxes,
   LayoutDashboard,
@@ -7,6 +6,7 @@ import {
   ShoppingCart,
   Users,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import { Button } from '@/shared/ui/button';
 
@@ -39,7 +39,12 @@ const INVENTORY_ROWS = [
   { name: 'Escritorio de pie', sku: 'SKU-1087', stock: 12, price: '$459.000' },
   { name: 'Monitor 27"', sku: 'SKU-1103', stock: 24, price: '$312.500' },
   { name: 'Teclado mecánico', sku: 'SKU-1156', stock: 87, price: '$89.900' },
-  { name: 'Lámpara de escritorio', sku: 'SKU-1189', stock: 6, price: '$54.000' },
+  {
+    name: 'Lámpara de escritorio',
+    sku: 'SKU-1189',
+    stock: 6,
+    price: '$54.000',
+  },
 ] as const;
 
 const SPARKLINE_BARS = [40, 65, 50, 80, 60, 90, 70] as const;
@@ -71,7 +76,9 @@ const BrowserFrameMock = () => (
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold">Inventario</p>
-            <p className="text-[11px] text-muted-foreground">38 artículos activos</p>
+            <p className="text-[11px] text-muted-foreground">
+              38 artículos activos
+            </p>
           </div>
           <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium">
             En stock
@@ -80,7 +87,9 @@ const BrowserFrameMock = () => (
         <div className="mt-4 grid grid-cols-3 gap-2">
           {SPARKLINE_BARS.map((height, index) => (
             <div key={index} className="rounded-md border p-2">
-              <p className="text-[10px] text-muted-foreground">Unidades vendidas</p>
+              <p className="text-[10px] text-muted-foreground">
+                Unidades vendidas
+              </p>
               <div className="mt-2 flex h-8 items-end gap-0.5">
                 {[45, 70, 55, 85].map((barHeight, barIndex) => (
                   <div
@@ -122,13 +131,20 @@ export const LandingPage = () => (
         aria-label="Principal"
         className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6"
       >
-        <Link to="/" className="flex items-center gap-2 font-semibold tracking-tight">
+        <Link
+          to="/"
+          className="flex items-center gap-2 font-semibold tracking-tight"
+        >
           <Boxes className="size-5" />
           Vimcore
         </Link>
         <div className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
           {NAV_LINKS.map((link) => (
-            <a key={link.href} href={link.href} className="transition-colors hover:text-foreground">
+            <a
+              key={link.href}
+              href={link.href}
+              className="transition-colors hover:text-foreground"
+            >
               {link.label}
             </a>
           ))}
@@ -140,7 +156,10 @@ export const LandingPage = () => (
     </header>
 
     <main>
-      <section id="producto" className="mx-auto grid max-w-6xl gap-12 px-6 py-20 lg:grid-cols-2 lg:items-center lg:py-28">
+      <section
+        id="producto"
+        className="mx-auto grid max-w-6xl gap-12 px-6 py-20 lg:grid-cols-2 lg:items-center lg:py-28"
+      >
         <div>
           <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
             Tu empresa en un solo sistema.
@@ -174,7 +193,9 @@ export const LandingPage = () => (
                 <module.icon className="size-5" />
               </div>
               <h3 className="mt-4 text-lg font-semibold">{module.title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">{module.description}</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {module.description}
+              </p>
             </div>
           ))}
         </div>

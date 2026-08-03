@@ -100,20 +100,50 @@ export const DashboardPage = ({
             <CardHeader>
               <CardDescription>Lectura visual de la plataforma</CardDescription>
               <CardTitle>Actividad operativa</CardTitle>
-              <CardDescription>Distribución actual de empresas, alertas y trazabilidad.</CardDescription>
+              <CardDescription>
+                Distribución actual de empresas, alertas y trazabilidad.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid h-48 grid-cols-3 items-end gap-6 rounded-lg border bg-muted/20 p-6">
                 {[
-                  { label: 'Empresas', value: summary.data?.totalCompanies ?? 0, color: 'bg-primary' },
-                  { label: 'Alertas', value: summary.data?.notificationCount ?? 0, color: 'bg-primary/70' },
-                  { label: 'Auditoría', value: summary.data?.auditEventCount ?? 0, color: 'bg-primary/45' },
+                  {
+                    label: 'Empresas',
+                    value: summary.data?.totalCompanies ?? 0,
+                    color: 'bg-primary',
+                  },
+                  {
+                    label: 'Alertas',
+                    value: summary.data?.notificationCount ?? 0,
+                    color: 'bg-primary/70',
+                  },
+                  {
+                    label: 'Auditoría',
+                    value: summary.data?.auditEventCount ?? 0,
+                    color: 'bg-primary/45',
+                  },
                 ].map((item) => {
-                  const maxValue = Math.max(summary.data?.totalCompanies ?? 0, summary.data?.notificationCount ?? 0, summary.data?.auditEventCount ?? 0, 1);
+                  const maxValue = Math.max(
+                    summary.data?.totalCompanies ?? 0,
+                    summary.data?.notificationCount ?? 0,
+                    summary.data?.auditEventCount ?? 0,
+                    1,
+                  );
                   return (
-                    <div key={item.label} className="flex h-full flex-col items-center justify-end gap-3">
-                      <div className={`w-full max-w-24 rounded-t-lg ${item.color} transition-all`} style={{ height: `${Math.max((item.value / maxValue) * 100, 12)}%` }} aria-label={`Actividad de ${item.label.toLowerCase()}`} />
-                      <span className="text-sm font-medium text-muted-foreground">{item.label}</span>
+                    <div
+                      key={item.label}
+                      className="flex h-full flex-col items-center justify-end gap-3"
+                    >
+                      <div
+                        className={`w-full max-w-24 rounded-t-lg ${item.color} transition-all`}
+                        style={{
+                          height: `${Math.max((item.value / maxValue) * 100, 12)}%`,
+                        }}
+                        aria-label={`Actividad de ${item.label.toLowerCase()}`}
+                      />
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {item.label}
+                      </span>
                     </div>
                   );
                 })}
@@ -169,7 +199,7 @@ export const DashboardPage = ({
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-red-400">
               <CardHeader className="flex flex-row items-start justify-between gap-4">
                 <div>
                   <CardDescription>Herramientas de plataforma</CardDescription>
@@ -199,7 +229,6 @@ export const DashboardPage = ({
               </CardContent>
             </Card>
           </div>
-
         </section>
       ) : (
         <Card>
@@ -217,7 +246,11 @@ export const DashboardPage = ({
                 : 'Elige una empresa activa desde el selector lateral para continuar.'}
             </CardDescription>
           </CardHeader>
-          <CardContent className={session.activeCompany ? 'grid gap-3 md:grid-cols-3' : 'space-y-2'}>
+          <CardContent
+            className={
+              session.activeCompany ? 'grid gap-3 md:grid-cols-3' : 'space-y-2'
+            }
+          >
             {session.activeCompany ? (
               modules.map((module) => (
                 <a
@@ -232,7 +265,8 @@ export const DashboardPage = ({
               ))
             ) : (
               <p className="text-sm text-muted-foreground">
-                Cambia de empresa para habilitar los módulos de trabajo y seguir con la operación diaria.
+                Cambia de empresa para habilitar los módulos de trabajo y seguir
+                con la operación diaria.
               </p>
             )}
           </CardContent>

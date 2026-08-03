@@ -34,6 +34,7 @@ export const erpModuleValues = [
 export type ErpModuleId = (typeof erpModuleValues)[number];
 
 export const MAX_ONBOARDING_SERVICES = 5;
+export const PRIVACY_POLICY_VERSION = '2025-07-09';
 
 export const isValidEcuadorianMobile = (value: string) =>
   /^09\d{8}$/.test(value);
@@ -217,7 +218,8 @@ export const needsCompanyOnboarding = (session: AuthSession | null) => {
   }
 
   return (
-    !session.memberships.some((membership) => membership.role === 'platform-admin') &&
-    getCompanyMemberships(session).length === 0
+    !session.memberships.some(
+      (membership) => membership.role === 'platform-admin',
+    ) && getCompanyMemberships(session).length === 0
   );
 };

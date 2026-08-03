@@ -4,17 +4,55 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import type { AuthSession } from '../../auth/domain/auth';
-import type { ItemCategory } from '../domain/item';
-import { useCategoriesQuery, useCreateCategoryMutation, useUpdateCategoryMutation } from '../infrastructure/item-queries';
 import { HttpError } from '@/shared/lib/http/http-client';
 import { Badge } from '@/shared/ui/badge';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/shared/ui/breadcrumb';
 import { Button } from '@/shared/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
-import { Field, FieldContent, FieldError, FieldGroup, FieldLabel } from '@/shared/ui/field';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/shared/ui/card';
+import {
+  Field,
+  FieldContent,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@/shared/ui/field';
 import { Input } from '@/shared/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/shared/ui/drawer';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select';
 import { Skeleton } from '@/shared/ui/skeleton';
+import { Link } from 'react-router-dom';
+import type { AuthSession } from '../../auth/domain/auth';
+import type { ItemCategory } from '../domain/item';
+import {
+  useCategoriesQuery,
+  useCreateCategoryMutation,
+  useUpdateCategoryMutation,
+} from '../infrastructure/item-queries';
 
 type CategoryTreeNode = ItemCategory & {
   children: CategoryTreeNode[];
@@ -31,7 +69,7 @@ type CategoryEditorState = {
 };
 
 const categoryFormSchema = z.object({
-  name: z.string().trim().min(1, 'Name is required.'),
+  name: z.string().trim().min(1, 'El nombre es obligatorio.'),
   parentId: z.string(),
 });
 
@@ -96,7 +134,7 @@ const getFriendlyCategoryError = (error: unknown) => {
     return error.message;
   }
 
-  return 'Unable to save category.';
+  return 'No se pudo guardar la categoría.';
 };
 
 const CategoryTreeList = ({
@@ -117,7 +155,9 @@ const CategoryTreeList = ({
   return (
     <ul className="space-y-3">
       {nodes.map((node) => {
-        const parentName = node.parentId ? categoriesById.get(node.parentId)?.name ?? null : null;
+        const parentName = node.parentId
+          ? (categoriesById.get(node.parentId)?.name ?? null)
+          : null;
 
         return (
           <li key={node.id}>
@@ -129,11 +169,15 @@ const CategoryTreeList = ({
                 <div className="space-y-2">
                   <p className="font-medium">{node.name}</p>
                   <Badge variant={parentName ? 'outline' : 'secondary'}>
-                    {parentName ? `Parent: ${parentName}` : 'Root category'}
+                    {parentName ? `Categoría padre: ${parentName}` : 'Categoría principal'}
                   </Badge>
                 </div>
-                <Button type="button" variant="outline" onClick={() => onEdit(node.id)}>
-                  Edit {node.name}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onEdit(node.id)}
+                >
+                  Editar {node.name}
                 </Button>
               </div>
             </div>
@@ -168,13 +212,19 @@ const CategoryFormCard = ({
   onCancel: () => void;
   onSuccess: () => void;
 }) => {
-  const selectedCategory = categories.find((category) => category.id === editorState.categoryId) ?? null;
+  const selectedCategory =
+    categories.find((category) => category.id === editorState.categoryId) ??
+    null;
   const createCategoryMutation = useCreateCategoryMutation();
   const updateCategoryMutation = useUpdateCategoryMutation();
   const isEditMode = editorState.mode === 'edit' && selectedCategory !== null;
-  const isSubmitting = createCategoryMutation.isPending || updateCategoryMutation.isPending;
-  const submissionError = createCategoryMutation.error ?? updateCategoryMutation.error;
-  const companyLabel = session.memberships[0]?.companyId ? 'Current company' : 'Workspace';
+  const isSubmitting =
+    createCategoryMutation.isPending || updateCategoryMutation.isPending;
+  const submissionError =
+    createCategoryMutation.error ?? updateCategoryMutation.error;
+  const companyLabel = session.memberships[0]?.companyId
+    ? 'Empresa actual'
+    : 'Espacio de trabajo';
 
   const form = useForm<CategoryFormValues>({
     resolver: zodResolver(categoryFormSchema),
@@ -209,12 +259,18 @@ const CategoryFormCard = ({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{isEditMode ? 'Edit category' : 'Create category'}</CardTitle>
-        <CardDescription>{companyLabel} category hierarchy</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div>
+      <DrawerHeader className="px-0 pt-0">
+        <DrawerTitle>
+          {isEditMode ? 'Editar categoría' : 'Crear categoría'}
+        </DrawerTitle>
+        <DrawerDescription>
+          {companyLabel === 'Espacio de trabajo'
+            ? 'Organiza las categorías de tu espacio de trabajo.'
+            : 'Organiza la jerarquía de categorías de tu empresa.'}
+        </DrawerDescription>
+      </DrawerHeader>
+      <div className="pt-2">
         <form
           className="space-y-5"
           noValidate
@@ -224,22 +280,31 @@ const CategoryFormCard = ({
         >
           <FieldGroup>
             <Field>
-              <FieldLabel htmlFor="category-name">Name</FieldLabel>
+              <FieldLabel htmlFor="category-name">Nombre</FieldLabel>
               <FieldContent>
-                <Input id="category-name" aria-label="Name" disabled={isSubmitting} {...form.register('name')} />
+                <Input
+                  id="category-name"
+                  aria-label="Nombre"
+                  disabled={isSubmitting}
+                  {...form.register('name')}
+                />
                 <FieldError errors={[form.formState.errors.name]} />
               </FieldContent>
             </Field>
 
             <Field>
-              <FieldLabel>Parent category</FieldLabel>
+              <FieldLabel>Categoría padre</FieldLabel>
               <FieldContent>
                 <Controller
                   control={form.control}
                   name="parentId"
                   render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
-                      <SelectTrigger aria-label="Parent category">
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      disabled={isSubmitting}
+                    >
+                      <SelectTrigger aria-label="Categoría padre">
                         <SelectValue placeholder="Sin categoría padre" />
                       </SelectTrigger>
                       <SelectContent>
@@ -258,63 +323,86 @@ const CategoryFormCard = ({
           </FieldGroup>
 
           {submissionError ? (
-            <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+            <p
+              role="alert"
+              className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+            >
               {getFriendlyCategoryError(submissionError)}
             </p>
           ) : null}
 
           <div className="flex flex-wrap gap-3">
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : null}
-              {isEditMode ? 'Save changes' : 'Save category'}
+              {isSubmitting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : null}
+              {isEditMode ? 'Guardar cambios' : 'Guardar categoría'}
             </Button>
             <Button type="button" variant="ghost" onClick={onCancel}>
-              Cancel
+              Cancelar
             </Button>
           </div>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 
 export const CategoriesPage = ({ session }: { session: AuthSession }) => {
   const categoriesQuery = useCategoriesQuery();
-  const [state, setState] = useState<CategoryEditorState>({ mode: 'create', categoryId: null });
+  const [state, setState] = useState<CategoryEditorState | null>(null);
 
   if (categoriesQuery.isLoading) {
     return (
       <div className="flex h-full min-h-[calc(100dvh-9rem)] flex-col gap-4">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm text-muted-foreground">Inventory</p>
-            <h1 className="text-3xl font-semibold tracking-tight">Categories</h1>
+            <p className="text-sm text-muted-foreground">Catálogo</p>
+            <h1 className="text-3xl font-semibold tracking-tight">Categorías</h1>
           </div>
           <Button type="button" disabled>
-            Add Category
+            Agregar categoría
           </Button>
         </div>
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,420px)]">
           <Card>
             <CardHeader>
-              <CardTitle>Category tree</CardTitle>
+              <CardTitle>Árbol de categorías</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Skeleton data-testid="categories-skeleton" className="h-16 w-full" />
-              <Skeleton data-testid="categories-skeleton" className="h-16 w-full" />
-              <Skeleton data-testid="categories-skeleton" className="h-16 w-full" />
+              <Skeleton
+                data-testid="categories-skeleton"
+                className="h-16 w-full"
+              />
+              <Skeleton
+                data-testid="categories-skeleton"
+                className="h-16 w-full"
+              />
+              <Skeleton
+                data-testid="categories-skeleton"
+                className="h-16 w-full"
+              />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Create category</CardTitle>
+              <CardTitle>Crear categoría</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Skeleton data-testid="categories-skeleton" className="h-10 w-full" />
-              <Skeleton data-testid="categories-skeleton" className="h-10 w-full" />
-              <Skeleton data-testid="categories-skeleton" className="h-10 w-32" />
+              <Skeleton
+                data-testid="categories-skeleton"
+                className="h-10 w-full"
+              />
+              <Skeleton
+                data-testid="categories-skeleton"
+                className="h-10 w-full"
+              />
+              <Skeleton
+                data-testid="categories-skeleton"
+                className="h-10 w-32"
+              />
             </CardContent>
           </Card>
         </div>
@@ -326,14 +414,19 @@ export const CategoriesPage = ({ session }: { session: AuthSession }) => {
     return (
       <div className="flex h-full min-h-[calc(100dvh-9rem)] flex-col gap-4">
         <div>
-          <p className="text-sm text-muted-foreground">Inventory</p>
-          <h1 className="text-3xl font-semibold tracking-tight">Categories</h1>
+          <p className="text-sm text-muted-foreground">Catálogo</p>
+          <h1 className="text-3xl font-semibold tracking-tight">Categorías</h1>
         </div>
 
         <Card>
           <CardContent className="pt-6">
-            <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-              {categoriesQuery.error instanceof Error ? categoriesQuery.error.message : 'Unable to load categories.'}
+            <p
+              role="alert"
+              className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+            >
+              {categoriesQuery.error instanceof Error
+                ? categoriesQuery.error.message
+                : 'No se pudieron cargar las categorías.'}
             </p>
           </CardContent>
         </Card>
@@ -346,26 +439,62 @@ export const CategoriesPage = ({ session }: { session: AuthSession }) => {
   const categoryTree = buildCategoryTree(categories);
 
   return (
-    <div className="flex h-full min-h-[calc(100dvh-9rem)] flex-col gap-4">
+    <div className="mx-auto flex max-w-6xl flex-col gap-6">
+      <header>
+        <h1 className="text-3xl font-medium tracking-tight">Categorías</h1>
+        <Breadcrumb className="mt-1">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link
+                  className="text-gray-500 text-xs hover:text-gray-700 transition-all ease-in-out duration-300"
+                  to="/dashboard"
+                >
+                  Inicio
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="text-gray-800 text-xs">
+                Categorías
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </header>
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-sm text-muted-foreground">Inventory</p>
-          <h1 className="text-3xl font-semibold tracking-tight">Categories</h1>
+           <h1 className="text-3xl font-medium">Categorías para productos</h1>
         </div>
-        <Button type="button" onClick={() => setState({ mode: 'create', categoryId: null })}>
-          Add Category
+        <Button
+          className="h-10 font-medium rounded-2xl flex items-center justify-center cursor-pointer"
+          type="button"
+          onClick={() => setState({ mode: 'create', categoryId: null })}
+        >
+          Agregar categoría
         </Button>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,420px)]">
+      <div>
         <Card>
           <CardHeader>
-            <CardTitle>Category tree</CardTitle>
-            <CardDescription>Organize parent and child categories for the catalog.</CardDescription>
+            <CardTitle>Lista de categorías</CardTitle>
+            <CardDescription className="text-gray-600">
+              Organiza las categorías principales y secundarias de tu catálogo.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {categories.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No hay categorías todavía. Creá la primera.</p>
+              <p className="text-sm">
+                No hay categorías registradas en tu empresa.{' '}
+                <button
+                  onClick={() => setState({ mode: 'create', categoryId: null })}
+                  className="border-b-black border-b cursor-pointer"
+                >
+                  Agrega tu primera categoría
+                </button>
+              </p>
             ) : (
               <CategoryTreeList
                 nodes={categoryTree}
@@ -376,15 +505,31 @@ export const CategoriesPage = ({ session }: { session: AuthSession }) => {
           </CardContent>
         </Card>
 
-        <CategoryFormCard
-          key={`${state.mode}-${state.categoryId ?? 'create'}-${categories.length}`}
-          categories={categories}
-          editorState={state}
-          session={session}
-          onCancel={() => setState({ mode: 'create', categoryId: null })}
-          onSuccess={() => setState({ mode: 'create', categoryId: null })}
-        />
       </div>
+
+      <Drawer
+        open={state !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setState(null);
+          }
+        }}
+      >
+        <DrawerContent
+          className="max-h-[90vh] rounded-t-3xl px-6 pb-8 pt-6 opacity-100 data-[state=open]:slide-in-from-bottom-8 data-[state=closed]:slide-out-to-bottom-8 data-[state=open]:duration-[240ms] data-[state=closed]:duration-[180ms] data-[state=open]:ease-out data-[state=closed]:ease-out motion-reduce:data-[state=open]:animate-none motion-reduce:data-[state=closed]:animate-none sm:px-8"
+        >
+          {state ? (
+            <CategoryFormCard
+              key={`${state.mode}-${state.categoryId ?? 'create'}-${categories.length}`}
+              categories={categories}
+              editorState={state}
+              session={session}
+              onCancel={() => setState(null)}
+              onSuccess={() => setState(null)}
+            />
+          ) : null}
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };

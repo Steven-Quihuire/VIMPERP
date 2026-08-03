@@ -1,6 +1,6 @@
 export type LoginCopy = {
-  eyebrow: string;
   title: string;
+  description__upercase: string;
   description: string;
   identifierLabel: string;
   identifierPlaceholder: string;
@@ -15,8 +15,9 @@ export type LoginCopy = {
 
 // El copy vive en un módulo para reemplazarlo luego con un resolver español/inglés.
 export const loginCopy: LoginCopy = {
-  eyebrow: 'VIMPERP',
   title: 'Iniciar sesión',
+  description__upercase:
+    'Ingresa nuevamente a tu sistema listo para comenzar a trabajar.',
   description:
     'Accede a tu espacio de trabajo y mantené tu operación en marcha.',
   identifierLabel: 'Correo o usuario',

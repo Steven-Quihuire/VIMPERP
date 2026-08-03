@@ -17,7 +17,8 @@ import {
   type ProvisioningStep,
 } from '../domain/company';
 
-type DrizzleProvisioningRecorder = ProvisioningRecorder & ApplicationErrorRecorder;
+type DrizzleProvisioningRecorder = ProvisioningRecorder &
+  ApplicationErrorRecorder;
 
 const toStepRows = ({
   createId,
@@ -56,6 +57,7 @@ export const createDrizzleProvisioningRecorder = (
   return {
     startRun: async ({
       actorUserId,
+      companyName,
       correlationId,
       process,
       requestId,
@@ -132,6 +134,7 @@ export const createDrizzleProvisioningRecorder = (
         correlationId,
         requestId,
         actorUserId,
+        companyName,
         process,
         status: 'running',
         attempt: 1,

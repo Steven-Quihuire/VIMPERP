@@ -66,6 +66,7 @@ const mapProvisioningRunSummary = (row: {
   correlationId: string;
   requestId: string;
   actorUserId: string;
+  companyName: string | null;
   process: string;
   status: AdminProvisioningRunSummary['status'];
   attempt: number;
@@ -78,6 +79,7 @@ const mapProvisioningRunSummary = (row: {
   correlationId: row.correlationId,
   requestId: row.requestId,
   actorUserId: row.actorUserId,
+  companyName: row.companyName,
   process: row.process,
   status: row.status,
   attempt: row.attempt,
@@ -154,7 +156,10 @@ export const createDrizzleAdminGateway = (db: AppDb): AdminGateway => ({
         erpModuleId: companyProfilesTable.erpModuleId,
       })
       .from(companiesTable)
-      .leftJoin(companyProfilesTable, eq(companiesTable.id, companyProfilesTable.companyId))
+      .leftJoin(
+        companyProfilesTable,
+        eq(companiesTable.id, companyProfilesTable.companyId),
+      )
       .orderBy(desc(companiesTable.createdAt))
       .limit(5);
 
@@ -232,6 +237,7 @@ export const createDrizzleAdminGateway = (db: AppDb): AdminGateway => ({
         correlationId: provisioningRunsTable.correlationId,
         requestId: provisioningRunsTable.requestId,
         actorUserId: provisioningRunsTable.actorUserId,
+        companyName: provisioningRunsTable.companyName,
         process: provisioningRunsTable.process,
         status: provisioningRunsTable.status,
         attempt: provisioningRunsTable.attempt,
@@ -242,7 +248,10 @@ export const createDrizzleAdminGateway = (db: AppDb): AdminGateway => ({
       })
       .from(provisioningRunsTable)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(provisioningRunsTable.createdAt), desc(provisioningRunsTable.id))
+      .orderBy(
+        desc(provisioningRunsTable.createdAt),
+        desc(provisioningRunsTable.id),
+      )
       .limit(parsedFilters.limit + 1);
 
     const mappedRows = rows.map((row) => mapProvisioningRunSummary(row));
@@ -259,6 +268,7 @@ export const createDrizzleAdminGateway = (db: AppDb): AdminGateway => ({
         correlationId: provisioningRunsTable.correlationId,
         requestId: provisioningRunsTable.requestId,
         actorUserId: provisioningRunsTable.actorUserId,
+        companyName: provisioningRunsTable.companyName,
         process: provisioningRunsTable.process,
         status: provisioningRunsTable.status,
         attempt: provisioningRunsTable.attempt,
@@ -282,7 +292,10 @@ export const createDrizzleAdminGateway = (db: AppDb): AdminGateway => ({
       })
       .from(provisioningStepsTable)
       .where(eq(provisioningStepsTable.runId, runId))
-      .orderBy(desc(provisioningStepsTable.createdAt), desc(provisioningStepsTable.id));
+      .orderBy(
+        desc(provisioningStepsTable.createdAt),
+        desc(provisioningStepsTable.id),
+      );
 
     const mappedRun = mapProvisioningRunSummary(run!);
 
@@ -305,7 +318,9 @@ export const createDrizzleAdminGateway = (db: AppDb): AdminGateway => ({
     const conditions = [];
 
     if (parsedFilters.fingerprint) {
-      conditions.push(eq(applicationErrorsTable.fingerprint, parsedFilters.fingerprint));
+      conditions.push(
+        eq(applicationErrorsTable.fingerprint, parsedFilters.fingerprint),
+      );
     }
 
     if (parsedFilters.correlationId) {
@@ -342,7 +357,10 @@ export const createDrizzleAdminGateway = (db: AppDb): AdminGateway => ({
       })
       .from(applicationErrorsTable)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(applicationErrorsTable.createdAt), desc(applicationErrorsTable.id))
+      .orderBy(
+        desc(applicationErrorsTable.createdAt),
+        desc(applicationErrorsTable.id),
+      )
       .limit(parsedFilters.limit + 1);
 
     const mappedRows = rows.map((row) => mapApplicationErrorSummary(row));
@@ -389,7 +407,9 @@ export const createDrizzleAdminGateway = (db: AppDb): AdminGateway => ({
     }
 
     if (parsedFilters.correlationId) {
-      conditions.push(eq(auditEventsTable.correlationId, parsedFilters.correlationId));
+      conditions.push(
+        eq(auditEventsTable.correlationId, parsedFilters.correlationId),
+      );
     }
 
     if (parsedFilters.cursor) {

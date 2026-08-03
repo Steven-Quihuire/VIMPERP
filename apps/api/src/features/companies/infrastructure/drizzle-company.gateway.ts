@@ -11,6 +11,8 @@ import {
   companyServicesTable,
   membershipsTable,
   notificationsTable,
+  privacyConsentsTable,
+  privacyPolicyAcceptancesTable,
   themePreferencesTable,
   userPreferencesTable,
 } from '../../../shared/infrastructure/db/schema';
@@ -20,6 +22,7 @@ import {
   paletteValues,
   type CompanyOnboardingGateway,
   type PaletteId,
+  PrivacyPolicyNotAcceptedError,
 } from '../domain/company';
 
 const toPaletteId = (value: string): PaletteId => {
@@ -57,11 +60,37 @@ export const createDrizzleCompanyOnboardingGateway = (
         throw new DuplicateCompanyError();
       }
 
+      const [privacyPolicyAcceptance] = await tx
+        .select({ id: privacyPolicyAcceptancesTable.id })
+        .from(privacyPolicyAcceptancesTable)
+        .where(
+          and(
+            eq(privacyPolicyAcceptancesTable.userId, input.ownerUserId),
+            eq(
+              privacyPolicyAcceptancesTable.policyVersion,
+              input.privacyPolicyVersion,
+            ),
+          ),
+        )
+        .limit(1);
+
+      if (!privacyPolicyAcceptance) {
+        throw new PrivacyPolicyNotAcceptedError();
+      }
+
       await tx.insert(companiesTable).values({
         id: companyId,
         name: input.name,
         status: 'active',
         createdAt,
+      });
+
+      await tx.insert(privacyConsentsTable).values({
+        id: generateId(),
+        userId: input.ownerUserId,
+        companyId,
+        policyVersion: input.privacyPolicyVersion,
+        acceptedAt: createdAt,
       });
 
       await tx.insert(companyProfilesTable).values({
@@ -175,6 +204,34 @@ export const createDrizzleCompanyOnboardingGateway = (
       };
     });
   },
+  recordPrivacyPolicyAcceptance: async ({ userId, policyVersion }) => {
+    const acceptedAt = now();
+    const [existingAcceptance] = await db
+      .select({ id: privacyPolicyAcceptancesTable.id })
+      .from(privacyPolicyAcceptancesTable)
+      .where(
+        and(
+          eq(privacyPolicyAcceptancesTable.userId, userId),
+          eq(privacyPolicyAcceptancesTable.policyVersion, policyVersion),
+        ),
+      )
+      .limit(1);
+
+    if (existingAcceptance) {
+      await db
+        .update(privacyPolicyAcceptancesTable)
+        .set({ acceptedAt })
+        .where(eq(privacyPolicyAcceptancesTable.id, existingAcceptance.id));
+      return;
+    }
+
+    await db.insert(privacyPolicyAcceptancesTable).values({
+      id: (createId ?? randomUUID)(),
+      userId,
+      policyVersion,
+      acceptedAt,
+    });
+  },
   getCurrentCompanySummary: async (activeCompanyId) => {
     if (!activeCompanyId) {
       return null;
@@ -186,7 +243,12 @@ export const createDrizzleCompanyOnboardingGateway = (
         name: companiesTable.name,
       })
       .from(companiesTable)
-      .where(and(eq(companiesTable.id, activeCompanyId), isNotNull(companiesTable.id)))
+      .where(
+        and(
+          eq(companiesTable.id, activeCompanyId),
+          isNotNull(companiesTable.id),
+        ),
+      )
       .limit(1);
 
     return company ?? null;

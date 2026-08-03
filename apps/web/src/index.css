@@ -111,3 +111,12 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+.auth-autofill-input:-webkit-autofill,
+.auth-autofill-input:-webkit-autofill:hover,
+.auth-autofill-input:-webkit-autofill:focus,
+.auth-autofill-input:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--muted-foreground);
+  -webkit-box-shadow: 0 0 0 1000px var(--muted) inset;
+  box-shadow: 0 0 0 1000px var(--muted) inset;
+}

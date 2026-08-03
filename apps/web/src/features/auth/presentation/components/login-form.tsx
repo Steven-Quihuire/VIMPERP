@@ -28,7 +28,14 @@ export function LoginForm({
   error,
   ...props
 }: LoginFormProps) {
+  const [identifier, setIdentifier] = useState('');
+  const [identifierFocused, setIdentifierFocused] = useState(false);
+  const [password, setPassword] = useState('');
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+
+  const identifierLabelFloats = identifierFocused || identifier !== '';
+  const passwordLabelFloats = passwordFocused || password !== '';
 
   const readTextValue = (formData: FormData, name: string) => {
     const value = formData.get(name);
@@ -53,62 +60,90 @@ export function LoginForm({
     >
       <FieldGroup>
         <div className="flex flex-col items-center gap-2 text-center">
-          <p className="font-bold uppercase tracking-[0.2em] text-primary">
-            {loginCopy.eyebrow}
-          </p>
-          <h1 className="text-4xl font-medium tracking-tight">
+          <h1 className="text-5xl tracking-tight text-balance ">
             {loginCopy.title}
           </h1>
-          <p className="max-w-sm text-balance text-sm">
-            {loginCopy.description}
+          <p className="text-sm leading-6 flex flex-col">
+            <span className="uppercase">{loginCopy.description__upercase}</span>
+            <span className="text-sm leading-6">{loginCopy.description}</span>
           </p>
+          <p className="max-w-sm text-balance text-sm"></p>
         </div>
-        <Field>
-          <FieldLabel htmlFor="identifier">
-            {loginCopy.identifierLabel}
-          </FieldLabel>
-          <Input
-            id="identifier"
-            name="identifier"
-            type="text"
-            autoComplete="username"
-            placeholder={loginCopy.identifierPlaceholder}
-            required
-          />
-        </Field>
-        <Field>
-          <div className="flex items-center">
-            <FieldLabel htmlFor="password">
-              {loginCopy.passwordLabel}
-            </FieldLabel>
-          </div>
-          <div className="relative">
-            <Input
-              id="password"
-              name="password"
-              type={isPasswordVisible ? 'text' : 'password'}
-              autoComplete="current-password"
-              placeholder={loginCopy.passwordPlaceholder}
-              className="pr-10"
-              required
-            />
-            <button
-              type="button"
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              onClick={() => setIsPasswordVisible((visible) => !visible)}
-              aria-label={
-                isPasswordVisible ? 'Ocultar contraseña' : 'Mostrar contraseña'
-              }
-              aria-pressed={isPasswordVisible}
-            >
-              {isPasswordVisible ? (
-                <EyeOff className="cursor-pointer text-gray-500" size={20} />
-              ) : (
-                <Eye className="cursor-pointer text-gray-500" size={20} />
-              )}
-            </button>
-          </div>
-        </Field>
+        <div className="flex flex-col gap-9">
+          <Field>
+            <div className="relative">
+              <Input
+                id="identifier"
+                name="identifier"
+                type="text"
+                autoComplete="username"
+                value={identifier}
+                onChange={(event) => setIdentifier(event.target.value)}
+                onFocus={() => setIdentifierFocused(true)}
+                onBlur={() => setIdentifierFocused(false)}
+                className={cn(
+                  'auth-autofill-input text-sm caret-transparent transition-[caret-color] duration-300 ease-in-out',
+                  identifierFocused && 'caret-current',
+                )}
+                required
+              />
+              <FieldLabel
+                htmlFor="identifier"
+                className={cn(
+                  'pointer-events-none absolute top-1/2 -translate-y-1/2 text-muted-foreground transition-all duration-300 ease-in-out',
+                  identifierLabelFloats && 'translate-y-[-200%] text-xs',
+                )}
+              >
+                {loginCopy.identifierLabel}
+              </FieldLabel>
+            </div>
+          </Field>
+          <Field>
+            <div className="relative">
+              <Input
+                id="password"
+                name="password"
+                type={isPasswordVisible ? 'text' : 'password'}
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                onFocus={() => setPasswordFocused(true)}
+                onBlur={() => setPasswordFocused(false)}
+                className={cn(
+                  'auth-autofill-input pr-10 text-sm caret-transparent transition-[caret-color] duration-300 ease-in-out',
+                  passwordFocused && 'caret-current',
+                )}
+                required
+              />
+              <FieldLabel
+                htmlFor="password"
+                className={cn(
+                  'pointer-events-none absolute top-1/2 -translate-y-1/2 text-muted-foreground transition-all duration-300 ease-in-out',
+                  passwordLabelFloats && 'translate-y-[-200%] text-xs',
+                )}
+              >
+                {loginCopy.passwordLabel}
+              </FieldLabel>
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={() => setIsPasswordVisible((visible) => !visible)}
+                aria-label={
+                  isPasswordVisible
+                    ? 'Ocultar contraseña'
+                    : 'Mostrar contraseña'
+                }
+                aria-pressed={isPasswordVisible}
+              >
+                {isPasswordVisible ? (
+                  <EyeOff className="cursor-pointer text-gray-500" size={20} />
+                ) : (
+                  <Eye className="cursor-pointer text-gray-500" size={20} />
+                )}
+              </button>
+            </div>
+          </Field>
+        </div>
         {error ? (
           <FieldDescription className="text-destructive">
             {error}
@@ -116,17 +151,19 @@ export function LoginForm({
         ) : null}
         <Field>
           <Button
-            variant={'vimcore'}
             type="submit"
-            className="h-12 hover:shadow-2xl"
+            className="h-12 mt-4 rounded-xl text-sm font-normal cursor-pointer w-full sm:ml-auto"
             disabled={isPending}
           >
             {isPending ? loginCopy.submittingLabel : loginCopy.submitLabel}
           </Button>
         </Field>
-        <p className="text-center text-sm text-muted-foreground">
+        <p className="text-center text-gray-600 text-xs">
           ¿Necesitas crear una cuenta?{' '}
-          <Link className="font-medium text-primary underline-offset-4 hover:underline" to="/register">
+          <Link
+            className="font-medium text-gray-900 transition-all duration-500 ease-in-out hover:underline"
+            to="/register"
+          >
             Registra tu empresa
           </Link>
         </p>

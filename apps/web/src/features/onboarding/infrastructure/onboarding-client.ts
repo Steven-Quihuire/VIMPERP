@@ -2,7 +2,11 @@ import { createAuthRepository } from '../../auth/infrastructure/auth-client';
 import type { AuthSession } from '../../auth/domain/auth';
 import { getApiBaseUrl } from '../../../shared/lib/http/api-base-url';
 import { createHttpClient } from '../../../shared/lib/http/http-client';
-import type { ErpModuleId, PaletteId } from '../domain/onboarding';
+import type {
+  PRIVACY_POLICY_VERSION,
+  ErpModuleId,
+  PaletteId,
+} from '../domain/onboarding';
 
 export type CreateCompanyPayload = {
   name: string;
@@ -19,6 +23,7 @@ export type CreateCompanyPayload = {
   };
   paletteId: PaletteId;
   erpModuleId: ErpModuleId;
+  privacyPolicyVersion: typeof PRIVACY_POLICY_VERSION;
 };
 
 export const createOnboardingRepository = (apiBaseUrl = getApiBaseUrl()) => {
@@ -26,6 +31,11 @@ export const createOnboardingRepository = (apiBaseUrl = getApiBaseUrl()) => {
   const authRepository = createAuthRepository(apiBaseUrl);
 
   return {
+    recordPrivacyPolicyAcceptance: async (
+      policyVersion: typeof PRIVACY_POLICY_VERSION,
+    ) => {
+      await httpClient.post('/me/privacy-consent', { policyVersion });
+    },
     createCompany: async (payload: CreateCompanyPayload) => {
       const response = await httpClient.post('/companies', payload);
 
