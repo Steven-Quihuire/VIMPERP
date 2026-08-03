@@ -64,17 +64,18 @@ The system MUST allow owners/users to update mutable fields, keep `type` immutab
 
 ### Requirement: Item soft delete
 
-The system MUST allow only `company-owner` to soft-delete items, set `deletedAt`, and MUST NOT expose hard delete.
+The system MUST allow soft-delete only when the caller has the centralized delete-item capability in the active company context, MUST set `deletedAt`, and MUST NOT expose hard delete.
+(Previously: Only the `company-owner` role could soft-delete items.)
 
-#### Scenario: Delete
-- GIVEN owner and active item in company A
-- WHEN the owner deletes the item
-- THEN default lists exclude it afterward
+#### Scenario: Capability allows delete
+- GIVEN a caller with delete-item capability for the active company and an active item
+- WHEN the caller deletes the item
+- THEN default lists SHALL exclude it afterward
 
-#### Scenario: Forbid
-- GIVEN company-user and active item
-- WHEN that user deletes the item
-- THEN the request is forbidden
+#### Scenario: Missing capability forbids delete
+- GIVEN a caller without delete-item capability for the active company
+- WHEN that caller deletes an active item
+- THEN the request MUST be forbidden
 
 ### Requirement: Category management
 
@@ -92,17 +93,18 @@ The system MUST support company-scoped category CRUD with nullable parent. A cat
 
 ### Requirement: Multi-tenant isolation
 
-The system MUST scope every item/category read/write by session companyId and MUST NOT trust body companyId.
+The system MUST scope every item/category read/write by explicit active company context and MUST NOT trust body companyId or infer tenant context from the first membership.
+(Previously: Requests were scoped by session companyId and only ignored body companyId.)
 
-#### Scenario: Ignore
-- GIVEN caller from company A
+#### Scenario: Body company is ignored
+- GIVEN a caller whose active company is company A
 - WHEN create data names company B
-- THEN the new record belongs to company A only
+- THEN the new record SHALL belong to company A only
 
-#### Scenario: Foreign
-- GIVEN company A caller and company B record id
-- WHEN the caller updates that id
-- THEN the result is not-found
+#### Scenario: Missing active company blocks access
+- GIVEN a caller without a resolved active company for a tenant-scoped route
+- WHEN the caller reads or updates catalog data
+- THEN the request MUST be denied before data access
 
 ### Requirement: Audit emission
 

@@ -85,17 +85,33 @@ The system MUST block empty name, negative price, and invalid unit input, MUST o
 - THEN no save request is sent
 
 ### Requirement: RBAC enforcement
-The system MUST derive permissions from the session so both roles can create or edit while only owners can delete.
 
-#### Scenario: User can create and edit
-- GIVEN a company user is authenticated
+The system MUST derive catalog permissions from the session capability contract so permitted users can create or edit while delete remains available only when the delete-item capability is present for the active company.
+(Previously: Permissions were derived directly from owner vs non-owner role checks.)
+
+#### Scenario: Session with save capability can edit
+- GIVEN an authenticated session with catalog save capability
 - WHEN the user opens create or edit actions
-- THEN save actions are available
+- THEN save actions SHALL be available
 
-#### Scenario: Session lacks owner role
-- GIVEN an authenticated non-owner session
+#### Scenario: Session lacks delete capability
+- GIVEN an authenticated session without delete-item capability
 - WHEN delete permissions are evaluated
-- THEN delete remains unavailable
+- THEN delete MUST remain unavailable
+
+### Requirement: Active Company Entry Gate
+
+The system MUST require an active company before entering catalog routes. If multiple companies are available and none is active, the system MUST redirect to selection instead of rendering catalog data.
+
+#### Scenario: Active company allows entry
+- GIVEN an authenticated session with an active company
+- WHEN `/dashboard/items` opens
+- THEN the catalog SHALL load for that company
+
+#### Scenario: Missing active company redirects
+- GIVEN an authenticated session with multiple companies and no active company
+- WHEN `/dashboard/items` opens
+- THEN the system MUST redirect to company selection
 
 ### Requirement: Loading and error states
 The system MUST show loading feedback and MUST show an error notification when an API call fails.
