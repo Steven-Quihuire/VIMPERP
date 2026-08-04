@@ -14,7 +14,7 @@ const dashboardRoleLabels: Record<
   AuthSession['memberships'][number]['role'],
   string
 > = {
-  'platform-admin': 'Administrador de plataforma',
+  'platform-admin': 'Panel administrador',
   'company-owner': 'Responsable de empresa',
   'company-user': 'Usuario de empresa',
 };

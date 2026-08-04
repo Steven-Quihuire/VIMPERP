@@ -70,6 +70,17 @@ import type {
 } from '../features/items/domain/item';
 import { createDrizzleItemGateway } from '../features/items/infrastructure/drizzle-item.gateway';
 import { createItemRouter } from '../features/items/presentation/item.router';
+import { createCreateLocalUseCase } from '../features/org-hierarchy/application/create-local';
+import { createCreateDivisionUseCase } from '../features/org-hierarchy/application/create-division';
+import { createDeleteDivisionUseCase } from '../features/org-hierarchy/application/delete-division';
+import { createDeleteLocalUseCase } from '../features/org-hierarchy/application/delete-local';
+import { createListDivisionsUseCase } from '../features/org-hierarchy/application/list-divisions';
+import { createListLocalsUseCase } from '../features/org-hierarchy/application/list-locals';
+import { createUpdateDivisionUseCase } from '../features/org-hierarchy/application/update-division';
+import { createUpdateLocalUseCase } from '../features/org-hierarchy/application/update-local';
+import type { OrgHierarchyGateway } from '../features/org-hierarchy/domain/org-hierarchy';
+import { createDrizzleOrgHierarchyGateway } from '../features/org-hierarchy/infrastructure/drizzle-org-hierarchy.gateway';
+import { createOrgHierarchyRouter } from '../features/org-hierarchy/presentation/org-hierarchy.router';
 import { createGetHealth } from '../features/sample-health/application/get-health';
 import type { HealthGateway } from '../features/sample-health/domain/health';
 import { createDrizzleHealthGateway } from '../features/sample-health/infrastructure/drizzle-health.gateway';
@@ -96,6 +107,7 @@ type CreateAppInput = {
   provisioningRecorder?: ProvisioningRecorder & ApplicationErrorRecorder;
   adminGateway?: AdminGateway;
   itemGateway?: ItemCatalogGateway & CategoryGateway;
+  orgHierarchyGateway?: OrgHierarchyGateway;
   nodeEnv?: 'development' | 'test' | 'production';
   seedAdminEnabled?: boolean;
   sessionCookieName?: string;
@@ -123,6 +135,8 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     input.provisioningRecorder ?? createDrizzleProvisioningRecorder(db);
   const adminGateway = input.adminGateway ?? createDrizzleAdminGateway(db);
   const itemGateway = input.itemGateway ?? createDrizzleItemGateway(db);
+  const orgHierarchyGateway =
+    input.orgHierarchyGateway ?? createDrizzleOrgHierarchyGateway(db);
   const nodeEnv = input.nodeEnv ?? 'development';
   const seedAdminEnabled = nodeEnv !== 'production' && (input.seedAdminEnabled ?? false);
   const sessionCookieName = input.sessionCookieName ?? 'vimcore_session';
@@ -177,6 +191,13 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     });
   };
 
+  const switchActiveLocal = async (input: {
+    userId: string;
+    localId: string | null;
+  }) => {
+    await authIdentityGateway.setActiveLocalId(input.userId, input.localId);
+  };
+
   app.use(express.json());
   app.use(createRequestContextMiddleware({ logger, metrics: requestMetrics }));
   app.use(createHealthRouter(getHealth));
@@ -197,6 +218,12 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       }),
       resolveAuthSession,
       logout: createLogout(authIdentityGateway, seedAdminSessions),
+      switchActiveLocal,
+      findLocalCompanyById: async (localId) => {
+        return await authIdentityGateway.findLocalCompanyById(localId);
+      },
+      requireAuth,
+      requireRole: createRequireRole,
       sessionCookieName,
       secureCookies: nodeEnv === 'production',
     }),
@@ -244,6 +271,20 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       getCategoryById: async (input) => {
         return await itemGateway.getCategoryById(input);
       },
+    }),
+  );
+  app.use(
+    createOrgHierarchyRouter({
+      requireAuth,
+      requireRole: createRequireRole,
+      createDivision: createCreateDivisionUseCase({ gateway: orgHierarchyGateway }),
+      listDivisions: createListDivisionsUseCase({ gateway: orgHierarchyGateway }),
+      updateDivision: createUpdateDivisionUseCase({ gateway: orgHierarchyGateway }),
+      deleteDivision: createDeleteDivisionUseCase({ gateway: orgHierarchyGateway }),
+      createLocal: createCreateLocalUseCase({ gateway: orgHierarchyGateway }),
+      listLocals: createListLocalsUseCase({ gateway: orgHierarchyGateway }),
+      updateLocal: createUpdateLocalUseCase({ gateway: orgHierarchyGateway }),
+      deleteLocal: createDeleteLocalUseCase({ gateway: orgHierarchyGateway }),
     }),
   );
   app.use(createErrorMiddleware({ recorder: provisioningRecorder }));

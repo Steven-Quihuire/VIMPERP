@@ -55,6 +55,31 @@ export const createResolveAuthSession = ({
     };
   };
 
+  const resolveActiveLocalId = async (
+    userId: string,
+    activeCompany: AuthSession['activeCompany'],
+  ): Promise<string | null> => {
+    if (!activeCompany) {
+      return null;
+    }
+
+    const savedLocalId = await authIdentityGateway.findActiveLocalId(userId);
+
+    if (!savedLocalId) {
+      return null;
+    }
+
+    const localCompanyId = await authIdentityGateway.findLocalCompanyById(
+      savedLocalId,
+    );
+
+    if (!localCompanyId || localCompanyId !== activeCompany.companyId) {
+      return null;
+    }
+
+    return savedLocalId;
+  };
+
   return async (token: string | null | undefined): Promise<AuthSession> => {
     if (!token) {
       throw new InvalidSessionError();
@@ -72,6 +97,7 @@ export const createResolveAuthSession = ({
         user: toPublicAuthUser(createSeedAdminUser()),
         memberships: createSeedAdminMemberships(),
         activeCompany: null,
+        activeLocalId: null,
         capabilities: [],
       };
     }
@@ -90,11 +116,13 @@ export const createResolveAuthSession = ({
     const memberships = await authIdentityGateway.listMemberships(user.id);
 
     const activeCompany = await resolveActiveCompany(user.id, memberships);
+    const activeLocalId = await resolveActiveLocalId(user.id, activeCompany);
 
     return {
       user: toPublicAuthUser(user),
       memberships,
       activeCompany,
+      activeLocalId,
       capabilities: deriveAuthCapabilities({ memberships, activeCompany }),
     };
   };

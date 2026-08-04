@@ -114,6 +114,18 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
   async recordActiveCompanySwitch() {
     await Promise.resolve();
   }
+
+  async findActiveLocalId() {
+    return await Promise.resolve(null);
+  }
+
+  async setActiveLocalId() {
+    await Promise.resolve();
+  }
+
+  async findLocalCompanyById() {
+    return await Promise.resolve(null);
+  }
 }
 
 class InMemoryItemGateway implements ItemCatalogGateway, CategoryGateway {
@@ -432,7 +444,7 @@ const createAuthenticatedApp = async ({
     passwordHash: 'hashed:secret123',
   });
   authGateway.setMemberships('owner-user', [
-    { companyId: 'company-a', role: 'company-owner' },
+    { companyId: 'company-a', role: 'company-owner', divisionId: null, localId: null },
   ]);
   authGateway.setActiveCompany('owner-user', 'company-a');
   authGateway.setCompanyStatus('company-a', 'active');
@@ -445,7 +457,7 @@ const createAuthenticatedApp = async ({
     passwordHash: 'hashed:secret123',
   });
   authGateway.setMemberships('member-user', [
-    { companyId: 'company-a', role: 'company-user' },
+    { companyId: 'company-a', role: 'company-user', divisionId: null, localId: null },
   ]);
   authGateway.setActiveCompany('member-user', 'company-a');
 
@@ -456,7 +468,7 @@ const createAuthenticatedApp = async ({
     passwordHash: 'hashed:secret123',
   });
   authGateway.setMemberships('other-owner-user', [
-    { companyId: 'company-b', role: 'company-owner' },
+    { companyId: 'company-b', role: 'company-owner', divisionId: null, localId: null },
   ]);
   authGateway.setActiveCompany('other-owner-user', 'company-b');
 
@@ -779,8 +791,8 @@ describe('item routes', () => {
     const { app, authGateway, memberSessionCookie } = await createAuthenticatedApp({ itemGateway });
 
     authGateway.setMemberships('member-user', [
-      { companyId: 'company-a', role: 'company-user' },
-      { companyId: 'company-b', role: 'company-owner' },
+      { companyId: 'company-a', role: 'company-user', divisionId: null, localId: null },
+      { companyId: 'company-b', role: 'company-owner', divisionId: null, localId: null },
     ]);
     authGateway.setActiveCompany('member-user', 'company-a');
 
@@ -856,8 +868,8 @@ describe('item routes', () => {
     const { app, authGateway, ownerSessionCookie, itemGateway } = await createAuthenticatedApp();
 
     authGateway.setMemberships('owner-user', [
-      { companyId: 'company-a', role: 'company-owner' },
-      { companyId: 'company-b', role: 'company-owner' },
+      { companyId: 'company-a', role: 'company-owner', divisionId: null, localId: null },
+      { companyId: 'company-b', role: 'company-owner', divisionId: null, localId: null },
     ]);
     authGateway.setActiveCompany('owner-user', null);
 

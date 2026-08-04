@@ -18,6 +18,12 @@ export type PublicAuthUser = Omit<AuthUser, 'passwordHash'>;
 export type AuthMembership = {
   companyId: string | null;
   role: AuthRole;
+  divisionId: string | null;
+  localId: string | null;
+};
+
+export type SwitchActiveLocalInput = {
+  localId: string | null;
 };
 
 export const companyLifecycleValues = [
@@ -51,6 +57,7 @@ export type AuthSession = {
   user: PublicAuthUser;
   memberships: AuthMembership[];
   activeCompany: ActiveCompany | null;
+  activeLocalId: string | null;
   capabilities: AuthCapability[];
 };
 
@@ -69,6 +76,9 @@ export type AuthIdentityGateway = {
   findActiveCompanyId: (userId: string) => Promise<string | null>;
   findCompanyStatus: (companyId: string) => Promise<CompanyLifecycle>;
   setActiveCompanyId: (userId: string, companyId: string) => Promise<void>;
+  findActiveLocalId: (userId: string) => Promise<string | null>;
+  setActiveLocalId: (userId: string, localId: string | null) => Promise<void>;
+  findLocalCompanyById: (localId: string) => Promise<string | null>;
   countRecentActiveCompanySwitches: (userId: string, since: Date) => Promise<number>;
   recordActiveCompanySwitch: (input: {
     userId: string;
@@ -197,5 +207,5 @@ export const createSeedAdminUser = (): AuthUser => ({
 });
 
 export const createSeedAdminMemberships = (): AuthMembership[] => [
-  { companyId: null, role: 'platform-admin' },
+  { companyId: null, role: 'platform-admin', divisionId: null, localId: null },
 ];

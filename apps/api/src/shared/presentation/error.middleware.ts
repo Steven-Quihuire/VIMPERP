@@ -20,6 +20,14 @@ import {
   UnauthorizedError,
 } from '../../features/identity/domain/auth';
 import {
+  DivisionConflictError,
+  DivisionNameConflictError,
+  DivisionNotFoundError,
+  LocalConflictError,
+  LocalNameConflictError,
+  LocalNotFoundError,
+} from '../../features/org-hierarchy/domain/org-hierarchy';
+import {
   sanitizeApplicationError,
   type SanitizedApplicationError,
 } from '../infrastructure/observability/error-sanitizer';
@@ -95,6 +103,24 @@ export const createErrorMiddleware = ({
       error instanceof CategoryCycleError
     ) {
       response.status(409).json(toResponseBody('CONFLICT', error.message));
+      return;
+    }
+
+    if (
+      error instanceof DivisionConflictError ||
+      error instanceof LocalConflictError ||
+      error instanceof DivisionNameConflictError ||
+      error instanceof LocalNameConflictError
+    ) {
+      response.status(409).json(toResponseBody('CONFLICT', error.message));
+      return;
+    }
+
+    if (
+      error instanceof DivisionNotFoundError ||
+      error instanceof LocalNotFoundError
+    ) {
+      response.status(404).json(toResponseBody('NOT_FOUND', error.message));
       return;
     }
 

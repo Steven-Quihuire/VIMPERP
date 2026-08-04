@@ -47,15 +47,17 @@ vi.mock('../infrastructure/item-queries', () => ({
 
 const ownerSession: AuthSession = {
   user: { id: 'user-1', email: 'owner@vimcore.test', username: 'owner' },
-  memberships: [{ companyId: 'company-1', role: 'company-owner' }],
+  memberships: [{ companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null }],
   activeCompany: { companyId: 'company-1', status: 'active' },
+  activeLocalId: null,
   capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
 };
 
 const userSession: AuthSession = {
   user: { id: 'user-2', email: 'user@vimcore.test', username: 'user' },
-  memberships: [{ companyId: 'company-1', role: 'company-user' }],
+  memberships: [{ companyId: 'company-1', role: 'company-user', divisionId: null, localId: null }],
   activeCompany: { companyId: 'company-1', status: 'active' },
+  activeLocalId: null,
   capabilities: ['catalog.read', 'catalog.write'],
 };
 

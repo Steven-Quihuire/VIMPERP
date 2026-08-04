@@ -5,6 +5,7 @@ import { and, count, eq, gte, or } from 'drizzle-orm';
 import type { AppDb } from '../../../shared/infrastructure/db/client';
 import {
   auditEventsTable,
+  branchesTable,
   companiesTable,
   membershipsTable,
   sessionsTable,
@@ -96,6 +97,8 @@ export const createDrizzleAuthIdentityGateway = (
       .select({
         companyId: membershipsTable.companyId,
         role: membershipsTable.role,
+        divisionId: membershipsTable.divisionId,
+        localId: membershipsTable.localId,
       })
       .from(membershipsTable)
       .where(and(eq(membershipsTable.userId, userId)));
@@ -128,7 +131,7 @@ export const createDrizzleAuthIdentityGateway = (
     if (existingPreference) {
       await db
         .update(userPreferencesTable)
-        .set({ activeCompanyId: companyId })
+        .set({ activeCompanyId: companyId, activeLocalId: null })
         .where(eq(userPreferencesTable.userId, userId));
 
       return;
@@ -138,6 +141,48 @@ export const createDrizzleAuthIdentityGateway = (
       userId,
       activeCompanyId: companyId,
     });
+  },
+  findActiveLocalId: async (userId) => {
+    const [preference] = await db
+      .select({ activeLocalId: userPreferencesTable.activeLocalId })
+      .from(userPreferencesTable)
+      .where(eq(userPreferencesTable.userId, userId))
+      .limit(1);
+
+    return preference?.activeLocalId ?? null;
+  },
+  setActiveLocalId: async (userId, localId) => {
+    const [existingPreference] = await db
+      .select({ userId: userPreferencesTable.userId })
+      .from(userPreferencesTable)
+      .where(eq(userPreferencesTable.userId, userId))
+      .limit(1);
+
+    if (existingPreference) {
+      await db
+        .update(userPreferencesTable)
+        .set({ activeLocalId: localId })
+        .where(eq(userPreferencesTable.userId, userId));
+
+      return;
+    }
+
+    await db.insert(userPreferencesTable).values({
+      userId,
+      activeCompanyId: null,
+      activeLocalId: localId,
+    });
+  },
+  findLocalCompanyById: async (localId) => {
+    const rows = await db
+      .select({ id: branchesTable.id, companyId: branchesTable.companyId })
+      .from(branchesTable)
+      .where(eq(branchesTable.id, localId))
+      .limit(1);
+
+    const match = rows.find((row) => row.id === localId);
+
+    return match?.companyId ?? null;
   },
   countRecentActiveCompanySwitches: async (userId, since) => {
     const [result] = await db

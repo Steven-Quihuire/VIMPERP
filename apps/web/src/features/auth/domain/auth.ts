@@ -3,6 +3,8 @@ export type AuthRole = 'platform-admin' | 'company-owner' | 'company-user';
 export type AuthMembership = {
   companyId: string | null;
   role: AuthRole;
+  divisionId: string | null;
+  localId: string | null;
 };
 
 export type CompanyLifecycle = 'active' | 'suspended' | 'provisioning_failed';
@@ -27,11 +29,16 @@ export type AuthSession = {
   user: AuthUser;
   memberships: AuthMembership[];
   activeCompany: ActiveCompany | null;
+  activeLocalId: string | null;
   capabilities: AuthCapability[];
 };
 
 export type SwitchActiveCompanyInput = {
   companyId: string;
+};
+
+export type SwitchActiveLocalInput = {
+  localId: string | null;
 };
 
 export type LoginInput = {
@@ -50,6 +57,7 @@ export type AuthRepository = {
   register: (input: RegisterInput) => Promise<void>;
   getMe: () => Promise<AuthSession>;
   switchActiveCompany: (input: SwitchActiveCompanyInput) => Promise<void>;
+  switchActiveLocal: (input: SwitchActiveLocalInput) => Promise<void>;
   logout: () => Promise<void>;
 };
 

@@ -64,6 +64,7 @@ export const createRegister = ({
         user: toPublicAuthUser(user),
         memberships: [],
         activeCompany: null,
+        activeLocalId: null,
         capabilities: [],
       },
     };

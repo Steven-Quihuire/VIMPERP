@@ -76,6 +76,18 @@ class AtomicOnlyAuthGateway implements AuthIdentityGateway {
   async recordActiveCompanySwitch() {
     await Promise.resolve();
   }
+
+  async findActiveLocalId() {
+    return await Promise.resolve(null);
+  }
+
+  async setActiveLocalId() {
+    await Promise.resolve();
+  }
+
+  async findLocalCompanyById() {
+    return await Promise.resolve(null);
+  }
 }
 
 const passwordHasher: PasswordHasher = {
@@ -126,6 +138,7 @@ describe('createRegister', () => {
         },
         memberships: [],
         activeCompany: null,
+        activeLocalId: null,
         capabilities: [],
       },
     });

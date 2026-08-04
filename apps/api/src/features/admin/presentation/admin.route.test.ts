@@ -98,6 +98,18 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
   async recordActiveCompanySwitch() {
     await Promise.resolve();
   }
+
+  async findActiveLocalId() {
+    return await Promise.resolve(null);
+  }
+
+  async setActiveLocalId() {
+    await Promise.resolve();
+  }
+
+  async findLocalCompanyById() {
+    return await Promise.resolve(null);
+  }
 }
 
 class InMemoryAdminGateway implements AdminGateway {
@@ -317,7 +329,7 @@ const createAuthenticatedApp = async (role: AuthMembership['role']) => {
     passwordHash: 'hashed:secret123',
   });
   gateway.setMemberships(userId, [
-    { companyId: role === 'platform-admin' ? null : 'company-1', role },
+    { companyId: role === 'platform-admin' ? null : 'company-1', role, divisionId: null, localId: null },
   ]);
 
   const app = createApp({

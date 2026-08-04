@@ -1,15 +1,8 @@
 import type { CSSProperties } from 'react';
 import { Bell } from 'lucide-react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet } from 'react-router-dom';
 
 import type { AuthSession } from '../../auth/domain/auth';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '../../../shared/ui/breadcrumb';
 import { Button } from '../../../shared/ui/button';
 import { Separator } from '../../../shared/ui/separator';
 import {
@@ -22,7 +15,6 @@ import {
   canViewAdminSignals,
   getDashboardCompanyDetail,
   getDashboardCompanyLabel,
-  getDashboardCurrentSection,
 } from '../domain/dashboard';
 import { getReadNotificationIds, useDashboardCurrentCompany, useDashboardNotifications, useNotificationReadVersion } from './use-dashboard';
 
@@ -33,8 +25,6 @@ export const DashboardShell = ({
   session: AuthSession;
   apiBaseUrl?: string;
 }) => {
-  const location = useLocation();
-  const currentSection = getDashboardCurrentSection(location.pathname);
   const currentCompany = useDashboardCurrentCompany(
     apiBaseUrl,
     Boolean(session.activeCompany),
@@ -67,15 +57,6 @@ export const DashboardShell = ({
           <div className="flex items-center gap-2">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList className="flex-nowrap">
-                <BreadcrumbItem className="hidden md:block">{companyLabel}</BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>{currentSection}</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden text-right text-xs text-muted-foreground md:block">

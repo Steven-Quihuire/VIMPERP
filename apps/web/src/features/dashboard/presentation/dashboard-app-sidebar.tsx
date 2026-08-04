@@ -6,22 +6,13 @@ import {
   FileWarning,
   LayoutDashboard,
   Package,
-  ShieldUser,
   Settings,
   ShieldCheck,
+  ShieldUser,
   Tags,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
-import type { AuthSession } from '../../auth/domain/auth';
-import { getCompanyMemberships } from '../../auth/domain/auth';
-import { TeamSwitcher } from '../../auth/presentation/components/team-switcher';
-import { useSwitchActiveCompany } from '../../auth/presentation/use-auth';
-import {
-  canViewAdminSignals,
-} from '../domain/dashboard';
-import { useDashboardNotifications } from './use-dashboard';
-import { getReadNotificationIds, useNotificationReadVersion } from './use-dashboard';
 import {
   Sidebar,
   SidebarContent,
@@ -34,6 +25,16 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from '../../../shared/ui/sidebar';
+import type { AuthSession } from '../../auth/domain/auth';
+import { getCompanyMemberships } from '../../auth/domain/auth';
+import { TeamSwitcher } from '../../auth/presentation/components/team-switcher';
+import { useSwitchActiveCompany } from '../../auth/presentation/use-auth';
+import { canViewAdminSignals } from '../domain/dashboard';
+import {
+  getReadNotificationIds,
+  useDashboardNotifications,
+  useNotificationReadVersion,
+} from './use-dashboard';
 
 const workspaceItems = [
   { label: 'Inicio', href: '/dashboard', icon: LayoutDashboard, end: true },
@@ -61,7 +62,7 @@ const getRoleLabel = (role: AuthSession['memberships'][number]['role']) => {
     case 'company-user':
       return 'Usuario de empresa';
     case 'platform-admin':
-      return 'Administrador de plataforma';
+      return 'Administrador de plataformas';
   }
 };
 
@@ -81,9 +82,12 @@ export const DashboardAppSidebar = ({
   const notifications = useDashboardNotifications(apiBaseUrl, isPlatformAdmin);
   useNotificationReadVersion();
   const readNotificationIds = getReadNotificationIds();
-  const newCompanyCount = notifications.data?.notifications.filter(
-    (notification) => notification.type === 'company.registered' && !readNotificationIds.has(notification.id),
-  ).length ?? 0;
+  const newCompanyCount =
+    notifications.data?.notifications.filter(
+      (notification) =>
+        notification.type === 'company.registered' &&
+        !readNotificationIds.has(notification.id),
+    ).length ?? 0;
   const companyMemberships = getCompanyMemberships(session);
   const companyOptions = companyMemberships.map((membership, index) => ({
     companyId: membership.companyId,
@@ -120,7 +124,9 @@ export const DashboardAppSidebar = ({
                 </span>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{companyLabel}</span>
-                  <span className="truncate text-xs text-muted-foreground">{companyDetail}</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {companyDetail}
+                  </span>
                 </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -143,9 +149,16 @@ export const DashboardAppSidebar = ({
                       </a>
                     </SidebarMenuButton>
                   ) : (
-                    <NavLink to={item.href} {...(item.end ? { end: true } : {})}>
+                    <NavLink
+                      to={item.href}
+                      {...(item.end ? { end: true } : {})}
+                    >
                       {({ isActive }) => (
-                        <SidebarMenuButton asChild tooltip={item.label} isActive={isActive}>
+                        <SidebarMenuButton
+                          asChild
+                          tooltip={item.label}
+                          isActive={isActive}
+                        >
                           <span>
                             <item.icon />
                             <span>{item.label}</span>
@@ -168,7 +181,11 @@ export const DashboardAppSidebar = ({
                 <SidebarMenuItem>
                   <NavLink to="/dashboard/admin/provisioning-runs">
                     {({ isActive }) => (
-                      <SidebarMenuButton asChild tooltip="Observabilidad" isActive={isActive}>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip="Observabilidad"
+                        isActive={isActive}
+                      >
                         <span>
                           <FileWarning />
                           <span>Observabilidad</span>
@@ -180,8 +197,15 @@ export const DashboardAppSidebar = ({
                 <SidebarMenuItem>
                   <NavLink to="/dashboard/admin/companies">
                     {({ isActive }) => (
-                      <SidebarMenuButton asChild tooltip="Empresas" isActive={isActive}>
-                        <span><Building2 /><span>Empresas</span></span>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip="Empresas"
+                        isActive={isActive}
+                      >
+                        <span>
+                          <Building2 />
+                          <span>Empresas</span>
+                        </span>
                       </SidebarMenuButton>
                     )}
                   </NavLink>
@@ -207,11 +231,16 @@ export const DashboardAppSidebar = ({
                   ) : (
                     <NavLink to={item.href}>
                       {({ isActive }) => (
-                        <SidebarMenuButton asChild tooltip={item.label} isActive={isActive}>
+                        <SidebarMenuButton
+                          asChild
+                          tooltip={item.label}
+                          isActive={isActive}
+                        >
                           <span>
                             <item.icon />
                             <span>{item.label}</span>
-                            {item.label === 'Notificaciones' && newCompanyCount > 0 ? (
+                            {item.label === 'Notificaciones' &&
+                            newCompanyCount > 0 ? (
                               <span
                                 className="ml-auto size-2 rounded-full bg-red-500"
                                 aria-label={`${newCompanyCount} empresa(s) nueva(s)`}

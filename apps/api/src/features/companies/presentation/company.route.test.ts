@@ -149,6 +149,18 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
     );
     await Promise.resolve();
   }
+
+  async findActiveLocalId() {
+    return await Promise.resolve(null);
+  }
+
+  async setActiveLocalId() {
+    await Promise.resolve();
+  }
+
+  async findLocalCompanyById() {
+    return await Promise.resolve(null);
+  }
 }
 
 class InMemoryCompanyGateway implements CompanyOnboardingGateway {
@@ -181,7 +193,7 @@ class InMemoryCompanyGateway implements CompanyOnboardingGateway {
     this.auditEvents.push({ companyId, actorUserId: input.ownerUserId });
     this.authGateway.setMemberships(input.ownerUserId, [
       ...(this.authGateway.membershipsFor(input.ownerUserId) ?? []),
-      { companyId, role: 'company-owner' },
+      { companyId, role: 'company-owner', divisionId: null, localId: null },
     ]);
     this.authGateway.setActiveCompany(input.ownerUserId, companyId);
     this.authGateway.setCompanyStatus(companyId, 'active');
@@ -577,8 +589,8 @@ describe('company onboarding routes', () => {
     const { app, authGateway, sessionCookie } = await createAuthenticatedApp();
 
     authGateway.setMemberships('user-1', [
-      { companyId: 'company-1', role: 'company-owner' },
-      { companyId: 'company-2', role: 'company-user' },
+      { companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null },
+      { companyId: 'company-2', role: 'company-user', divisionId: null, localId: null },
     ]);
     authGateway.setActiveCompany('user-1', 'company-1');
 
@@ -609,7 +621,7 @@ describe('company onboarding routes', () => {
     const { app, authGateway, sessionCookie } = await createAuthenticatedApp();
 
     authGateway.setMemberships('user-1', [
-      { companyId: 'company-1', role: 'company-owner' },
+      { companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null },
     ]);
     authGateway.setActiveCompany('user-1', 'company-1');
 
@@ -631,8 +643,8 @@ describe('company onboarding routes', () => {
     const { app, authGateway, sessionCookie } = await createAuthenticatedApp();
 
     authGateway.setMemberships('user-1', [
-      { companyId: 'company-1', role: 'company-owner' },
-      { companyId: 'company-2', role: 'company-user' },
+      { companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null },
+      { companyId: 'company-2', role: 'company-user', divisionId: null, localId: null },
     ]);
     authGateway.setActiveCompany('user-1', 'company-1');
     authGateway.setRecentSwitchCount('user-1', 10);

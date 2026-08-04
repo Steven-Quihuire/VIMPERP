@@ -121,6 +121,18 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
   async recordActiveCompanySwitch() {
     await Promise.resolve();
   }
+
+  async findActiveLocalId() {
+    return await Promise.resolve(null);
+  }
+
+  async setActiveLocalId() {
+    await Promise.resolve();
+  }
+
+  async findLocalCompanyById() {
+    return await Promise.resolve(null);
+  }
 }
 
 const passwordHasher: PasswordHasher = {
@@ -255,6 +267,7 @@ describe('auth routes', () => {
       },
       memberships: [],
       activeCompany: null,
+      activeLocalId: null,
       capabilities: [],
     });
   });
@@ -330,7 +343,7 @@ describe('auth routes', () => {
       passwordHash: 'hashed:secret123',
     });
     gateway.setMemberships('user-1', [
-      { companyId: 'company-1', role: 'company-owner' },
+      { companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null },
     ]);
 
     const app = createApp({
@@ -362,11 +375,12 @@ describe('auth routes', () => {
         email: 'owner@vimcore.test',
         username: 'owner',
       },
-      memberships: [{ companyId: 'company-1', role: 'company-owner' }],
+      memberships: [{ companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null }],
       activeCompany: {
         companyId: 'company-1',
         status: 'active',
       },
+      activeLocalId: null,
       capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
     });
   });
@@ -381,8 +395,8 @@ describe('auth routes', () => {
       passwordHash: 'hashed:secret123',
     });
     gateway.setMemberships('user-1', [
-      { companyId: 'company-1', role: 'company-owner' },
-      { companyId: 'company-2', role: 'company-user' },
+      { companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null },
+      { companyId: 'company-2', role: 'company-user', divisionId: null, localId: null },
     ]);
     gateway.setActiveCompany('user-1', 'company-2');
     gateway.setCompanyStatus('company-2', 'active');
@@ -413,13 +427,14 @@ describe('auth routes', () => {
         username: 'owner',
       },
       memberships: [
-        { companyId: 'company-1', role: 'company-owner' },
-        { companyId: 'company-2', role: 'company-user' },
+        { companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null },
+        { companyId: 'company-2', role: 'company-user', divisionId: null, localId: null },
       ],
       activeCompany: {
         companyId: 'company-2',
         status: 'active',
       },
+      activeLocalId: null,
       capabilities: ['catalog.read', 'catalog.write'],
     });
   });
@@ -434,7 +449,7 @@ describe('auth routes', () => {
       passwordHash: 'hashed:secret123',
     });
     gateway.setMemberships('user-1', [
-      { companyId: 'company-1', role: 'company-owner' },
+      { companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null },
     ]);
     gateway.setActiveCompany('user-1', 'company-999');
     gateway.setCompanyStatus('company-1', 'active');
@@ -464,11 +479,12 @@ describe('auth routes', () => {
         email: 'owner@vimcore.test',
         username: 'owner',
       },
-      memberships: [{ companyId: 'company-1', role: 'company-owner' }],
+      memberships: [{ companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null }],
       activeCompany: {
         companyId: 'company-1',
         status: 'active',
       },
+      activeLocalId: null,
       capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
     });
   });
@@ -565,10 +581,10 @@ describe('auth routes', () => {
       passwordHash: 'hashed:secret123',
     });
     gateway.setMemberships('company-user-1', [
-      { companyId: 'company-1', role: 'company-user' },
+      { companyId: 'company-1', role: 'company-user', divisionId: null, localId: null },
     ]);
     gateway.setMemberships('platform-admin-1', [
-      { companyId: null, role: 'platform-admin' },
+      { companyId: null, role: 'platform-admin', divisionId: null, localId: null },
     ]);
 
     const app = createApp({

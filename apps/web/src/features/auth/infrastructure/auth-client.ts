@@ -4,6 +4,7 @@ import type {
   LoginInput,
   RegisterInput,
   SwitchActiveCompanyInput,
+  SwitchActiveLocalInput,
 } from '../domain/auth';
 import { getApiBaseUrl } from '../../../shared/lib/http/api-base-url';
 import { createHttpClient } from '../../../shared/lib/http/http-client';
@@ -23,6 +24,9 @@ export const createAuthRepository = (
     getMe: async () => httpClient.get<AuthSession>('/auth/me'),
     switchActiveCompany: async (input: SwitchActiveCompanyInput) => {
       await httpClient.patch('/me/active-company', input);
+    },
+    switchActiveLocal: async (input: SwitchActiveLocalInput) => {
+      await httpClient.post('/auth/me/active-local', input);
     },
     logout: async () => {
       await httpClient.post('/auth/logout');
