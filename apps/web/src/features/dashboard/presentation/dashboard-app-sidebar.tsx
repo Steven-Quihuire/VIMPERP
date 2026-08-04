@@ -41,6 +41,9 @@ const workspaceItems = [
 
 const isHashLink = (href: string) => href.startsWith('#');
 
+const sidebarItemClass =
+  'hover:bg-black hover:text-white hover:pl-4 hover:rounded-2xl data-[active=true]:bg-black data-[active=true]:text-white data-[active=true]:pl-4 data-[active=true]:rounded-2xl transition-[width,height,padding,color,background-color] transition-all duration-400 ease-in-out';
+
 const getRoleLabel = (role: AuthSession['memberships'][number]['role']) => {
   switch (role) {
     case 'company-owner':
@@ -96,14 +99,11 @@ export const DashboardAppSidebar = ({
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" className="font-semibold">
-                <span className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  V
+                <span className="flex size-8 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
+                  <Building2 size={18} />
                 </span>
-                <div className="grid flex-1 text-left text-sm leading-tight">
+                <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                   <span className="truncate font-medium">{companyLabel}</span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {companyDetail}
-                  </span>
                 </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -119,7 +119,11 @@ export const DashboardAppSidebar = ({
               {workspaceItems.map((item) => (
                 <SidebarMenuItem key={item.label}>
                   {isHashLink(item.href) ? (
-                    <SidebarMenuButton asChild tooltip={item.label}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={item.label}
+                      className={sidebarItemClass}
+                    >
                       <a href={item.href}>
                         <item.icon />
                         <span>{item.label}</span>
@@ -132,11 +136,7 @@ export const DashboardAppSidebar = ({
                     >
                       {({ isActive }) => (
                         <SidebarMenuButton
-                          className={
-                            isActive
-                              ? 'data-[active=true]:bg-black text-white'
-                              : undefined
-                          }
+                          className={sidebarItemClass}
                           asChild
                           tooltip={item.label}
                           isActive={isActive}
@@ -164,6 +164,7 @@ export const DashboardAppSidebar = ({
                   <NavLink to="/dashboard/admin/provisioning-runs">
                     {({ isActive }) => (
                       <SidebarMenuButton
+                        className={sidebarItemClass}
                         asChild
                         tooltip="Observabilidad"
                         isActive={isActive}
@@ -183,6 +184,7 @@ export const DashboardAppSidebar = ({
                         asChild
                         tooltip="Empresas"
                         isActive={isActive}
+                        className={sidebarItemClass}
                       >
                         <span>
                           <Building2 />

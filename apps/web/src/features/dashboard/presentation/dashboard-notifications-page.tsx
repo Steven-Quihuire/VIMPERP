@@ -1,6 +1,15 @@
-import { useEffect, useMemo } from 'react';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/shared/ui/breadcrumb';
 import { Bell, Building2, CircleAlert } from 'lucide-react';
-
+import { useEffect, useMemo } from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Badge } from '../../../shared/ui/badge';
 import {
   Card,
   CardContent,
@@ -8,10 +17,17 @@ import {
   CardHeader,
   CardTitle,
 } from '../../../shared/ui/card';
-import { Badge } from '../../../shared/ui/badge';
 import type { AuthSession } from '../../auth/domain/auth';
-import { canViewAdminSignals } from '../domain/dashboard';
-import { markNotificationsAsRead, useDashboardNotifications } from './use-dashboard';
+import {
+  canViewAdminSignals,
+  notificationsWorkspaceLinks,
+} from '../domain/dashboard';
+import {
+  markNotificationsAsRead,
+  getReadNotificationIds,
+  useDashboardNotifications,
+  useNotificationReadVersion,
+} from './use-dashboard';
 
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat('es-EC', {
@@ -28,34 +44,82 @@ export const DashboardNotificationsPage = ({
 }) => {
   const isPlatformAdmin = session ? canViewAdminSignals(session) : true;
   const notifications = useDashboardNotifications(apiBaseUrl, isPlatformAdmin);
-  const items = useMemo(
-    () => notifications.data?.notifications ?? [],
-    [notifications.data?.notifications],
-  );
+  const location = useLocation();
+  const readVersion = useNotificationReadVersion();
+  const view = location.pathname.endsWith('/unread')
+    ? 'unread'
+    : location.pathname.endsWith('/all')
+      ? 'all'
+      : 'recent';
+  const items = useMemo(() => {
+    const allItems = notifications.data?.notifications ?? [];
+    const readIds = getReadNotificationIds();
+
+    return allItems.filter((notification) => {
+      if (view === 'unread') {
+        return readVersion >= 0 && !readIds.has(notification.id);
+      }
+      if (view === 'all') return true;
+
+      return Date.parse(notification.createdAt) >= Date.now() - 24 * 60 * 60 * 1000;
+    });
+  }, [notifications.data?.notifications, readVersion, view]);
 
   useEffect(() => {
-    markNotificationsAsRead(items.map((notification) => notification.id));
-  }, [items]);
+    if (view !== 'unread') {
+      markNotificationsAsRead(items.map((notification) => notification.id));
+    }
+  }, [items, view]);
+
+  const titles = {
+    recent: {
+      title: 'Actividad reciente',
+      description: 'Eventos de las últimas 24 horas',
+    },
+    all: {
+      title: 'Todas las notificaciones',
+      description: 'Historial completo de eventos de la plataforma',
+    },
+    unread: {
+      title: 'Notificaciones sin leer',
+      description: 'Eventos que todavía no has revisado',
+    },
+  } as const;
 
   return (
-    <main className="mx-auto flex max-w-5xl flex-col gap-6">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-primary">Centro de actividad</p>
-          <h1 className="text-3xl font-semibold tracking-tight">Notificaciones</h1>
-          <p className="mt-1 text-muted-foreground">
-            Revisa los eventos que requieren atención de la plataforma.
-          </p>
-        </div>
-        <div className="rounded-full border bg-card p-3 shadow-sm">
-          <Bell className="size-5" />
-        </div>
+    <main className="mx-auto flex max-w-6xl flex-col gap-6">
+      <header>
+        <h1 className="text-3xl font-medium tracking-tight">
+          Centro de notificación
+        </h1>
+        <Breadcrumb className="mt-1">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link
+                  className="text-gray-500 text-xs hover:text-gray-700 transition-all ease-in-out duration-300"
+                  to="/dashboard"
+                >
+                  Inicio
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="text-gray-800 text-xs">
+                Notificaciones
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
       </header>
+
+      <AdminWorkspaceNav />
 
       <Card>
         <CardHeader>
-          <CardTitle>Actividad reciente</CardTitle>
-          <CardDescription>Eventos recientes de la plataforma</CardDescription>
+          <CardTitle>{titles[view].title}</CardTitle>
+          <CardDescription>{titles[view].description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {notifications.isLoading ? (
@@ -67,7 +131,11 @@ export const DashboardNotificationsPage = ({
           {!notifications.isLoading && items.length === 0 ? (
             <div className="rounded-lg border border-dashed p-8 text-center">
               <CircleAlert className="mx-auto mb-3 size-8 text-muted-foreground" />
-              <p className="font-medium">No hay notificaciones nuevas</p>
+              <p className="font-medium">
+                {view === 'unread'
+                  ? 'No hay notificaciones sin leer'
+                  : 'No hay notificaciones para mostrar'}
+              </p>
               <p className="mt-1 text-sm text-muted-foreground">
                 Aquí aparecerán los eventos importantes del sistema.
               </p>
@@ -93,8 +161,13 @@ export const DashboardNotificationsPage = ({
                     <Badge variant="secondary">Nueva empresa</Badge>
                   ) : null}
                 </div>
-                <p className="mt-1 text-sm text-muted-foreground">{notification.type}</p>
-                <time className="mt-2 block text-xs text-muted-foreground" dateTime={notification.createdAt}>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {notification.type}
+                </p>
+                <time
+                  className="mt-2 block text-xs text-muted-foreground"
+                  dateTime={notification.createdAt}
+                >
                   {formatDate(notification.createdAt)}
                 </time>
               </div>
@@ -105,3 +178,27 @@ export const DashboardNotificationsPage = ({
     </main>
   );
 };
+
+export const AdminWorkspaceNav = () => (
+  <nav aria-label="Navegación de administración" className="overflow-x-auto">
+    <ul className="flex min-w-max gap-6 text-sm">
+      {notificationsWorkspaceLinks.map((link) => (
+        <li key={link.id}>
+          <NavLink
+            className={({ isActive }) =>
+              `inline-flex h-8 items-center whitespace-nowrap border-b-2 px-1 font-medium transition-colors ${
+                isActive
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground'
+              }`
+            }
+            end={link.id === 'notifications'}
+            to={link.href}
+          >
+            {link.label}
+          </NavLink>
+        </li>
+      ))}
+    </ul>
+  </nav>
+);

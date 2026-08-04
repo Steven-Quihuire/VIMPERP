@@ -3,12 +3,12 @@ import {
   ArrowUpRight,
   Bell,
   Building2,
+  Calendar,
   ShieldCheck,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { Badge } from '../../../shared/ui/badge';
-import { Button } from '../../../shared/ui/button';
 import {
   Card,
   CardContent,
@@ -20,8 +20,6 @@ import type { AuthSession } from '../../auth/domain/auth';
 import {
   adminWorkspaceLinks,
   canViewAdminSignals,
-  getDashboardCompanyDetail,
-  getDashboardCompanyLabel,
   getVisibleDashboardModules,
 } from '../domain/dashboard';
 import {
@@ -39,60 +37,48 @@ export const DashboardPage = ({
 }) => {
   const isPlatformAdmin = canViewAdminSignals(session);
   const modules = getVisibleDashboardModules(session);
-  const currentCompany = useDashboardCurrentCompany(
-    apiBaseUrl,
-    Boolean(session.activeCompany),
-  );
   const summary = useDashboardSummary(apiBaseUrl, isPlatformAdmin);
   const notifications = useDashboardNotifications(apiBaseUrl, isPlatformAdmin);
-  const companyLabel = getDashboardCompanyLabel(session, currentCompany.data);
-  const companyDetail = getDashboardCompanyDetail(session, currentCompany.data);
+  const currentCompany = useDashboardCurrentCompany(
+    apiBaseUrl,
+    !isPlatformAdmin,
+  );
   const notificationsList = notifications.data?.notifications ?? [];
-  const newCompanyCount = notificationsList.filter(
-    (notification) => notification.type === 'company.registered',
-  ).length;
   const formatDate = (value: string) =>
     new Intl.DateTimeFormat('es-EC', { dateStyle: 'medium' }).format(
       new Date(value),
     );
+  const formatToday = () => {
+    const parts = new Intl.DateTimeFormat('es-EC', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    }).formatToParts(new Date());
+    const date = Object.fromEntries(
+      parts
+        .filter((part) => part.type !== 'literal')
+        .map((part) => [part.type, part.value]),
+    ) as { day: string; month: string; year: string };
+
+    return `${date.day} de ${date.month}, ${date.year}`;
+  };
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-6">
+    <div className="gap-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">{companyLabel}</p>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            ERP dashboard
-          </h1>
-          <p className="text-sm text-muted-foreground">{companyDetail}</p>
+        <h1 className="text-3xl font-medium tracking-tight">
+          {isPlatformAdmin
+            ? 'Bienvenido hermoso'
+            : `Bienvenido a ${currentCompany.data?.name ?? ''}`}
+        </h1>
+        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <Calendar className="size-4" color="#4a5565" />
+          <span className="text-gray-600 text-xs">{formatToday()}</span>
         </div>
       </div>
 
       {isPlatformAdmin ? (
         <section className="grid gap-6">
-          <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/[0.08] via-card to-card">
-            <CardHeader className="flex flex-row items-start justify-between gap-4">
-              <div>
-                <CardDescription>Administración de plataforma</CardDescription>
-                <h2 className="mt-1 text-2xl font-semibold tracking-tight">
-                  Todo bajo control
-                </h2>
-                <CardDescription className="mt-2 max-w-2xl">
-                  Supervisa empresas, actividad operativa y señales técnicas
-                  desde un solo lugar.
-                </CardDescription>
-              </div>
-              <Link to="/dashboard/notifications">
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Bell className="size-4" />
-                  {newCompanyCount > 0
-                    ? `${newCompanyCount} nuevas`
-                    : 'Ver actividad'}
-                </Button>
-              </Link>
-            </CardHeader>
-          </Card>
-
           <Card>
             <CardHeader>
               <CardDescription>Lectura visual de la plataforma</CardDescription>
@@ -196,7 +182,7 @@ export const DashboardPage = ({
               </CardContent>
             </Card>
 
-            <Card className="bg-red-400">
+            <Card className="">
               <CardHeader className="flex flex-row items-start justify-between gap-4">
                 <div>
                   <CardDescription>Herramientas de plataforma</CardDescription>
@@ -269,6 +255,38 @@ export const DashboardPage = ({
           </CardContent>
         </Card>
       )}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Actividad</CardTitle>
+          <CardDescription>Movimientos recientes</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {notificationsList.slice(0, 4).map((notification) => (
+            <div key={notification.id} className="flex items-start gap-3">
+              <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                {notification.type === 'company.registered' ? (
+                  <Building2 className="size-4" />
+                ) : (
+                  <Bell className="size-4" />
+                )}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium leading-5">
+                  {notification.message}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {formatDate(notification.createdAt)}
+                </p>
+              </div>
+            </div>
+          ))}
+          {notificationsList.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No hay actividad reciente.
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
     </div>
   );
 };

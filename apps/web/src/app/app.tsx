@@ -299,6 +299,14 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
           element={<DashboardNotificationsPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
         />
         <Route
+          path="notifications/all"
+          element={<DashboardNotificationsPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="notifications/unread"
+          element={<DashboardNotificationsPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
           path="admin"
           element={
             <ProtectedAdminDashboard {...(apiBaseUrl ? { apiBaseUrl } : {})} />

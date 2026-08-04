@@ -1,13 +1,16 @@
 import { existsSync } from 'node:fs';
 
-import { defineConfig } from '@playwright/test';
+import { chromium, defineConfig } from '@playwright/test';
 
 const databaseUrl = 'postgres://postgres:postgres@127.0.0.1:5432/vimcore';
 const executablePath =
   process.env.PLAYWRIGHT_EXECUTABLE_PATH ??
-  ['/usr/bin/chromium', '/usr/bin/chromium-browser', '/opt/google/chrome/chrome'].find(
-    (path) => existsSync(path),
-  );
+  [
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/opt/google/chrome/chrome',
+    chromium.executablePath(),
+  ].find((path) => existsSync(path));
 const startPostgres = process.env.CI
   ? ''
   : 'docker compose up -d postgres && sleep 5 && ';

@@ -77,6 +77,34 @@ const platformAdminModules: DashboardModule[] = [
   { id: 'notifications', label: 'Notificaciones' },
 ];
 
+export type NotificationsWorkspaceLink = {
+  id: 'notifications' | 'notifications-all' | 'notifications-unread';
+  label: string;
+  href: string;
+  description: string;
+};
+
+export const notificationsWorkspaceLinks: NotificationsWorkspaceLink[] = [
+  {
+    id: 'notifications',
+    label: 'Notificaciones',
+    href: '/dashboard/notifications',
+    description: 'Consulta las notificaciones de las últimas 24 horas.',
+  },
+  {
+    id: 'notifications-all',
+    label: 'Todas',
+    href: '/dashboard/notifications/all',
+    description: 'Consulta todo el historial de notificaciones.',
+  },
+  {
+    id: 'notifications-unread',
+    label: 'Sin leer',
+    href: '/dashboard/notifications/unread',
+    description: 'Consulta únicamente las notificaciones sin leer.',
+  },
+];
+
 export const adminWorkspaceLinks: AdminWorkspaceLink[] = [
   {
     id: 'provisioning-runs',

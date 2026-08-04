@@ -25,7 +25,11 @@ export const markNotificationsAsRead = (ids: string[]) => {
   if (typeof window === 'undefined' || ids.length === 0) return;
 
   const readIds = getReadNotificationIds();
-  ids.forEach((id) => readIds.add(id));
+  const unreadIds = ids.filter((id) => !readIds.has(id));
+
+  if (unreadIds.length === 0) return;
+
+  unreadIds.forEach((id) => readIds.add(id));
   window.localStorage.setItem(notificationReadStorageKey, JSON.stringify([...readIds]));
   window.dispatchEvent(new Event(notificationReadEvent));
 };
