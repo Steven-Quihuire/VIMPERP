@@ -7,6 +7,7 @@ import {
 
 type UpdateCategoryInput = {
   companyId: string;
+  localId: string | null;
   actorUserId: string;
   capabilities: AuthCapability[];
   companyStatus: CompanyLifecycle;
@@ -32,6 +33,7 @@ export const createUpdateCategoryUseCase = ({
 
     const currentCategory = await itemGateway.getCategoryById({
       companyId: input.companyId,
+      localId: input.localId,
       categoryId: input.categoryId,
     });
 
@@ -51,6 +53,7 @@ export const createUpdateCategoryUseCase = ({
       if (input.parentId !== null) {
         const parent = await itemGateway.getCategoryById({
           companyId: input.companyId,
+          localId: input.localId,
           categoryId: input.parentId,
         });
 
@@ -60,6 +63,7 @@ export const createUpdateCategoryUseCase = ({
 
         const descendantIds = await itemGateway.getDescendantIds({
           companyId: input.companyId,
+          localId: input.localId,
           categoryId: input.categoryId,
         });
 
@@ -71,6 +75,7 @@ export const createUpdateCategoryUseCase = ({
 
     return await itemGateway.updateCategory({
       companyId: input.companyId,
+      localId: input.localId,
       actorUserId: input.actorUserId,
       correlationId: input.correlationId,
       categoryId: input.categoryId,

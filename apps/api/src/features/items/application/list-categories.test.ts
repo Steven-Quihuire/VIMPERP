@@ -6,6 +6,7 @@ import { type CategoryGateway, type ItemCatalogGateway, type ItemCategory } from
 const buildCategory = (id: string, companyId = 'company-1'): ItemCategory => ({
   id,
   companyId,
+  localId: null,
   parentId: null,
   name: `Category ${id}`,
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -38,11 +39,15 @@ describe('createListCategoriesUseCase', () => {
 
     const result = await listCategories({
       companyId: 'company-1',
+      localId: null,
       capabilities: ['catalog.read'],
       companyStatus: 'active',
     });
 
-    expect(itemGateway.listCategories).toHaveBeenCalledWith({ companyId: 'company-1' });
+    expect(itemGateway.listCategories).toHaveBeenCalledWith({
+      companyId: 'company-1',
+      localId: null,
+    });
     expect(result).toEqual({
       categories: [buildCategory('category-1'), buildCategory('category-2')],
     });

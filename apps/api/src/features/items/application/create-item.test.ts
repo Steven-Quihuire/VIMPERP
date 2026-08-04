@@ -28,6 +28,7 @@ describe('createCreateItemUseCase', () => {
 
     const result = await createItem({
       companyId: 'company-1',
+      localId: null,
       actorUserId: 'user-1',
       capabilities: ['catalog.write'],
       companyStatus: 'active',
@@ -42,6 +43,7 @@ describe('createCreateItemUseCase', () => {
 
     expect(itemGateway.createItem).toHaveBeenCalledWith({
       companyId: 'company-1',
+      localId: null,
       actorUserId: 'user-1',
       correlationId: 'corr-1',
       name: 'Keyboard',
@@ -62,6 +64,7 @@ describe('createCreateItemUseCase', () => {
 
     await createItem({
       companyId: 'company-1',
+      localId: null,
       actorUserId: 'user-1',
       capabilities: ['catalog.write'],
       companyStatus: 'active',
@@ -92,6 +95,7 @@ describe('createCreateItemUseCase', () => {
     await expect(
       createItem({
         companyId: 'company-1',
+        localId: null,
         actorUserId: 'user-1',
         capabilities: ['catalog.write'],
         companyStatus: 'active',
@@ -115,6 +119,7 @@ describe('createCreateItemUseCase', () => {
     await expect(
       createItem({
         companyId: 'company-1',
+        localId: null,
         actorUserId: 'user-1',
         capabilities: ['catalog.write'],
         companyStatus: 'active',
@@ -138,6 +143,7 @@ describe('createCreateItemUseCase', () => {
     await expect(
       createItem({
         companyId: 'company-1',
+        localId: null,
         actorUserId: 'user-1',
         capabilities: ['catalog.write'],
         companyStatus: 'suspended',
@@ -161,6 +167,7 @@ describe('createCreateItemUseCase', () => {
     await expect(
       createItem({
         companyId: 'company-1',
+        localId: null,
         actorUserId: 'user-1',
         capabilities: ['catalog.read'],
         companyStatus: 'active',

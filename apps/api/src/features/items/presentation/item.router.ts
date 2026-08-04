@@ -97,6 +97,7 @@ const getRouteContext = (
     actorUserId: auth.user.id,
     capabilities: activeCompany.capabilities,
     companyId: activeCompany.companyId,
+    localId: auth.activeLocalId,
     companyStatus: activeCompany.status,
     correlationId:
       locals.requestContext?.correlationId ?? String(response.getHeader('x-correlation-id')),
@@ -118,6 +119,7 @@ export const createItemRouter = ({
   requireAuth: RequestHandler;
   createItem: (input: {
     companyId: string;
+    localId: string | null;
     actorUserId: string;
     capabilities: AuthCapability[];
     companyStatus: CompanyLifecycle;
@@ -133,6 +135,7 @@ export const createItemRouter = ({
   }) => Promise<{ itemId: string }>;
   updateItem: (input: {
     companyId: string;
+    localId: string | null;
     actorUserId: string;
     capabilities: AuthCapability[];
     companyStatus: CompanyLifecycle;
@@ -148,6 +151,7 @@ export const createItemRouter = ({
   }) => Promise<{ itemId: string }>;
   softDeleteItem: (input: {
     companyId: string;
+    localId: string | null;
     actorUserId: string;
     capabilities: AuthCapability[];
     companyStatus: CompanyLifecycle;
@@ -156,6 +160,7 @@ export const createItemRouter = ({
   }) => Promise<void>;
   getItem: (input: {
     companyId: string;
+    localId: string | null;
     capabilities: AuthCapability[];
     companyStatus: CompanyLifecycle;
     itemId: string;
@@ -163,6 +168,7 @@ export const createItemRouter = ({
   }) => Promise<Item | null>;
   listItems: (input: {
     companyId: string;
+    localId: string | null;
     capabilities: AuthCapability[];
     companyStatus: CompanyLifecycle;
     limit: number;
@@ -170,6 +176,7 @@ export const createItemRouter = ({
   }) => Promise<{ items: Item[]; nextCursor: string | null }>;
   createCategory: (input: {
     companyId: string;
+    localId: string | null;
     actorUserId: string;
     capabilities: AuthCapability[];
     companyStatus: CompanyLifecycle;
@@ -179,6 +186,7 @@ export const createItemRouter = ({
   }) => Promise<{ categoryId: string }>;
   updateCategory: (input: {
     companyId: string;
+    localId: string | null;
     actorUserId: string;
     capabilities: AuthCapability[];
     companyStatus: CompanyLifecycle;
@@ -189,10 +197,12 @@ export const createItemRouter = ({
   }) => Promise<{ categoryId: string }>;
   getCategoryById?: (input: {
     companyId: string;
+    localId: string | null;
     categoryId: string;
   }) => Promise<ItemCategory | null>;
   listCategories?: (input: {
     companyId: string;
+    localId: string | null;
     capabilities: AuthCapability[];
     companyStatus: CompanyLifecycle;
   }) => Promise<{ categories: ItemCategory[] }>;
@@ -225,6 +235,7 @@ export const createItemRouter = ({
       const result = await listItems({
         capabilities: context.capabilities,
         companyId: context.companyId,
+        localId: context.localId,
         companyStatus: context.companyStatus,
         limit: query.limit,
         ...(query.cursor !== undefined ? { cursor: query.cursor } : {}),
@@ -244,6 +255,7 @@ export const createItemRouter = ({
       const item = await getItem({
         capabilities: context.capabilities,
         companyId: context.companyId,
+        localId: context.localId,
         companyStatus: context.companyStatus,
         itemId: params.id,
         includeDeleted: query.includeDeleted === 'true',
@@ -266,6 +278,7 @@ export const createItemRouter = ({
       const context = getRouteContext(response, 'catalog.write');
       const input: {
         companyId: string;
+        localId: string | null;
         actorUserId: string;
         capabilities: AuthCapability[];
         companyStatus: CompanyLifecycle;
@@ -342,6 +355,7 @@ export const createItemRouter = ({
         const result = await listCategories({
           capabilities: context.capabilities,
           companyId: context.companyId,
+          localId: context.localId,
           companyStatus: context.companyStatus,
         });
 
@@ -375,6 +389,7 @@ export const createItemRouter = ({
         const context = getRouteContext(response, 'catalog.read');
         const category = await getCategoryById({
           companyId: context.companyId,
+          localId: context.localId,
           categoryId: params.id,
         });
 
@@ -396,6 +411,7 @@ export const createItemRouter = ({
       const context = getRouteContext(response, 'catalog.write');
       const input: {
         companyId: string;
+        localId: string | null;
         actorUserId: string;
         capabilities: AuthCapability[];
         companyStatus: CompanyLifecycle;
@@ -405,6 +421,7 @@ export const createItemRouter = ({
         parentId?: string | null;
       } = {
         companyId: context.companyId,
+        localId: context.localId,
         actorUserId: context.actorUserId,
         capabilities: context.capabilities,
         companyStatus: context.companyStatus,

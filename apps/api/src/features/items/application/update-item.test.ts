@@ -12,6 +12,7 @@ import {
 const buildItem = (overrides: Partial<Item> = {}): Item => ({
   id: 'item-1',
   companyId: 'company-1',
+  localId: null,
   categoryId: null,
   sku: 'sku-1',
   name: 'Keyboard',
@@ -50,6 +51,7 @@ describe('createUpdateItemUseCase', () => {
 
     const result = await updateItem({
       companyId: 'company-1',
+      localId: null,
       actorUserId: 'user-1',
       capabilities: ['catalog.write'],
       companyStatus: 'active',
@@ -66,11 +68,13 @@ describe('createUpdateItemUseCase', () => {
 
     expect(itemGateway.getItemById).toHaveBeenCalledWith({
       companyId: 'company-1',
+      localId: null,
       itemId: 'item-1',
       includeDeleted: false,
     });
     expect(itemGateway.updateItem).toHaveBeenCalledWith({
       companyId: 'company-1',
+      localId: null,
       actorUserId: 'user-1',
       correlationId: 'corr-1',
       itemId: 'item-1',
@@ -91,6 +95,7 @@ describe('createUpdateItemUseCase', () => {
 
     await updateItem({
       companyId: 'company-1',
+      localId: null,
       actorUserId: 'user-1',
       capabilities: ['catalog.write'],
       companyStatus: 'active',
@@ -102,6 +107,7 @@ describe('createUpdateItemUseCase', () => {
 
     expect(itemGateway.updateItem).toHaveBeenCalledWith({
       companyId: 'company-1',
+      localId: null,
       actorUserId: 'user-1',
       correlationId: 'corr-1',
       itemId: 'item-1',
@@ -116,6 +122,7 @@ describe('createUpdateItemUseCase', () => {
     await expect(
       updateItem({
         companyId: 'company-1',
+        localId: null,
         actorUserId: 'user-1',
         capabilities: ['catalog.write'],
         companyStatus: 'active',
@@ -135,6 +142,7 @@ describe('createUpdateItemUseCase', () => {
     await expect(
       updateItem({
         companyId: 'company-1',
+        localId: null,
         actorUserId: 'user-1',
         capabilities: ['catalog.write'],
         companyStatus: 'active',
@@ -153,6 +161,7 @@ describe('createUpdateItemUseCase', () => {
     await expect(
       updateItem({
         companyId: 'company-1',
+        localId: null,
         actorUserId: 'user-1',
         capabilities: ['catalog.write'],
         companyStatus: 'active',
@@ -164,6 +173,7 @@ describe('createUpdateItemUseCase', () => {
 
     expect(itemGateway.getItemById).toHaveBeenCalledWith({
       companyId: 'company-1',
+      localId: null,
       itemId: 'item-1',
       includeDeleted: false,
     });

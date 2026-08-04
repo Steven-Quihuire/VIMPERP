@@ -12,6 +12,7 @@ import {
 const buildItem = (): Item => ({
   id: 'item-1',
   companyId: 'company-1',
+  localId: null,
   categoryId: null,
   sku: 'sku-1',
   name: 'Keyboard',
@@ -50,6 +51,7 @@ describe('createSoftDeleteItemUseCase', () => {
     await expect(
       softDeleteItem({
         companyId: 'company-1',
+        localId: null,
         actorUserId: 'user-1',
         capabilities: ['catalog.delete'],
         companyStatus: 'active',
@@ -60,11 +62,13 @@ describe('createSoftDeleteItemUseCase', () => {
 
     expect(itemGateway.getItemById).toHaveBeenCalledWith({
       companyId: 'company-1',
+      localId: null,
       itemId: 'item-1',
       includeDeleted: false,
     });
     expect(itemGateway.softDeleteItem).toHaveBeenCalledWith({
       companyId: 'company-1',
+      localId: null,
       actorUserId: 'user-1',
       correlationId: 'corr-1',
       itemId: 'item-1',
@@ -78,6 +82,7 @@ describe('createSoftDeleteItemUseCase', () => {
     await expect(
       softDeleteItem({
         companyId: 'company-1',
+        localId: null,
         actorUserId: 'user-1',
         capabilities: ['catalog.write'],
         companyStatus: 'active',
@@ -97,6 +102,7 @@ describe('createSoftDeleteItemUseCase', () => {
     await expect(
       softDeleteItem({
         companyId: 'company-1',
+        localId: null,
         actorUserId: 'user-1',
         capabilities: ['catalog.delete'],
         companyStatus: 'active',
@@ -115,6 +121,7 @@ describe('createSoftDeleteItemUseCase', () => {
     await expect(
       softDeleteItem({
         companyId: 'company-1',
+        localId: null,
         actorUserId: 'user-1',
         capabilities: ['catalog.delete'],
         companyStatus: 'active',
@@ -125,6 +132,7 @@ describe('createSoftDeleteItemUseCase', () => {
 
     expect(itemGateway.getItemById).toHaveBeenCalledWith({
       companyId: 'company-1',
+      localId: null,
       itemId: 'item-1',
       includeDeleted: false,
     });
@@ -137,6 +145,7 @@ describe('createSoftDeleteItemUseCase', () => {
     await expect(
       softDeleteItem({
         companyId: 'company-1',
+        localId: null,
         actorUserId: 'user-1',
         capabilities: ['catalog.delete'],
         companyStatus: 'provisioning_failed',

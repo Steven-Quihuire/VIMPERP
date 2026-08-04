@@ -27,6 +27,8 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
   private sessions = new Map<string, AuthSessionRecord>();
   private membershipsByUserId = new Map<string, AuthMembership[]>();
   private activeCompanyByUserId = new Map<string, string | null>();
+  private activeLocalByUserId = new Map<string, string | null>();
+  private localCompanyByLocalId = new Map<string, string>();
   private companyStatusByCompanyId = new Map<
     string,
     'active' | 'suspended' | 'provisioning_failed'
@@ -44,6 +46,14 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
 
   setActiveCompany(userId: string, companyId: string | null) {
     this.activeCompanyByUserId.set(userId, companyId);
+  }
+
+  setActiveLocal(userId: string, localId: string | null) {
+    this.activeLocalByUserId.set(userId, localId);
+  }
+
+  setLocalCompany(localId: string, companyId: string) {
+    this.localCompanyByLocalId.set(localId, companyId);
   }
 
   setCompanyStatus(
@@ -115,16 +125,17 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
     await Promise.resolve();
   }
 
-  async findActiveLocalId() {
-    return await Promise.resolve(null);
+  async findActiveLocalId(userId: string) {
+    return await Promise.resolve(this.activeLocalByUserId.get(userId) ?? null);
   }
 
-  async setActiveLocalId() {
+  async setActiveLocalId(userId: string, localId: string | null) {
+    this.activeLocalByUserId.set(userId, localId);
     await Promise.resolve();
   }
 
-  async findLocalCompanyById() {
-    return await Promise.resolve(null);
+  async findLocalCompanyById(localId: string) {
+    return await Promise.resolve(this.localCompanyByLocalId.get(localId) ?? null);
   }
 }
 
@@ -133,6 +144,7 @@ class InMemoryItemGateway implements ItemCatalogGateway, CategoryGateway {
   readonly categories: ItemCategory[] = [];
   readonly createItemCalls: Array<{
     companyId: string;
+    localId: string | null;
     actorUserId: string;
     correlationId: string;
     name: string;
@@ -147,6 +159,7 @@ class InMemoryItemGateway implements ItemCatalogGateway, CategoryGateway {
 
   async createItem(input: {
     companyId: string;
+    localId: string | null;
     actorUserId: string;
     correlationId: string;
     name: string;
@@ -165,6 +178,7 @@ class InMemoryItemGateway implements ItemCatalogGateway, CategoryGateway {
     this.items.push({
       id: itemId,
       companyId: input.companyId,
+      localId: input.localId,
       categoryId: input.categoryId,
       sku: input.sku,
       name: input.name,
@@ -183,6 +197,7 @@ class InMemoryItemGateway implements ItemCatalogGateway, CategoryGateway {
 
   async updateItem(input: {
     companyId: string;
+    localId: string | null;
     actorUserId: string;
     correlationId: string;
     itemId: string;
@@ -198,7 +213,10 @@ class InMemoryItemGateway implements ItemCatalogGateway, CategoryGateway {
     void input.correlationId;
 
     const item = this.items.find(
-      (candidate) => candidate.id === input.itemId && candidate.companyId === input.companyId,
+      (candidate) =>
+        candidate.id === input.itemId &&
+        candidate.companyId === input.companyId &&
+        (candidate.localId ?? null) === (input.localId ?? null),
     );
 
     if (!item || item.deletedAt !== null) {
@@ -240,6 +258,7 @@ class InMemoryItemGateway implements ItemCatalogGateway, CategoryGateway {
 
   async softDeleteItem(input: {
     companyId: string;
+    localId: string | null;
     actorUserId: string;
     correlationId: string;
     itemId: string;
@@ -248,7 +267,10 @@ class InMemoryItemGateway implements ItemCatalogGateway, CategoryGateway {
     void input.correlationId;
 
     const item = this.items.find(
-      (candidate) => candidate.id === input.itemId && candidate.companyId === input.companyId,
+      (candidate) =>
+        candidate.id === input.itemId &&
+        candidate.companyId === input.companyId &&
+        (candidate.localId ?? null) === (input.localId ?? null),
     );
 
     if (!item || item.deletedAt !== null) {
@@ -261,9 +283,17 @@ class InMemoryItemGateway implements ItemCatalogGateway, CategoryGateway {
     await Promise.resolve();
   }
 
-  async getItemById(input: { companyId: string; itemId: string; includeDeleted?: boolean }) {
+  async getItemById(input: {
+    companyId: string;
+    localId: string | null;
+    itemId: string;
+    includeDeleted?: boolean;
+  }) {
     const item = this.items.find(
-      (candidate) => candidate.id === input.itemId && candidate.companyId === input.companyId,
+      (candidate) =>
+        candidate.id === input.itemId &&
+        candidate.companyId === input.companyId &&
+        (candidate.localId ?? null) === (input.localId ?? null),
     );
 
     if (!item) {
@@ -277,11 +307,21 @@ class InMemoryItemGateway implements ItemCatalogGateway, CategoryGateway {
     return await Promise.resolve({ ...item });
   }
 
-  async listItems(input: { companyId: string; limit: number; cursor?: string }) {
+  async listItems(input: {
+    companyId: string;
+    localId: string | null;
+    limit: number;
+    cursor?: string;
+  }) {
     void input.cursor;
 
     const items = this.items
-      .filter((candidate) => candidate.companyId === input.companyId && candidate.deletedAt === null)
+      .filter(
+        (candidate) =>
+          candidate.companyId === input.companyId &&
+          (candidate.localId ?? null) === (input.localId ?? null) &&
+          candidate.deletedAt === null,
+      )
       .slice(0, input.limit)
       .map((item) => ({ ...item }));
 
@@ -290,6 +330,7 @@ class InMemoryItemGateway implements ItemCatalogGateway, CategoryGateway {
 
   async createCategory(input: {
     companyId: string;
+    localId: string | null;
     actorUserId: string;
     correlationId: string;
     name: string;
@@ -302,6 +343,7 @@ class InMemoryItemGateway implements ItemCatalogGateway, CategoryGateway {
     this.categories.push({
       id: categoryId,
       companyId: input.companyId,
+      localId: input.localId,
       parentId: input.parentId,
       name: input.name,
       createdAt: new Date(),
@@ -310,25 +352,43 @@ class InMemoryItemGateway implements ItemCatalogGateway, CategoryGateway {
     return await Promise.resolve({ categoryId });
   }
 
-  async getCategoryById(input: { companyId: string; categoryId: string }) {
+  async getCategoryById(input: {
+    companyId: string;
+    localId: string | null;
+    categoryId: string;
+  }) {
     const category = this.categories.find(
       (candidate) =>
-        candidate.id === input.categoryId && candidate.companyId === input.companyId,
+        candidate.id === input.categoryId &&
+        candidate.companyId === input.companyId &&
+        (candidate.localId ?? null) === (input.localId ?? null),
     );
 
     return await Promise.resolve(category ? { ...category } : null);
   }
 
-  async listCategories(input: { companyId: string }) {
+  async listCategories(input: { companyId: string; localId: string | null }) {
     return await Promise.resolve(
       this.categories
-        .filter((candidate) => candidate.companyId === input.companyId)
+        .filter(
+          (candidate) =>
+            candidate.companyId === input.companyId &&
+            (candidate.localId ?? null) === (input.localId ?? null),
+        )
         .map((category) => ({ ...category })),
     );
   }
 
-  async getDescendantIds(input: { companyId: string; categoryId: string }) {
-    const categories = this.categories.filter((candidate) => candidate.companyId === input.companyId);
+  async getDescendantIds(input: {
+    companyId: string;
+    localId: string | null;
+    categoryId: string;
+  }) {
+    const categories = this.categories.filter(
+      (candidate) =>
+        candidate.companyId === input.companyId &&
+        (candidate.localId ?? null) === (input.localId ?? null),
+    );
     const descendants: string[] = [];
     const queue = [input.categoryId];
 
@@ -352,6 +412,7 @@ class InMemoryItemGateway implements ItemCatalogGateway, CategoryGateway {
 
   async updateCategory(input: {
     companyId: string;
+    localId: string | null;
     actorUserId: string;
     correlationId: string;
     categoryId: string;
@@ -363,7 +424,9 @@ class InMemoryItemGateway implements ItemCatalogGateway, CategoryGateway {
 
     const category = this.categories.find(
       (candidate) =>
-        candidate.id === input.categoryId && candidate.companyId === input.companyId,
+        candidate.id === input.categoryId &&
+        candidate.companyId === input.companyId &&
+        (candidate.localId ?? null) === (input.localId ?? null),
     );
 
     if (!category) {
@@ -512,6 +575,7 @@ describe('item routes', () => {
       {
         id: 'category-a1',
         companyId: 'company-a',
+        localId: null,
         parentId: null,
         name: 'Hardware',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -519,6 +583,7 @@ describe('item routes', () => {
       {
         id: 'category-a2',
         companyId: 'company-a',
+        localId: null,
         parentId: 'category-a1',
         name: 'Peripherals',
         createdAt: new Date('2026-01-02T00:00:00.000Z'),
@@ -526,6 +591,7 @@ describe('item routes', () => {
       {
         id: 'category-b1',
         companyId: 'company-b',
+        localId: null,
         parentId: null,
         name: 'Foreign Category',
         createdAt: new Date('2026-01-03T00:00:00.000Z'),
@@ -609,6 +675,7 @@ describe('item routes', () => {
       {
         id: 'item-a1',
         companyId: 'company-a',
+        localId: null,
         categoryId: null,
         sku: null,
         name: 'Visible item',
@@ -624,6 +691,7 @@ describe('item routes', () => {
       {
         id: 'item-a2',
         companyId: 'company-a',
+        localId: null,
         categoryId: null,
         sku: null,
         name: 'Deleted item',
@@ -639,6 +707,7 @@ describe('item routes', () => {
       {
         id: 'item-b1',
         companyId: 'company-b',
+        localId: null,
         categoryId: null,
         sku: null,
         name: 'Other tenant item',
@@ -672,6 +741,7 @@ describe('item routes', () => {
     itemGateway.items.push({
       id: 'item-b1',
       companyId: 'company-b',
+      localId: null,
       categoryId: null,
       sku: null,
       name: 'Foreign item',
@@ -699,6 +769,7 @@ describe('item routes', () => {
     itemGateway.items.push({
       id: 'item-a1',
       companyId: 'company-a',
+      localId: null,
       categoryId: null,
       sku: 'SKU-1',
       name: 'Keyboard',
@@ -741,6 +812,7 @@ describe('item routes', () => {
     itemGateway.items.push({
       id: 'item-a1',
       companyId: 'company-a',
+      localId: null,
       categoryId: null,
       sku: null,
       name: 'Keyboard',
@@ -775,6 +847,7 @@ describe('item routes', () => {
     itemGateway.items.push({
       id: 'item-a1',
       companyId: 'company-a',
+      localId: null,
       categoryId: null,
       sku: null,
       name: 'Keyboard',
@@ -810,6 +883,7 @@ describe('item routes', () => {
       {
         id: 'category-parent',
         companyId: 'company-a',
+        localId: null,
         parentId: null,
         name: 'Parent',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -817,6 +891,7 @@ describe('item routes', () => {
       {
         id: 'category-child',
         companyId: 'company-a',
+        localId: null,
         parentId: 'category-parent',
         name: 'Child',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -898,5 +973,225 @@ describe('item routes', () => {
 
     expect(response.status).toBe(403);
     expect((response.body as { error: { code: string } }).error.code).toBe('FORBIDDEN');
+  });
+
+  it('lists only local-scoped items when activeLocalId is set', async () => {
+    const itemGateway = new InMemoryItemGateway();
+    itemGateway.items.push(
+      {
+        id: 'item-company',
+        companyId: 'company-a',
+        localId: null,
+        categoryId: null,
+        sku: 'C-1',
+        name: 'Company-wide Item',
+        type: 'product',
+        unit: 'unit',
+        unitPrice: 10,
+        tracksStock: true,
+        trackBatchMode: 'none',
+        deletedAt: null,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      },
+      {
+        id: 'item-local-1',
+        companyId: 'company-a',
+        localId: 'local-1',
+        categoryId: null,
+        sku: 'L-1',
+        name: 'Local 1 Item',
+        type: 'product',
+        unit: 'unit',
+        unitPrice: 12,
+        tracksStock: true,
+        trackBatchMode: 'none',
+        deletedAt: null,
+        createdAt: new Date('2026-01-02T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+      },
+      {
+        id: 'item-local-2',
+        companyId: 'company-a',
+        localId: 'local-2',
+        categoryId: null,
+        sku: 'L-2',
+        name: 'Local 2 Item',
+        type: 'product',
+        unit: 'unit',
+        unitPrice: 15,
+        tracksStock: true,
+        trackBatchMode: 'none',
+        deletedAt: null,
+        createdAt: new Date('2026-01-03T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-03T00:00:00.000Z'),
+      },
+    );
+
+    const { app, authGateway, ownerSessionCookie } = await createAuthenticatedApp({ itemGateway });
+    authGateway.setLocalCompany('local-1', 'company-a');
+    authGateway.setActiveLocal('owner-user', 'local-1');
+
+    const response = await request(app)
+      .get('/items')
+      .set('Cookie', ownerSessionCookie);
+
+    expect(response.status).toBe(200);
+    expect(response.body.items).toHaveLength(1);
+    expect(response.body.items[0]).toEqual(
+      expect.objectContaining({ id: 'item-local-1', localId: 'local-1' }),
+    );
+  });
+
+  it('derives localId from the session on item creation, not from the body', async () => {
+    const { app, authGateway, itemGateway, ownerSessionCookie } = await createAuthenticatedApp();
+    authGateway.setLocalCompany('local-1', 'company-a');
+    authGateway.setActiveLocal('owner-user', 'local-1');
+
+    const response = await request(app)
+      .post('/items')
+      .set('Cookie', ownerSessionCookie)
+      .send({
+        name: 'Local Widget',
+        type: 'product',
+        unit: 'unit',
+        sku: 'LW-1',
+      });
+
+    expect(response.status).toBe(201);
+    expect(itemGateway.createItemCalls[0]?.localId).toBe('local-1');
+    expect(itemGateway.items[0]?.localId).toBe('local-1');
+  });
+
+  it('creates items at company level when activeLocalId is null', async () => {
+    const { app, itemGateway, ownerSessionCookie } = await createAuthenticatedApp();
+
+    const response = await request(app)
+      .post('/items')
+      .set('Cookie', ownerSessionCookie)
+      .send({
+        name: 'Company Widget',
+        type: 'product',
+        unit: 'unit',
+        sku: 'CW-1',
+      });
+
+    expect(response.status).toBe(201);
+    expect(itemGateway.createItemCalls[0]?.localId).toBeNull();
+    expect(itemGateway.items[0]?.localId).toBeNull();
+  });
+
+  it('isolates items between company level and local scope', async () => {
+    const itemGateway = new InMemoryItemGateway();
+    itemGateway.items.push(
+      {
+        id: 'item-company',
+        companyId: 'company-a',
+        localId: null,
+        categoryId: null,
+        sku: 'C-1',
+        name: 'Company Item',
+        type: 'product',
+        unit: 'unit',
+        unitPrice: 10,
+        tracksStock: true,
+        trackBatchMode: 'none',
+        deletedAt: null,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      },
+      {
+        id: 'item-local-1',
+        companyId: 'company-a',
+        localId: 'local-1',
+        categoryId: null,
+        sku: 'L-1',
+        name: 'Local Item',
+        type: 'product',
+        unit: 'unit',
+        unitPrice: 12,
+        tracksStock: true,
+        trackBatchMode: 'none',
+        deletedAt: null,
+        createdAt: new Date('2026-01-02T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+      },
+    );
+
+    const { app, authGateway, ownerSessionCookie } = await createAuthenticatedApp({ itemGateway });
+
+    const companyResponse = await request(app)
+      .get('/items')
+      .set('Cookie', ownerSessionCookie);
+
+    expect(companyResponse.body.items).toHaveLength(1);
+    expect(companyResponse.body.items[0]).toEqual(
+      expect.objectContaining({ id: 'item-company', localId: null }),
+    );
+
+    authGateway.setLocalCompany('local-1', 'company-a');
+    authGateway.setActiveLocal('owner-user', 'local-1');
+
+    const localResponse = await request(app)
+      .get('/items')
+      .set('Cookie', ownerSessionCookie);
+
+    expect(localResponse.body.items).toHaveLength(1);
+    expect(localResponse.body.items[0]).toEqual(
+      expect.objectContaining({ id: 'item-local-1', localId: 'local-1' }),
+    );
+  });
+
+  it('rejects localId in the item creation body via strict schema', async () => {
+    const { ownerSessionCookie, app } = await createAuthenticatedApp();
+
+    const response = await request(app)
+      .post('/items')
+      .set('Cookie', ownerSessionCookie)
+      .send({
+        name: 'Widget',
+        type: 'product',
+        unit: 'unit',
+        localId: 'local-1',
+      });
+
+    expect(response.status).toBe(400);
+    expect((response.body as { error: { code: string } }).error.code).toBe('BAD_REQUEST');
+  });
+
+  it('lists only categories scoped to the active local', async () => {
+    const itemGateway = new InMemoryItemGateway();
+    itemGateway.categories.push(
+      {
+        id: 'cat-company',
+        companyId: 'company-a',
+        localId: null,
+        parentId: null,
+        name: 'Company Category',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      },
+      {
+        id: 'cat-local-1',
+        companyId: 'company-a',
+        localId: 'local-1',
+        parentId: null,
+        name: 'Local 1 Category',
+        createdAt: new Date('2026-01-02T00:00:00.000Z'),
+      },
+    );
+
+    const { app, authGateway, ownerSessionCookie } = await createAuthenticatedApp({ itemGateway });
+    authGateway.setLocalCompany('local-1', 'company-a');
+    authGateway.setActiveLocal('owner-user', 'local-1');
+
+    const response = await request(app)
+      .get('/item-categories')
+      .set('Cookie', ownerSessionCookie);
+
+    expect(response.status).toBe(200);
+    expect(response.body.categories).toHaveLength(1);
+    expect(response.body.categories[0]).toEqual(
+      expect.objectContaining({ id: 'cat-local-1', localId: 'local-1' }),
+    );
   });
 });

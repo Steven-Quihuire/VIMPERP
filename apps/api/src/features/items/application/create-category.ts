@@ -6,6 +6,7 @@ import {
 
 type CreateCategoryInput = {
   companyId: string;
+  localId: string | null;
   actorUserId: string;
   capabilities: AuthCapability[];
   companyStatus: CompanyLifecycle;
@@ -37,6 +38,7 @@ export const createCreateCategoryUseCase = ({
     if (input.parentId !== null) {
       const parent = await itemGateway.getCategoryById({
         companyId: input.companyId,
+        localId: input.localId,
         categoryId: input.parentId,
       });
 
@@ -47,6 +49,7 @@ export const createCreateCategoryUseCase = ({
 
     return await itemGateway.createCategory({
       companyId: input.companyId,
+      localId: input.localId,
       actorUserId: input.actorUserId,
       correlationId: input.correlationId,
       name,

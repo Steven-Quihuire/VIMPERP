@@ -12,6 +12,7 @@ import {
 const buildCategory = (overrides: Partial<ItemCategory> = {}): ItemCategory => ({
   id: 'category-1',
   companyId: 'company-1',
+  localId: null,
   parentId: null,
   name: 'Hardware',
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -61,6 +62,7 @@ describe('createUpdateCategoryUseCase', () => {
     await expect(
       updateCategory({
         companyId: 'company-1',
+        localId: null,
         actorUserId: 'user-1',
         capabilities: ['catalog.write'],
         companyStatus: 'active',
@@ -83,6 +85,7 @@ describe('createUpdateCategoryUseCase', () => {
     await expect(
       updateCategory({
         companyId: 'company-1',
+        localId: null,
         actorUserId: 'user-1',
         capabilities: ['catalog.write'],
         companyStatus: 'active',
@@ -94,6 +97,7 @@ describe('createUpdateCategoryUseCase', () => {
 
     expect(itemGateway.getDescendantIds).toHaveBeenCalledWith({
       companyId: 'company-1',
+      localId: null,
       categoryId: 'category-1',
     });
   });
@@ -104,6 +108,7 @@ describe('createUpdateCategoryUseCase', () => {
 
     const result = await updateCategory({
       companyId: 'company-1',
+      localId: null,
       actorUserId: 'user-1',
       capabilities: ['catalog.write'],
       companyStatus: 'active',
@@ -115,6 +120,7 @@ describe('createUpdateCategoryUseCase', () => {
 
     expect(itemGateway.updateCategory).toHaveBeenCalledWith({
       companyId: 'company-1',
+      localId: null,
       actorUserId: 'user-1',
       correlationId: 'corr-1',
       categoryId: 'category-1',
@@ -131,6 +137,7 @@ describe('createUpdateCategoryUseCase', () => {
     await expect(
       updateMissingCurrent({
         companyId: 'company-1',
+        localId: null,
         actorUserId: 'user-1',
         capabilities: ['catalog.write'],
         companyStatus: 'active',
@@ -146,6 +153,7 @@ describe('createUpdateCategoryUseCase', () => {
     await expect(
       updateMissingParent({
         companyId: 'company-1',
+        localId: null,
         actorUserId: 'user-1',
         capabilities: ['catalog.write'],
         companyStatus: 'active',

@@ -10,6 +10,7 @@ import {
 
 type UpdateItemInput = {
   companyId: string;
+  localId: string | null;
   actorUserId: string;
   capabilities: AuthCapability[];
   companyStatus: CompanyLifecycle;
@@ -41,6 +42,7 @@ export const createUpdateItemUseCase = ({
 
     const existingItem = await itemGateway.getItemById({
       companyId: input.companyId,
+      localId: input.localId,
       itemId: input.itemId,
       includeDeleted: false,
     });
@@ -63,6 +65,7 @@ export const createUpdateItemUseCase = ({
 
     const patch: {
       companyId: string;
+      localId: string | null;
       actorUserId: string;
       correlationId: string;
       itemId: string;
@@ -75,6 +78,7 @@ export const createUpdateItemUseCase = ({
       trackBatchMode?: ItemTrackBatchMode;
     } = {
       companyId: input.companyId,
+      localId: input.localId,
       actorUserId: input.actorUserId,
       correlationId: input.correlationId,
       itemId: input.itemId,

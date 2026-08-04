@@ -11,6 +11,7 @@ import {
 const buildCategory = (overrides: Partial<ItemCategory> = {}): ItemCategory => ({
   id: 'category-1',
   companyId: 'company-1',
+  localId: null,
   parentId: null,
   name: 'Hardware',
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -41,6 +42,7 @@ describe('createCreateCategoryUseCase', () => {
 
     const result = await createCategory({
       companyId: 'company-1',
+      localId: null,
       actorUserId: 'user-1',
       capabilities: ['catalog.write'],
       companyStatus: 'active',
@@ -51,10 +53,12 @@ describe('createCreateCategoryUseCase', () => {
 
     expect(itemGateway.getCategoryById).toHaveBeenCalledWith({
       companyId: 'company-1',
+      localId: null,
       categoryId: 'category-1',
     });
     expect(itemGateway.createCategory).toHaveBeenCalledWith({
       companyId: 'company-1',
+      localId: null,
       actorUserId: 'user-1',
       correlationId: 'corr-1',
       name: 'Keyboards',
@@ -70,6 +74,7 @@ describe('createCreateCategoryUseCase', () => {
     await expect(
       createCategory({
         companyId: 'company-1',
+        localId: null,
         actorUserId: 'user-1',
         capabilities: ['catalog.write'],
         companyStatus: 'active',

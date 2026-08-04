@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 
 import type { AppDb } from '../../../shared/infrastructure/db/client';
 import {
@@ -35,6 +35,7 @@ const isUniqueViolation = (error: unknown) => {
 const toItem = (row: ItemRow): Item => ({
   id: row.id,
   companyId: row.companyId,
+  localId: row.localId,
   categoryId: row.categoryId,
   sku: row.sku,
   name: row.name,
@@ -51,6 +52,7 @@ const toItem = (row: ItemRow): Item => ({
 const toItemCategory = (row: CategoryRow): ItemCategory => ({
   id: row.id,
   companyId: row.companyId,
+  localId: row.localId,
   parentId: row.parentId,
   name: row.name,
   createdAt: row.createdAt,
@@ -76,13 +78,31 @@ const toItemAuditValues = (item: {
   unitPrice: item.unitPrice,
 });
 
-const normalizeItemRows = (rows: ItemRow[], companyId: string) => {
-  return rows.filter((row) => row.companyId === companyId);
+const normalizeItemRows = (
+  rows: ItemRow[],
+  companyId: string,
+  localId: string | null,
+) => {
+  return rows.filter(
+    (row) => row.companyId === companyId && (row.localId ?? null) === (localId ?? null),
+  );
 };
 
-const normalizeCategoryRows = (rows: CategoryRow[], companyId: string) => {
-  return rows.filter((row) => row.companyId === companyId);
+const normalizeCategoryRows = (
+  rows: CategoryRow[],
+  companyId: string,
+  localId: string | null,
+) => {
+  return rows.filter(
+    (row) => row.companyId === companyId && (row.localId ?? null) === (localId ?? null),
+  );
 };
+
+const itemLocalFilter = (localId: string | null) =>
+  sql`${itemsTable.localId} IS NOT DISTINCT FROM ${localId}`;
+
+const categoryLocalFilter = (localId: string | null) =>
+  sql`${itemCategoriesTable.localId} IS NOT DISTINCT FROM ${localId}`;
 
 export const createDrizzleItemGateway = (
   db: AppDb,
@@ -103,6 +123,7 @@ export const createDrizzleItemGateway = (
       const itemRow = {
         id: itemId,
         companyId: input.companyId,
+        localId: input.localId,
         categoryId: input.categoryId,
         sku: input.sku,
         name: input.name,
@@ -123,6 +144,8 @@ export const createDrizzleItemGateway = (
             id: generateId(),
             actorUserId: input.actorUserId,
             companyId: input.companyId,
+            divisionId: null,
+            localId: input.localId,
             type: 'item.created',
             correlationId: input.correlationId,
             entityType: 'item',
@@ -165,12 +188,13 @@ export const createDrizzleItemGateway = (
         .where(
           and(
             eq(itemsTable.companyId, input.companyId),
+            itemLocalFilter(input.localId),
             eq(itemsTable.id, input.itemId),
             isNull(itemsTable.deletedAt),
           ),
         )
         .limit(1);
-      const current = normalizeItemRows(rows, input.companyId).find(
+      const current = normalizeItemRows(rows, input.companyId, input.localId).find(
         (row) => row.id === input.itemId && row.deletedAt === null,
       );
 
@@ -233,6 +257,7 @@ export const createDrizzleItemGateway = (
             .where(
               and(
                 eq(itemsTable.companyId, input.companyId),
+                itemLocalFilter(input.localId),
                 eq(itemsTable.id, input.itemId),
                 isNull(itemsTable.deletedAt),
               ),
@@ -241,6 +266,8 @@ export const createDrizzleItemGateway = (
             id: generateId(),
             actorUserId: input.actorUserId,
             companyId: input.companyId,
+            divisionId: null,
+            localId: input.localId,
             type: 'item.updated',
             correlationId: input.correlationId,
             entityType: 'item',
@@ -268,12 +295,13 @@ export const createDrizzleItemGateway = (
         .where(
           and(
             eq(itemsTable.companyId, input.companyId),
+            itemLocalFilter(input.localId),
             eq(itemsTable.id, input.itemId),
             isNull(itemsTable.deletedAt),
           ),
         )
         .limit(1);
-      const current = normalizeItemRows(rows, input.companyId).find(
+      const current = normalizeItemRows(rows, input.companyId, input.localId).find(
         (row) => row.id === input.itemId && row.deletedAt === null,
       );
 
@@ -290,6 +318,7 @@ export const createDrizzleItemGateway = (
           .where(
             and(
               eq(itemsTable.companyId, input.companyId),
+              itemLocalFilter(input.localId),
               eq(itemsTable.id, input.itemId),
               isNull(itemsTable.deletedAt),
             ),
@@ -298,6 +327,8 @@ export const createDrizzleItemGateway = (
           id: generateId(),
           actorUserId: input.actorUserId,
           companyId: input.companyId,
+          divisionId: null,
+          localId: input.localId,
           type: 'item.deleted',
           correlationId: input.correlationId,
           entityType: 'item',
@@ -309,21 +340,26 @@ export const createDrizzleItemGateway = (
         });
       });
     },
-    getItemById: async ({ companyId, itemId, includeDeleted = false }) => {
+    getItemById: async ({ companyId, localId, itemId, includeDeleted = false }) => {
       const rows = await db
         .select()
         .from(itemsTable)
         .where(
           includeDeleted
-            ? and(eq(itemsTable.companyId, companyId), eq(itemsTable.id, itemId))
+            ? and(
+                eq(itemsTable.companyId, companyId),
+                itemLocalFilter(localId),
+                eq(itemsTable.id, itemId),
+              )
             : and(
                 eq(itemsTable.companyId, companyId),
+                itemLocalFilter(localId),
                 eq(itemsTable.id, itemId),
                 isNull(itemsTable.deletedAt),
               ),
         )
         .limit(1);
-      const item = normalizeItemRows(rows, companyId).find((row) => {
+      const item = normalizeItemRows(rows, companyId, localId).find((row) => {
         if (row.id !== itemId) {
           return false;
         }
@@ -337,14 +373,20 @@ export const createDrizzleItemGateway = (
 
       return item ? toItem(item) : null;
     },
-    listItems: async ({ companyId, limit }) => {
+    listItems: async ({ companyId, localId, limit }) => {
       const rows = await db
         .select()
         .from(itemsTable)
-        .where(and(eq(itemsTable.companyId, companyId), isNull(itemsTable.deletedAt)))
+        .where(
+          and(
+            eq(itemsTable.companyId, companyId),
+            itemLocalFilter(localId),
+            isNull(itemsTable.deletedAt),
+          ),
+        )
         .orderBy(desc(itemsTable.createdAt))
         .limit(limit);
-      const items = normalizeItemRows(rows, companyId)
+      const items = normalizeItemRows(rows, companyId, localId)
         .filter((row) => row.deletedAt === null)
         .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
         .slice(0, limit)
@@ -359,6 +401,7 @@ export const createDrizzleItemGateway = (
       if (input.parentId !== null) {
         const parent = await gateway.getCategoryById({
           companyId: input.companyId,
+          localId: input.localId,
           categoryId: input.parentId,
         });
 
@@ -373,6 +416,7 @@ export const createDrizzleItemGateway = (
       await db.insert(itemCategoriesTable).values({
         id: categoryId,
         companyId: input.companyId,
+        localId: input.localId,
         parentId: input.parentId,
         name: input.name,
         createdAt,
@@ -380,33 +424,39 @@ export const createDrizzleItemGateway = (
 
       return { categoryId };
     },
-    getCategoryById: async ({ companyId, categoryId }) => {
+    getCategoryById: async ({ companyId, localId, categoryId }) => {
       const rows = await db
         .select()
         .from(itemCategoriesTable)
         .where(
           and(
             eq(itemCategoriesTable.companyId, companyId),
+            categoryLocalFilter(localId),
             eq(itemCategoriesTable.id, categoryId),
           ),
         )
         .limit(1);
-      const category = normalizeCategoryRows(rows, companyId).find(
+      const category = normalizeCategoryRows(rows, companyId, localId).find(
         (row) => row.id === categoryId,
       );
 
       return category ? toItemCategory(category) : null;
     },
-    listCategories: async ({ companyId }) => {
+    listCategories: async ({ companyId, localId }) => {
       const rows = await db
         .select()
         .from(itemCategoriesTable)
-        .where(eq(itemCategoriesTable.companyId, companyId));
+        .where(
+          and(
+            eq(itemCategoriesTable.companyId, companyId),
+            categoryLocalFilter(localId),
+          ),
+        );
 
-      return normalizeCategoryRows(rows, companyId).map((row) => toItemCategory(row));
+      return normalizeCategoryRows(rows, companyId, localId).map((row) => toItemCategory(row));
     },
-    getDescendantIds: async ({ companyId, categoryId }) => {
-      const categories = await gateway.listCategories({ companyId });
+    getDescendantIds: async ({ companyId, localId, categoryId }) => {
+      const categories = await gateway.listCategories({ companyId, localId });
       const descendants: string[] = [];
       const queue = [categoryId];
 
@@ -430,6 +480,7 @@ export const createDrizzleItemGateway = (
     updateCategory: async (input) => {
       const current = await gateway.getCategoryById({
         companyId: input.companyId,
+        localId: input.localId,
         categoryId: input.categoryId,
       });
 
@@ -445,6 +496,7 @@ export const createDrizzleItemGateway = (
         if (input.parentId !== null) {
           const parent = await gateway.getCategoryById({
             companyId: input.companyId,
+            localId: input.localId,
             categoryId: input.parentId,
           });
 
@@ -454,6 +506,7 @@ export const createDrizzleItemGateway = (
 
           const descendantIds = await gateway.getDescendantIds({
             companyId: input.companyId,
+            localId: input.localId,
             categoryId: input.categoryId,
           });
 
@@ -479,6 +532,7 @@ export const createDrizzleItemGateway = (
         .where(
           and(
             eq(itemCategoriesTable.companyId, input.companyId),
+            categoryLocalFilter(input.localId),
             eq(itemCategoriesTable.id, input.categoryId),
           ),
         );

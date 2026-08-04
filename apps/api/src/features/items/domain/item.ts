@@ -21,6 +21,7 @@ export type ItemTrackBatchMode = (typeof itemTrackBatchModeValues)[number];
 export type Item = {
   id: string;
   companyId: string;
+  localId: string | null;
   categoryId: string | null;
   sku: string | null;
   name: string;
@@ -37,6 +38,7 @@ export type Item = {
 export type ItemCategory = {
   id: string;
   companyId: string;
+  localId: string | null;
   parentId: string | null;
   name: string;
   createdAt: Date;
@@ -45,6 +47,7 @@ export type ItemCategory = {
 export type ItemCatalogGateway = {
   createItem: (input: {
     companyId: string;
+    localId: string | null;
     actorUserId: string;
     correlationId: string;
     name: string;
@@ -58,6 +61,7 @@ export type ItemCatalogGateway = {
   }) => Promise<{ itemId: string }>;
   updateItem: (input: {
     companyId: string;
+    localId: string | null;
     actorUserId: string;
     correlationId: string;
     itemId: string;
@@ -71,17 +75,20 @@ export type ItemCatalogGateway = {
   }) => Promise<{ itemId: string }>;
   softDeleteItem: (input: {
     companyId: string;
+    localId: string | null;
     actorUserId: string;
     correlationId: string;
     itemId: string;
   }) => Promise<void>;
   getItemById: (input: {
     companyId: string;
+    localId: string | null;
     itemId: string;
     includeDeleted?: boolean;
   }) => Promise<Item | null>;
   listItems: (input: {
     companyId: string;
+    localId: string | null;
     limit: number;
     cursor?: string;
   }) => Promise<{ items: Item[]; nextCursor: string | null }>;
@@ -90,6 +97,7 @@ export type ItemCatalogGateway = {
 export type CategoryGateway = {
   createCategory: (input: {
     companyId: string;
+    localId: string | null;
     actorUserId: string;
     correlationId: string;
     name: string;
@@ -97,15 +105,21 @@ export type CategoryGateway = {
   }) => Promise<{ categoryId: string }>;
   getCategoryById: (input: {
     companyId: string;
+    localId: string | null;
     categoryId: string;
   }) => Promise<ItemCategory | null>;
-  listCategories: (input: { companyId: string }) => Promise<ItemCategory[]>;
+  listCategories: (input: {
+    companyId: string;
+    localId: string | null;
+  }) => Promise<ItemCategory[]>;
   getDescendantIds: (input: {
     companyId: string;
+    localId: string | null;
     categoryId: string;
   }) => Promise<string[]>;
   updateCategory: (input: {
     companyId: string;
+    localId: string | null;
     actorUserId: string;
     correlationId: string;
     categoryId: string;

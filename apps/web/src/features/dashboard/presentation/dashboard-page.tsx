@@ -66,9 +66,6 @@ export const DashboardPage = ({
           </h1>
           <p className="text-sm text-muted-foreground">{companyDetail}</p>
         </div>
-        <div className="text-sm text-muted-foreground">
-          {session.user.email}
-        </div>
       </div>
 
       {isPlatformAdmin ? (

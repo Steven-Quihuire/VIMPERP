@@ -3,6 +3,7 @@ import type { Item, ItemCatalogGateway } from '../domain/item';
 
 type ListItemsInput = {
   companyId: string;
+  localId: string | null;
   capabilities: AuthCapability[];
   companyStatus: CompanyLifecycle;
   limit: number;
@@ -25,6 +26,7 @@ export const createListItemsUseCase = ({
 
     return await itemGateway.listItems({
       companyId: input.companyId,
+      localId: input.localId,
       limit: input.limit,
       ...(input.cursor !== undefined ? { cursor: input.cursor } : {}),
     });

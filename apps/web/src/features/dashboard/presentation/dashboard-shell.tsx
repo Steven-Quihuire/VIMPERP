@@ -1,9 +1,29 @@
 import type { CSSProperties } from 'react';
-import { Bell } from 'lucide-react';
-import { Link, Outlet } from 'react-router-dom';
+import {
+  Bell,
+  ChevronRight,
+  CircleHelp,
+  LogOut,
+  Monitor,
+  Settings,
+  UserRound,
+} from 'lucide-react';
+import { Link, Outlet, useNavigate } from 'react-router-dom';
 
 import type { AuthSession } from '../../auth/domain/auth';
+import { useLogout } from '../../auth/presentation/use-auth';
 import { Button } from '../../../shared/ui/button';
+import {
+  Avatar,
+  AvatarFallback,
+} from '../../../shared/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../../../shared/ui/dropdown-menu';
 import { Separator } from '../../../shared/ui/separator';
 import {
   SidebarInset,
@@ -18,6 +38,15 @@ import {
 } from '../domain/dashboard';
 import { getReadNotificationIds, useDashboardCurrentCompany, useDashboardNotifications, useNotificationReadVersion } from './use-dashboard';
 
+const getCompanyInitials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join('')
+    .toUpperCase() || 'V';
+
 export const DashboardShell = ({
   session,
   apiBaseUrl,
@@ -29,14 +58,25 @@ export const DashboardShell = ({
     apiBaseUrl,
     Boolean(session.activeCompany),
   );
+  const navigate = useNavigate();
   const companyLabel = getDashboardCompanyLabel(session, currentCompany.data);
   const companyDetail = getDashboardCompanyDetail(session, currentCompany.data);
+  const logout = useLogout(apiBaseUrl);
   const notifications = useDashboardNotifications(apiBaseUrl, canViewAdminSignals(session));
   useNotificationReadVersion();
   const readNotificationIds = getReadNotificationIds();
   const newCompanyCount = notifications.data?.notifications.filter(
     (notification) => notification.type === 'company.registered' && !readNotificationIds.has(notification.id),
   ).length ?? 0;
+  const companyName = currentCompany.data?.name ?? companyLabel;
+  const companyInitials = getCompanyInitials(companyName);
+  const handleLogout = () => {
+    logout.mutate(undefined, {
+      onSuccess: () => {
+        void navigate('/login', { replace: true });
+      },
+    });
+  };
 
   return (
     <SidebarProvider
@@ -59,9 +99,6 @@ export const DashboardShell = ({
             <Separator orientation="vertical" className="mr-2 h-4" />
           </div>
           <div className="flex items-center gap-3">
-            <div className="hidden text-right text-xs text-muted-foreground md:block">
-              <p>{companyDetail}</p>
-            </div>
             <Link to="/dashboard/notifications" aria-label="Abrir notificaciones">
               <Button variant="ghost" size="icon" className="relative" aria-label="Notificaciones">
                 <Bell />
@@ -70,6 +107,88 @@ export const DashboardShell = ({
                 ) : null}
               </Button>
             </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full p-0"
+                  aria-label={`Abrir menú de ${companyName}`}
+                >
+                  <Avatar size="default" className="size-9 bg-primary text-primary-foreground">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {companyInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                sideOffset={8}
+                className="w-80 rounded-xl p-2"
+              >
+                <div className="flex items-center gap-3 px-2 py-2">
+                  <Avatar className="size-10 bg-primary text-primary-foreground">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {companyInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{companyName}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      Cuenta de empresa
+                    </p>
+                  </div>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild className="h-11 gap-3 rounded-lg px-2">
+                  <Link to="/dashboard/settings/profile">
+                    <span className="flex size-8 items-center justify-center rounded-full bg-muted">
+                      <UserRound className="size-4" />
+                    </span>
+                    <span className="flex-1">Configuración de perfil</span>
+                    <ChevronRight className="size-4 text-muted-foreground" />
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="h-11 gap-3 rounded-lg px-2">
+                  <Link to="/privacy-policy">
+                    <span className="flex size-8 items-center justify-center rounded-full bg-muted">
+                      <Settings className="size-4" />
+                    </span>
+                    <span className="flex-1">Configuración y privacidad</span>
+                    <ChevronRight className="size-4 text-muted-foreground" />
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="h-11 gap-3 rounded-lg px-2">
+                  <a href="mailto:soporte@vimcore.app">
+                    <span className="flex size-8 items-center justify-center rounded-full bg-muted">
+                      <CircleHelp className="size-4" />
+                    </span>
+                    <span className="flex-1">Ayuda y asistencia</span>
+                    <ChevronRight className="size-4 text-muted-foreground" />
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="h-11 gap-3 rounded-lg px-2">
+                  <Link to="/dashboard/settings/theme">
+                    <span className="flex size-8 items-center justify-center rounded-full bg-muted">
+                      <Monitor className="size-4" />
+                    </span>
+                    <span className="flex-1">Pantalla y accesibilidad</span>
+                    <ChevronRight className="size-4 text-muted-foreground" />
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="h-11 gap-3 rounded-lg px-2"
+                  onSelect={handleLogout}
+                >
+                  <span className="flex size-8 items-center justify-center rounded-full bg-muted">
+                    <LogOut className="size-4" />
+                  </span>
+                  <span className="flex-1">Cerrar sesión</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 

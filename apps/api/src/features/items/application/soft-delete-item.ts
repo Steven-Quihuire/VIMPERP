@@ -8,6 +8,7 @@ import { ItemNotFoundError, type ItemCatalogGateway } from '../domain/item';
 
 type SoftDeleteItemInput = {
   companyId: string;
+  localId: string | null;
   actorUserId: string;
   capabilities: AuthCapability[];
   companyStatus: CompanyLifecycle;
@@ -31,6 +32,7 @@ export const createSoftDeleteItemUseCase = ({
 
     const existingItem = await itemGateway.getItemById({
       companyId: input.companyId,
+      localId: input.localId,
       itemId: input.itemId,
       includeDeleted: false,
     });
@@ -41,6 +43,7 @@ export const createSoftDeleteItemUseCase = ({
 
     await itemGateway.softDeleteItem({
       companyId: input.companyId,
+      localId: input.localId,
       actorUserId: input.actorUserId,
       correlationId: input.correlationId,
       itemId: input.itemId,

@@ -6,6 +6,7 @@ import { type CategoryGateway, type Item, type ItemCatalogGateway } from '../dom
 const buildItem = (): Item => ({
   id: 'item-1',
   companyId: 'company-1',
+  localId: null,
   categoryId: null,
   sku: 'sku-1',
   name: 'Keyboard',
@@ -45,6 +46,7 @@ describe('createGetItemUseCase', () => {
     await expect(
       getItem({
         companyId: 'company-1',
+        localId: null,
         capabilities: ['catalog.read'],
         companyStatus: 'active',
         itemId: 'item-1',
@@ -53,6 +55,7 @@ describe('createGetItemUseCase', () => {
 
     expect(itemGateway.getItemById).toHaveBeenCalledWith({
       companyId: 'company-1',
+      localId: null,
       itemId: 'item-1',
       includeDeleted: false,
     });
@@ -65,6 +68,7 @@ describe('createGetItemUseCase', () => {
     await expect(
       getItem({
         companyId: 'company-a',
+        localId: null,
         capabilities: ['catalog.read'],
         companyStatus: 'active',
         itemId: 'item-b',
@@ -78,6 +82,7 @@ describe('createGetItemUseCase', () => {
 
     await getItem({
       companyId: 'company-1',
+      localId: null,
       capabilities: ['catalog.read'],
       companyStatus: 'active',
       itemId: 'item-1',
@@ -86,6 +91,7 @@ describe('createGetItemUseCase', () => {
 
     expect(itemGateway.getItemById).toHaveBeenCalledWith({
       companyId: 'company-1',
+      localId: null,
       itemId: 'item-1',
       includeDeleted: true,
     });

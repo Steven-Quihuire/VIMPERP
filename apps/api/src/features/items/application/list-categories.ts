@@ -3,6 +3,7 @@ import type { CategoryGateway, ItemCategory } from '../domain/item';
 
 type ListCategoriesInput = {
   companyId: string;
+  localId: string | null;
   capabilities: AuthCapability[];
   companyStatus: CompanyLifecycle;
 };
@@ -21,7 +22,10 @@ export const createListCategoriesUseCase = ({
       throw new ForbiddenError();
     }
 
-    const categories = await itemGateway.listCategories({ companyId: input.companyId });
+    const categories = await itemGateway.listCategories({
+      companyId: input.companyId,
+      localId: input.localId,
+    });
 
     return { categories };
   };

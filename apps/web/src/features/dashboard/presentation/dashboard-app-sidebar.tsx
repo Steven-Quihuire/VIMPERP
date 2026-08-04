@@ -1,14 +1,11 @@
 import {
-  Bell,
   Boxes,
   Building2,
   ClipboardList,
   FileWarning,
   LayoutDashboard,
   Package,
-  Settings,
   ShieldCheck,
-  ShieldUser,
   Tags,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
@@ -30,11 +27,6 @@ import { getCompanyMemberships } from '../../auth/domain/auth';
 import { TeamSwitcher } from '../../auth/presentation/components/team-switcher';
 import { useSwitchActiveCompany } from '../../auth/presentation/use-auth';
 import { canViewAdminSignals } from '../domain/dashboard';
-import {
-  getReadNotificationIds,
-  useDashboardNotifications,
-  useNotificationReadVersion,
-} from './use-dashboard';
 
 const workspaceItems = [
   { label: 'Inicio', href: '/dashboard', icon: LayoutDashboard, end: true },
@@ -45,12 +37,6 @@ const workspaceItems = [
   { label: 'Produccion', href: '#production', icon: Boxes },
   { label: 'Finanzas', href: '#finance', icon: ShieldCheck },
   { label: 'Proyectos', href: '#projects', icon: ClipboardList },
-];
-
-const accountItems = [
-  { label: 'Notificaciones', href: '/dashboard/notifications', icon: Bell },
-  { label: 'Perfil', href: '/dashboard/settings/profile', icon: ShieldUser },
-  { label: 'Configuracion', href: '/dashboard/settings/theme', icon: Settings },
 ];
 
 const isHashLink = (href: string) => href.startsWith('#');
@@ -79,15 +65,6 @@ export const DashboardAppSidebar = ({
 }) => {
   const isPlatformAdmin = canViewAdminSignals(session);
   const switchActiveCompany = useSwitchActiveCompany(apiBaseUrl);
-  const notifications = useDashboardNotifications(apiBaseUrl, isPlatformAdmin);
-  useNotificationReadVersion();
-  const readNotificationIds = getReadNotificationIds();
-  const newCompanyCount =
-    notifications.data?.notifications.filter(
-      (notification) =>
-        notification.type === 'company.registered' &&
-        !readNotificationIds.has(notification.id),
-    ).length ?? 0;
   const companyMemberships = getCompanyMemberships(session);
   const companyOptions = companyMemberships.map((membership, index) => ({
     companyId: membership.companyId,
@@ -136,7 +113,7 @@ export const DashboardAppSidebar = ({
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+          <SidebarGroupLabel>Área de trabajo</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {workspaceItems.map((item) => (
@@ -155,6 +132,11 @@ export const DashboardAppSidebar = ({
                     >
                       {({ isActive }) => (
                         <SidebarMenuButton
+                          className={
+                            isActive
+                              ? 'data-[active=true]:bg-black text-white'
+                              : undefined
+                          }
                           asChild
                           tooltip={item.label}
                           isActive={isActive}
@@ -214,48 +196,6 @@ export const DashboardAppSidebar = ({
             </SidebarGroupContent>
           </SidebarGroup>
         ) : null}
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Account</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {accountItems.map((item) => (
-                <SidebarMenuItem key={item.label}>
-                  {isHashLink(item.href) ? (
-                    <SidebarMenuButton asChild tooltip={item.label}>
-                      <a href={item.href}>
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </a>
-                    </SidebarMenuButton>
-                  ) : (
-                    <NavLink to={item.href}>
-                      {({ isActive }) => (
-                        <SidebarMenuButton
-                          asChild
-                          tooltip={item.label}
-                          isActive={isActive}
-                        >
-                          <span>
-                            <item.icon />
-                            <span>{item.label}</span>
-                            {item.label === 'Notificaciones' &&
-                            newCompanyCount > 0 ? (
-                              <span
-                                className="ml-auto size-2 rounded-full bg-red-500"
-                                aria-label={`${newCompanyCount} empresa(s) nueva(s)`}
-                              />
-                            ) : null}
-                          </span>
-                        </SidebarMenuButton>
-                      )}
-                    </NavLink>
-                  )}
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
 
       <SidebarRail />

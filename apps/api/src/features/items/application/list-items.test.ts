@@ -6,6 +6,7 @@ import { type CategoryGateway, type Item, type ItemCatalogGateway } from '../dom
 const buildItem = (id: string): Item => ({
   id,
   companyId: 'company-1',
+  localId: null,
   categoryId: null,
   sku: `${id}-sku`,
   name: `Item ${id}`,
@@ -46,6 +47,7 @@ describe('createListItemsUseCase', () => {
 
     const result = await listItems({
       companyId: 'company-1',
+      localId: null,
       capabilities: ['catalog.read'],
       companyStatus: 'active',
       limit: 25,
@@ -54,6 +56,7 @@ describe('createListItemsUseCase', () => {
 
     expect(itemGateway.listItems).toHaveBeenCalledWith({
       companyId: 'company-1',
+      localId: null,
       limit: 25,
       cursor: 'cursor-1',
     });
@@ -69,6 +72,7 @@ describe('createListItemsUseCase', () => {
 
     await listItems({
       companyId: 'company-1',
+      localId: null,
       capabilities: ['catalog.read'],
       companyStatus: 'active',
       limit: 10,
@@ -76,6 +80,7 @@ describe('createListItemsUseCase', () => {
 
     expect(itemGateway.listItems).toHaveBeenCalledWith({
       companyId: 'company-1',
+      localId: null,
       limit: 10,
       cursor: undefined,
     });

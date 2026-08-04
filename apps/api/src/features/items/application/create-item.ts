@@ -8,6 +8,7 @@ import type {
 
 type CreateItemInput = {
   companyId: string;
+  localId: string | null;
   actorUserId: string;
   capabilities: AuthCapability[];
   companyStatus: CompanyLifecycle;
@@ -48,6 +49,7 @@ export const createCreateItemUseCase = ({
 
     return await itemGateway.createItem({
       companyId: input.companyId,
+      localId: input.localId,
       actorUserId: input.actorUserId,
       correlationId: input.correlationId,
       name,

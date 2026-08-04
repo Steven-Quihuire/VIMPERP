@@ -3,6 +3,7 @@ import type { Item, ItemCatalogGateway } from '../domain/item';
 
 type GetItemInput = {
   companyId: string;
+  localId: string | null;
   capabilities: AuthCapability[];
   companyStatus: CompanyLifecycle;
   itemId: string;
@@ -25,6 +26,7 @@ export const createGetItemUseCase = ({
 
     return await itemGateway.getItemById({
       companyId: input.companyId,
+      localId: input.localId,
       itemId: input.itemId,
       includeDeleted: input.includeDeleted ?? false,
     });

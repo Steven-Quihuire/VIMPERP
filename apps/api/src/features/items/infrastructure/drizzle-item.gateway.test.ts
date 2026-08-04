@@ -12,6 +12,7 @@ import { createDrizzleItemGateway } from './drizzle-item.gateway';
 type ItemRow = {
   id: string;
   companyId: string;
+  localId: string | null;
   categoryId: string | null;
   sku: string | null;
   name: string;
@@ -28,6 +29,7 @@ type ItemRow = {
 type CategoryRow = {
   id: string;
   companyId: string;
+  localId: string | null;
   parentId: string | null;
   name: string;
   createdAt: Date;
@@ -138,6 +140,7 @@ describe('createDrizzleItemGateway', () => {
 
     const result = await gateway.createItem({
       companyId: 'company-a',
+      localId: null,
       actorUserId: 'user-1',
       correlationId: 'corr-1',
       name: 'Consulting Hour',
@@ -158,6 +161,7 @@ describe('createDrizzleItemGateway', () => {
         values: {
           categoryId: 'category-1',
           companyId: 'company-a',
+          localId: null,
           createdAt: new Date('2026-07-30T18:00:00.000Z'),
           deletedAt: null,
           id: 'generated-id',
@@ -180,9 +184,11 @@ describe('createDrizzleItemGateway', () => {
           correlationId: 'corr-1',
           createdAt: new Date('2026-07-30T18:00:00.000Z'),
           details: {},
+          divisionId: null,
           entityId: 'generated-id',
           entityType: 'item',
           id: 'generated-id',
+          localId: null,
           newValues: {
             categoryId: 'category-1',
             name: 'Consulting Hour',
@@ -206,6 +212,7 @@ describe('createDrizzleItemGateway', () => {
         {
           id: 'item-1',
           companyId: 'company-a',
+          localId: null,
           categoryId: 'category-1',
           sku: 'SKU-1',
           name: 'Original Item',
@@ -227,6 +234,7 @@ describe('createDrizzleItemGateway', () => {
 
     const result = await gateway.updateItem({
       companyId: 'company-a',
+      localId: null,
       actorUserId: 'user-1',
       correlationId: 'corr-2',
       itemId: 'item-1',
@@ -265,9 +273,11 @@ describe('createDrizzleItemGateway', () => {
           correlationId: 'corr-2',
           createdAt: new Date('2026-07-30T19:00:00.000Z'),
           details: {},
+          divisionId: null,
           entityId: 'item-1',
           entityType: 'item',
           id: 'audit-1',
+          localId: null,
           newValues: {
             categoryId: null,
             name: 'Updated Item',
@@ -300,6 +310,7 @@ describe('createDrizzleItemGateway', () => {
         {
           id: 'item-1',
           companyId: 'company-a',
+          localId: null,
           categoryId: null,
           sku: null,
           name: 'Disposable Item',
@@ -321,6 +332,7 @@ describe('createDrizzleItemGateway', () => {
 
     await gateway.softDeleteItem({
       companyId: 'company-a',
+      localId: null,
       actorUserId: 'owner-1',
       correlationId: 'corr-3',
       itemId: 'item-1',
@@ -345,9 +357,11 @@ describe('createDrizzleItemGateway', () => {
           correlationId: 'corr-3',
           createdAt: new Date('2026-07-30T20:00:00.000Z'),
           details: {},
+          divisionId: null,
           entityId: 'item-1',
           entityType: 'item',
           id: 'audit-delete',
+          localId: null,
           newValues: {
             deletedAt: new Date('2026-07-30T20:00:00.000Z'),
           },
@@ -364,6 +378,7 @@ describe('createDrizzleItemGateway', () => {
         {
           id: 'item-1',
           companyId: 'company-a',
+          localId: null,
           categoryId: null,
           sku: null,
           name: 'Deleted Item',
@@ -381,14 +396,15 @@ describe('createDrizzleItemGateway', () => {
     const gateway = createDrizzleItemGateway(db);
 
     await expect(
-      gateway.getItemById({ companyId: 'company-a', itemId: 'item-1' }),
+      gateway.getItemById({ companyId: 'company-a', localId: null, itemId: 'item-1' }),
     ).resolves.toBeNull();
 
     await expect(
-      gateway.getItemById({ companyId: 'company-a', itemId: 'item-1', includeDeleted: true }),
+      gateway.getItemById({ companyId: 'company-a', localId: null, itemId: 'item-1', includeDeleted: true }),
     ).resolves.toEqual({
       id: 'item-1',
       companyId: 'company-a',
+      localId: null,
       categoryId: null,
       sku: null,
       name: 'Deleted Item',
@@ -409,6 +425,7 @@ describe('createDrizzleItemGateway', () => {
         {
           id: 'item-old',
           companyId: 'company-a',
+          localId: null,
           categoryId: null,
           sku: 'A-1',
           name: 'Older Item',
@@ -424,6 +441,7 @@ describe('createDrizzleItemGateway', () => {
         {
           id: 'item-deleted',
           companyId: 'company-a',
+          localId: null,
           categoryId: null,
           sku: 'A-2',
           name: 'Deleted Item',
@@ -439,6 +457,7 @@ describe('createDrizzleItemGateway', () => {
         {
           id: 'item-other-company',
           companyId: 'company-b',
+          localId: null,
           categoryId: null,
           sku: 'B-1',
           name: 'Foreign Item',
@@ -454,6 +473,7 @@ describe('createDrizzleItemGateway', () => {
         {
           id: 'item-new',
           companyId: 'company-a',
+          localId: null,
           categoryId: null,
           sku: 'A-3',
           name: 'Newest Item',
@@ -471,12 +491,13 @@ describe('createDrizzleItemGateway', () => {
     const gateway = createDrizzleItemGateway(db);
 
     await expect(
-      gateway.listItems({ companyId: 'company-a', limit: 10 }),
+      gateway.listItems({ companyId: 'company-a', localId: null, limit: 10 }),
     ).resolves.toEqual({
       items: [
         {
           id: 'item-new',
           companyId: 'company-a',
+          localId: null,
           categoryId: null,
           sku: 'A-3',
           name: 'Newest Item',
@@ -492,6 +513,7 @@ describe('createDrizzleItemGateway', () => {
         {
           id: 'item-old',
           companyId: 'company-a',
+          localId: null,
           categoryId: null,
           sku: 'A-1',
           name: 'Older Item',
@@ -515,6 +537,7 @@ describe('createDrizzleItemGateway', () => {
         {
           id: 'item-foreign',
           companyId: 'company-b',
+          localId: null,
           categoryId: null,
           sku: null,
           name: 'Foreign Item',
@@ -532,7 +555,7 @@ describe('createDrizzleItemGateway', () => {
     const gateway = createDrizzleItemGateway(db);
 
     await expect(
-      gateway.getItemById({ companyId: 'company-a', itemId: 'item-foreign' }),
+      gateway.getItemById({ companyId: 'company-a', localId: null, itemId: 'item-foreign' }),
     ).resolves.toBeNull();
   });
 
@@ -542,6 +565,7 @@ describe('createDrizzleItemGateway', () => {
         {
           id: 'root',
           companyId: 'company-a',
+          localId: null,
           parentId: null,
           name: 'Root',
           createdAt: new Date('2026-07-01T00:00:00.000Z'),
@@ -549,6 +573,7 @@ describe('createDrizzleItemGateway', () => {
         {
           id: 'child',
           companyId: 'company-a',
+          localId: null,
           parentId: 'root',
           name: 'Child',
           createdAt: new Date('2026-07-02T00:00:00.000Z'),
@@ -556,6 +581,7 @@ describe('createDrizzleItemGateway', () => {
         {
           id: 'grandchild',
           companyId: 'company-a',
+          localId: null,
           parentId: 'child',
           name: 'Grandchild',
           createdAt: new Date('2026-07-03T00:00:00.000Z'),
@@ -567,6 +593,7 @@ describe('createDrizzleItemGateway', () => {
     await expect(
       gateway.updateCategory({
         companyId: 'company-a',
+        localId: null,
         actorUserId: 'user-1',
         correlationId: 'corr-4',
         categoryId: 'root',
@@ -577,11 +604,340 @@ describe('createDrizzleItemGateway', () => {
     await expect(
       gateway.updateCategory({
         companyId: 'company-a',
+        localId: null,
         actorUserId: 'user-1',
         correlationId: 'corr-5',
         categoryId: 'root',
         parentId: 'grandchild',
       }),
     ).rejects.toBeInstanceOf(CategoryCycleError);
+  });
+
+  it('lists only company-wide items when localId is null', async () => {
+    const { db } = createFakeDb({
+      items: [
+        {
+          id: 'item-company',
+          companyId: 'company-a',
+          localId: null,
+          categoryId: null,
+          sku: 'A-1',
+          name: 'Company-wide Item',
+          type: 'product',
+          unit: 'unit',
+          unitPrice: '10',
+          tracksStock: true,
+          trackBatchMode: 'none',
+          deletedAt: null,
+          createdAt: new Date('2026-07-01T00:00:00.000Z'),
+          updatedAt: new Date('2026-07-01T00:00:00.000Z'),
+        },
+        {
+          id: 'item-local-1',
+          companyId: 'company-a',
+          localId: 'local-1',
+          categoryId: null,
+          sku: 'A-2',
+          name: 'Local 1 Item',
+          type: 'product',
+          unit: 'unit',
+          unitPrice: '11',
+          tracksStock: true,
+          trackBatchMode: 'none',
+          deletedAt: null,
+          createdAt: new Date('2026-07-02T00:00:00.000Z'),
+          updatedAt: new Date('2026-07-02T00:00:00.000Z'),
+        },
+      ],
+    });
+    const gateway = createDrizzleItemGateway(db);
+
+    const result = await gateway.listItems({
+      companyId: 'company-a',
+      localId: null,
+      limit: 10,
+    });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]?.id).toBe('item-company');
+    expect(result.items[0]?.localId).toBeNull();
+  });
+
+  it('lists only local-scoped items when localId is set', async () => {
+    const { db } = createFakeDb({
+      items: [
+        {
+          id: 'item-company',
+          companyId: 'company-a',
+          localId: null,
+          categoryId: null,
+          sku: 'A-1',
+          name: 'Company-wide Item',
+          type: 'product',
+          unit: 'unit',
+          unitPrice: '10',
+          tracksStock: true,
+          trackBatchMode: 'none',
+          deletedAt: null,
+          createdAt: new Date('2026-07-01T00:00:00.000Z'),
+          updatedAt: new Date('2026-07-01T00:00:00.000Z'),
+        },
+        {
+          id: 'item-local-1',
+          companyId: 'company-a',
+          localId: 'local-1',
+          categoryId: null,
+          sku: 'A-2',
+          name: 'Local 1 Item',
+          type: 'product',
+          unit: 'unit',
+          unitPrice: '11',
+          tracksStock: true,
+          trackBatchMode: 'none',
+          deletedAt: null,
+          createdAt: new Date('2026-07-02T00:00:00.000Z'),
+          updatedAt: new Date('2026-07-02T00:00:00.000Z'),
+        },
+        {
+          id: 'item-local-2',
+          companyId: 'company-a',
+          localId: 'local-2',
+          categoryId: null,
+          sku: 'A-3',
+          name: 'Local 2 Item',
+          type: 'product',
+          unit: 'unit',
+          unitPrice: '12',
+          tracksStock: true,
+          trackBatchMode: 'none',
+          deletedAt: null,
+          createdAt: new Date('2026-07-03T00:00:00.000Z'),
+          updatedAt: new Date('2026-07-03T00:00:00.000Z'),
+        },
+      ],
+    });
+    const gateway = createDrizzleItemGateway(db);
+
+    const result = await gateway.listItems({
+      companyId: 'company-a',
+      localId: 'local-1',
+      limit: 10,
+    });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]?.id).toBe('item-local-1');
+    expect(result.items[0]?.localId).toBe('local-1');
+  });
+
+  it('filters out wrong-localId rows via normalizeItemRows defensive double-filter', async () => {
+    const { db } = createFakeDb({
+      items: [
+        {
+          id: 'item-correct',
+          companyId: 'company-a',
+          localId: 'local-1',
+          categoryId: null,
+          sku: 'A-1',
+          name: 'Correct Item',
+          type: 'product',
+          unit: 'unit',
+          unitPrice: '10',
+          tracksStock: true,
+          trackBatchMode: 'none',
+          deletedAt: null,
+          createdAt: new Date('2026-07-01T00:00:00.000Z'),
+          updatedAt: new Date('2026-07-01T00:00:00.000Z'),
+        },
+        {
+          id: 'item-wrong-local',
+          companyId: 'company-a',
+          localId: 'local-2',
+          categoryId: null,
+          sku: 'A-2',
+          name: 'Wrong Local Item',
+          type: 'product',
+          unit: 'unit',
+          unitPrice: '11',
+          tracksStock: true,
+          trackBatchMode: 'none',
+          deletedAt: null,
+          createdAt: new Date('2026-07-02T00:00:00.000Z'),
+          updatedAt: new Date('2026-07-02T00:00:00.000Z'),
+        },
+      ],
+    });
+    const gateway = createDrizzleItemGateway(db);
+
+    const result = await gateway.listItems({
+      companyId: 'company-a',
+      localId: 'local-1',
+      limit: 10,
+    });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]?.id).toBe('item-correct');
+  });
+
+  it('writes localId into the item row on create', async () => {
+    const { db, writes } = createFakeDb();
+    const gateway = createDrizzleItemGateway(db, {
+      createId: () => 'generated-id',
+      now: () => new Date('2026-07-30T18:00:00.000Z'),
+    });
+
+    await gateway.createItem({
+      companyId: 'company-a',
+      localId: 'local-1',
+      actorUserId: 'user-1',
+      correlationId: 'corr-1',
+      name: 'Local Widget',
+      type: 'product',
+      unit: 'unit',
+      sku: 'W-1',
+      categoryId: null,
+      unitPrice: 25,
+      tracksStock: false,
+      trackBatchMode: 'none',
+    });
+
+    const itemInsert = writes.find(
+      (w) => w.kind === 'insert' && w.table === itemsTable,
+    );
+    expect((itemInsert?.values as { localId: string | null }).localId).toBe(
+      'local-1',
+    );
+  });
+
+  it('writes null localId into the item row on create at company level', async () => {
+    const { db, writes } = createFakeDb();
+    const gateway = createDrizzleItemGateway(db, {
+      createId: () => 'generated-id',
+      now: () => new Date('2026-07-30T18:00:00.000Z'),
+    });
+
+    await gateway.createItem({
+      companyId: 'company-a',
+      localId: null,
+      actorUserId: 'user-1',
+      correlationId: 'corr-1',
+      name: 'Company Widget',
+      type: 'product',
+      unit: 'unit',
+      sku: 'W-2',
+      categoryId: null,
+      unitPrice: 25,
+      tracksStock: false,
+      trackBatchMode: 'none',
+    });
+
+    const itemInsert = writes.find(
+      (w) => w.kind === 'insert' && w.table === itemsTable,
+    );
+    expect((itemInsert?.values as { localId: string | null }).localId).toBeNull();
+  });
+
+  it('populates localId in toItem output', async () => {
+    const { db } = createFakeDb({
+      items: [
+        {
+          id: 'item-1',
+          companyId: 'company-a',
+          localId: 'local-1',
+          categoryId: null,
+          sku: null,
+          name: 'Test Item',
+          type: 'product',
+          unit: 'unit',
+          unitPrice: '10',
+          tracksStock: false,
+          trackBatchMode: 'none',
+          deletedAt: null,
+          createdAt: new Date('2026-07-01T00:00:00.000Z'),
+          updatedAt: new Date('2026-07-01T00:00:00.000Z'),
+        },
+      ],
+    });
+    const gateway = createDrizzleItemGateway(db);
+
+    const item = await gateway.getItemById({
+      companyId: 'company-a',
+      localId: 'local-1',
+      itemId: 'item-1',
+    });
+
+    expect(item?.localId).toBe('local-1');
+  });
+
+  it('includes localId in audit events on item creation', async () => {
+    const { db, writes } = createFakeDb();
+    const gateway = createDrizzleItemGateway(db, {
+      createId: () => 'generated-id',
+      now: () => new Date('2026-07-30T18:00:00.000Z'),
+    });
+
+    await gateway.createItem({
+      companyId: 'company-a',
+      localId: 'local-1',
+      actorUserId: 'user-1',
+      correlationId: 'corr-1',
+      name: 'Local Widget',
+      type: 'product',
+      unit: 'unit',
+      sku: 'W-1',
+      categoryId: null,
+      unitPrice: 25,
+      tracksStock: false,
+      trackBatchMode: 'none',
+    });
+
+    const auditInsert = writes.find(
+      (w) => w.kind === 'insert' && w.table === auditEventsTable,
+    );
+    expect((auditInsert?.values as { localId: string | null }).localId).toBe(
+      'local-1',
+    );
+    expect(
+      (auditInsert?.values as { divisionId: string | null }).divisionId,
+    ).toBeNull();
+  });
+
+  it('lists only categories for the requested localId', async () => {
+    const { db } = createFakeDb({
+      categories: [
+        {
+          id: 'cat-company',
+          companyId: 'company-a',
+          localId: null,
+          parentId: null,
+          name: 'Company Category',
+          createdAt: new Date('2026-07-01T00:00:00.000Z'),
+        },
+        {
+          id: 'cat-local-1',
+          companyId: 'company-a',
+          localId: 'local-1',
+          parentId: null,
+          name: 'Local 1 Category',
+          createdAt: new Date('2026-07-02T00:00:00.000Z'),
+        },
+      ],
+    });
+    const gateway = createDrizzleItemGateway(db);
+
+    const companyResult = await gateway.listCategories({
+      companyId: 'company-a',
+      localId: null,
+    });
+    expect(companyResult).toHaveLength(1);
+    expect(companyResult[0]?.id).toBe('cat-company');
+    expect(companyResult[0]?.localId).toBeNull();
+
+    const localResult = await gateway.listCategories({
+      companyId: 'company-a',
+      localId: 'local-1',
+    });
+    expect(localResult).toHaveLength(1);
+    expect(localResult[0]?.id).toBe('cat-local-1');
+    expect(localResult[0]?.localId).toBe('local-1');
   });
 });
