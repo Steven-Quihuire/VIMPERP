@@ -48,6 +48,7 @@ import { Skeleton } from '@/shared/ui/skeleton';
 import { Link } from 'react-router-dom';
 import type { AuthSession } from '../../auth/domain/auth';
 import type { ItemCategory } from '../domain/item';
+import { LocalScopeBadge } from '../../org-hierarchy/presentation/local-scope-badge';
 import {
   useCategoriesQuery,
   useCreateCategoryMutation,
@@ -464,8 +465,9 @@ export const CategoriesPage = ({ session }: { session: AuthSession }) => {
         </Breadcrumb>
       </header>
       <div className="flex items-center justify-between gap-4">
-        <div>
+        <div className="flex items-center gap-3">
            <h1 className="text-3xl font-medium">Categorías para productos</h1>
+           <LocalScopeBadge session={session} />
         </div>
         <Button
           className="h-10 font-medium rounded-2xl flex items-center justify-center cursor-pointer"

@@ -347,8 +347,9 @@ describe('ItemCatalogPage', () => {
         return Promise.resolve(
           createJsonResponse({
             user: { id: 'user-1', email: 'owner@vimcore.test', username: 'owner' },
-            memberships: [{ companyId: 'company-1', role: 'company-owner' }],
+            memberships: [{ companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null }],
             activeCompany: { companyId: 'company-1', status: 'active' },
+            activeLocalId: null,
             capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
           }, 200),
         );
@@ -360,6 +361,10 @@ describe('ItemCatalogPage', () => {
 
       if (url.endsWith('/me/company')) {
         return Promise.resolve(createJsonResponse({ companyId: 'company-1', name: 'Northwind' }, 200));
+      }
+
+      if (url.includes('/companies/') && url.endsWith('/locals')) {
+        return Promise.resolve(createJsonResponse([], 200));
       }
 
       if (url.endsWith('/items')) {
@@ -427,8 +432,9 @@ describe('ItemCatalogPage', () => {
         return Promise.resolve(
           createJsonResponse({
             user: { id: 'user-1', email: 'owner@vimcore.test', username: 'owner' },
-            memberships: [{ companyId: 'company-1', role: 'company-owner' }],
+            memberships: [{ companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null }],
             activeCompany: { companyId: 'company-1', status: 'active' },
+            activeLocalId: null,
             capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
           }, 200),
         );
@@ -440,6 +446,10 @@ describe('ItemCatalogPage', () => {
 
       if (url.endsWith('/me/company')) {
         return Promise.resolve(createJsonResponse({ companyId: 'company-1', name: 'Northwind' }, 200));
+      }
+
+      if (url.includes('/companies/') && url.endsWith('/locals')) {
+        return Promise.resolve(createJsonResponse([], 200));
       }
 
       if (url.endsWith('/item-categories')) {
@@ -481,7 +491,7 @@ describe('ItemCatalogPage', () => {
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByRole('button', { name: 'Add Category' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Agregar categoría/i })).toBeInTheDocument();
     expect((await screen.findAllByText('Lighting')).length).toBeGreaterThan(0);
 
     vi.unstubAllGlobals();

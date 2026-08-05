@@ -41,7 +41,7 @@ export const DashboardPage = ({
   const notifications = useDashboardNotifications(apiBaseUrl, isPlatformAdmin);
   const currentCompany = useDashboardCurrentCompany(
     apiBaseUrl,
-    !isPlatformAdmin,
+    Boolean(session.activeCompany) && !isPlatformAdmin,
   );
   const notificationsList = notifications.data?.notifications ?? [];
   const formatDate = (value: string) =>

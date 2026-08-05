@@ -1,5 +1,6 @@
 import type { AuthSession } from '../../auth/domain/auth';
 import { Button } from '@/shared/ui/button';
+import { LocalScopeBadge } from '../../org-hierarchy/presentation/local-scope-badge';
 
 import { ItemFormPanel } from './item-form-panel';
 import { ItemTable } from './item-table';
@@ -11,9 +12,12 @@ export const ItemCatalogPage = ({ session }: { session: AuthSession }) => {
   return (
     <div className="flex h-full min-h-[calc(100dvh-9rem)] flex-col gap-4">
       <div className="flex items-center justify-between gap-4">
-        <div>
+        <div className="space-y-1">
           <p className="text-sm text-muted-foreground">Inventory</p>
-          <h1 className="text-3xl font-semibold tracking-tight">Items</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-semibold tracking-tight">Items</h1>
+            <LocalScopeBadge session={session} />
+          </div>
         </div>
         <Button type="button" onClick={() => startCreate()}>
           Add Product

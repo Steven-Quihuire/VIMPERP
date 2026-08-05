@@ -36,6 +36,8 @@ import { CategoriesPage } from '../features/items/presentation/categories-page';
 import { ItemCatalogPage } from '../features/items/presentation/item-catalog-page';
 import { LandingPage } from '../features/landing/presentation/landing-page';
 import { PrivacyPolicyPage } from '../features/legal/presentation/privacy-policy-page';
+import { DivisionsPage } from '../features/org-hierarchy/presentation/divisions-page';
+import { LocalsPage } from '../features/org-hierarchy/presentation/locals-page';
 import { needsCompanyOnboarding } from '../features/onboarding/domain/onboarding';
 import { OnboardingPage } from '../features/onboarding/presentation/onboarding-page';
 import { ThemeProvider } from '../features/theme/presentation/theme-provider';
@@ -151,6 +153,75 @@ const CategoriesRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   }
 
   return <CategoriesPage session={auth.session} />;
+};
+
+const getActiveRole = (session: import('../features/auth/domain/auth').AuthSession) => {
+  if (!session.activeCompany) return null;
+  return (
+    session.memberships.find(
+      (m) => m.companyId === session.activeCompany?.companyId,
+    )?.role ?? null
+  );
+};
+
+const DivisionsRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+  const auth = useAuth(apiBaseUrl);
+
+  if (auth.isLoading) {
+    return <p>Loading...</p>;
+  }
+
+  if (!auth.session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (needsCompanyOnboarding(auth.session)) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  if (needsActiveCompanySelection(auth.session)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (hasBlockedActiveCompany(auth.session)) {
+    return <Navigate to="/dashboard/company-status" replace />;
+  }
+
+  if (getActiveRole(auth.session) !== 'company-owner') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <DivisionsPage session={auth.session} />;
+};
+
+const LocalsRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+  const auth = useAuth(apiBaseUrl);
+
+  if (auth.isLoading) {
+    return <p>Loading...</p>;
+  }
+
+  if (!auth.session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (needsCompanyOnboarding(auth.session)) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  if (needsActiveCompanySelection(auth.session)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (hasBlockedActiveCompany(auth.session)) {
+    return <Navigate to="/dashboard/company-status" replace />;
+  }
+
+  if (getActiveRole(auth.session) !== 'company-owner') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <LocalsPage session={auth.session} />;
 };
 
 const LoginRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
@@ -277,6 +348,14 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
         <Route
           path="categories"
           element={<CategoriesRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="divisions"
+          element={<DivisionsRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="locals"
+          element={<LocalsRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
         />
         <Route
           path="settings/profile"

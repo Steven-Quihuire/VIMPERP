@@ -1,7 +1,13 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './app';
+import { useAuthStore } from '../features/auth/infrastructure/auth-store';
+
+afterEach(() => {
+  useAuthStore.getState().clearSession();
+  vi.unstubAllGlobals();
+});
 
 const createSessionResponse = (overrides?: Record<string, unknown>) => ({
   user: {
@@ -11,6 +17,7 @@ const createSessionResponse = (overrides?: Record<string, unknown>) => ({
   },
   memberships: [],
   activeCompany: null,
+  activeLocalId: null,
   capabilities: [],
   ...overrides,
 });
@@ -345,6 +352,10 @@ describe('App onboarding flow', () => {
         );
       }
 
+      if (url.includes('/companies/') && url.endsWith('/locals')) {
+        return Promise.resolve(createJsonResponse([], 200));
+      }
+
       throw new Error(`unexpected request: ${url}`);
     });
 
@@ -388,7 +399,7 @@ describe('App onboarding flow', () => {
     );
 
     expect(
-      await screen.findByRole('heading', { name: 'ERP dashboard' }),
+      await screen.findByRole('heading', { name: 'Bienvenido a Vimcore Labs' }),
     ).toBeInTheDocument();
 
     await waitFor(() => {

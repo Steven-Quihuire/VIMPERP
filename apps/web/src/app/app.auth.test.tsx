@@ -1,7 +1,13 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './app';
+import { useAuthStore } from '../features/auth/infrastructure/auth-store';
+
+afterEach(() => {
+  useAuthStore.getState().clearSession();
+  vi.unstubAllGlobals();
+});
 
 const createSessionResponse = (overrides?: Record<string, unknown>) => ({
   user: {
@@ -9,11 +15,12 @@ const createSessionResponse = (overrides?: Record<string, unknown>) => ({
     email: 'owner@vimcore.test',
     username: 'owner',
   },
-  memberships: [{ companyId: 'company-1', role: 'company-owner' }],
+  memberships: [{ companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null }],
   activeCompany: {
     companyId: 'company-1',
     status: 'active',
   },
+  activeLocalId: null,
   capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
   ...overrides,
 });
@@ -236,6 +243,10 @@ describe('App auth flow', () => {
         );
       }
 
+      if (url.includes('/companies/') && url.endsWith('/locals')) {
+        return Promise.resolve(createJsonResponse([], 200));
+      }
+
       if (url.endsWith('/auth/login')) {
         expect(init?.method).toBe('POST');
         return Promise.resolve(new Response(null, { status: 204 }));
@@ -257,9 +268,13 @@ describe('App auth flow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
 
     expect(
-      await screen.findByRole('heading', { name: 'ERP dashboard' }),
+      await screen.findByRole('heading', { name: 'Bienvenido a Northwind' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('owner@vimcore.test')).toBeInTheDocument();
+    expect(
+      screen.getByText((content) =>
+        content.startsWith('Responsable de empresa'),
+      ),
+    ).toBeInTheDocument();
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(

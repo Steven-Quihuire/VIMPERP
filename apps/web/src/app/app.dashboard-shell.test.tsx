@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './app';
+import { useAuthStore } from '../features/auth/infrastructure/auth-store';
 
 const createSessionResponse = (overrides?: Record<string, unknown>) => ({
   user: {
@@ -9,11 +10,12 @@ const createSessionResponse = (overrides?: Record<string, unknown>) => ({
     email: 'owner@vimcore.test',
     username: 'owner',
   },
-  memberships: [{ companyId: 'company-1', role: 'company-owner' }],
+  memberships: [{ companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null }],
   activeCompany: {
     companyId: 'company-1',
     status: 'active',
   },
+  activeLocalId: null,
   capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
   ...overrides,
 });
@@ -30,6 +32,8 @@ const readUrl = (input: RequestInfo | URL) =>
     : input instanceof URL
       ? input.toString()
       : input.url;
+
+const stripQuery = (url: string): string => url.split('?')[0] ?? url;
 
 const setDesktopBrowser = (userAgent: string, coarsePointer: boolean) => {
   Object.defineProperty(window.navigator, 'userAgent', {
@@ -51,6 +55,7 @@ const setDesktopBrowser = (userAgent: string, coarsePointer: boolean) => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  useAuthStore.getState().clearSession();
   document.documentElement.removeAttribute('data-palette');
   document.documentElement.removeAttribute('style');
 });
@@ -85,7 +90,7 @@ describe('App dashboard shell', () => {
         return Promise.resolve(createJsonResponse({ paletteId: 'violet' }, 200));
       }
 
-      if (url.endsWith('/admin/provisioning-runs')) {
+      if (stripQuery(url).endsWith('/admin/provisioning-runs')) {
         return Promise.resolve(
           createJsonResponse(
             {
@@ -150,11 +155,11 @@ describe('App dashboard shell', () => {
     render(<App initialEntries={['/dashboard/admin/provisioning-runs']} />);
 
     expect(
-      await screen.findByRole('heading', { name: 'Procesos de alta' }),
+      await screen.findByRole('heading', { name: 'Historial de creación de empresas' }),
     ).toBeInTheDocument();
     expect(await screen.findByText('Company owner already exists')).toBeInTheDocument();
     expect(
-      await screen.findByRole('link', { name: 'Ver proceso' }),
+      await screen.findByRole('link', { name: 'Ver detalles' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: 'Errores de aplicación' }),
@@ -202,7 +207,7 @@ describe('App dashboard shell', () => {
         return Promise.resolve(createJsonResponse({ paletteId: 'violet' }, 200));
       }
 
-      if (url.endsWith('/admin/application-errors')) {
+      if (stripQuery(url).endsWith('/admin/application-errors')) {
         return Promise.resolve(
           createJsonResponse(
             {
@@ -245,7 +250,7 @@ describe('App dashboard shell', () => {
         );
       }
 
-      if (url.endsWith('/admin/audit-events')) {
+      if (stripQuery(url).endsWith('/admin/audit-events')) {
         return Promise.resolve(
           createJsonResponse(
             {
@@ -297,14 +302,15 @@ describe('App dashboard shell', () => {
     render(<App initialEntries={['/dashboard/admin/application-errors']} />);
 
     expect(
-      await screen.findByRole('heading', { name: 'Errores de aplicación' }),
+      await screen.findByRole('heading', { name: 'Historial de errores de aplicación' }),
     ).toBeInTheDocument();
     expect(await screen.findByText('Provisioning failed')).toBeInTheDocument();
     expect(
-      await screen.findByRole('link', { name: 'Ver error' }),
+      await screen.findByRole('link', { name: 'Ver detalles' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /retry|delete/i })).not.toBeInTheDocument();
 
+    cleanup();
     render(<App initialEntries={['/dashboard/admin/application-errors/error-1']} />);
 
     expect(
@@ -313,6 +319,7 @@ describe('App dashboard shell', () => {
     expect(await screen.findByText('stack line 1')).toBeInTheDocument();
     expect(await screen.findByText(/company-onboarding/)).toBeInTheDocument();
 
+    cleanup();
     render(<App initialEntries={['/dashboard/admin/audit-events']} />);
 
     expect(
@@ -320,10 +327,11 @@ describe('App dashboard shell', () => {
     ).toBeInTheDocument();
     expect(await screen.findByText('company.created')).toBeInTheDocument();
     expect(
-      await screen.findByRole('link', { name: 'Ver evento' }),
+      await screen.findByRole('link', { name: 'Ver detalles' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /retry|delete/i })).not.toBeInTheDocument();
 
+    cleanup();
     render(<App initialEntries={['/dashboard/admin/audit-events/audit-1']} />);
 
     expect(
@@ -369,6 +377,10 @@ describe('App dashboard shell', () => {
         );
       }
 
+      if (url.includes('/companies/') && url.endsWith('/locals')) {
+        return Promise.resolve(createJsonResponse([], 200));
+      }
+
       throw new Error(`unexpected request: ${url}`);
     });
 
@@ -376,8 +388,8 @@ describe('App dashboard shell', () => {
 
     render(<App initialEntries={['/dashboard/admin/provisioning-runs']} />);
 
-    expect(await screen.findByRole('heading', { name: 'ERP dashboard' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Procesos de alta' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Bienvenido a Northwind' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Historial de creación de empresas' })).not.toBeInTheDocument();
     expect(
       fetchMock.mock.calls.some(([input]) => readUrl(input).includes('/admin/')),
     ).toBe(false);
@@ -412,19 +424,19 @@ describe('App dashboard shell', () => {
         return Promise.resolve(createJsonResponse({ paletteId: 'violet' }, 200));
       }
 
-      if (url.endsWith('/admin/provisioning-runs')) {
+      if (stripQuery(url).endsWith('/admin/provisioning-runs')) {
         return Promise.resolve(
           createJsonResponse({ provisioningRuns: [], nextCursor: null }, 200),
         );
       }
 
-      if (url.endsWith('/admin/application-errors')) {
+      if (stripQuery(url).endsWith('/admin/application-errors')) {
         return Promise.resolve(
           createJsonResponse({ applicationErrors: [], nextCursor: null }, 200),
         );
       }
 
-      if (url.endsWith('/admin/audit-events')) {
+      if (stripQuery(url).endsWith('/admin/audit-events')) {
         return Promise.resolve(
           createJsonResponse({ auditEvents: [], nextCursor: null }, 200),
         );
@@ -436,10 +448,10 @@ describe('App dashboard shell', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     render(<App initialEntries={['/dashboard/admin/provisioning-runs']} />);
-    expect(await screen.findByText('No hay procesos de alta')).toBeInTheDocument();
+    expect(await screen.findByText('No hay empresas registradas')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'No hay procesos que coincidan con los filtros actuales.',
+        'No hay registros que coincidan con los filtros actuales.',
       ),
     ).toBeInTheDocument();
 
@@ -461,7 +473,7 @@ describe('App dashboard shell', () => {
     expect(screen.queryByRole('button', { name: /retry|delete/i })).not.toBeInTheDocument();
   });
 
-  it('exposes Items and Categorias catalog links in the company-owner sidebar', async () => {
+  it('exposes exactly 3 workspace items (Inicio, Items, Categorías) in the company-owner sidebar', async () => {
     setDesktopBrowser(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0',
       false,
@@ -483,10 +495,14 @@ describe('App dashboard shell', () => {
         return Promise.resolve(createJsonResponse({ paletteId: 'ocean' }, 200));
       }
 
-      if (url.endsWith('/me/company')) {
+if (url.endsWith('/me/company')) {
         return Promise.resolve(
           createJsonResponse({ companyId: 'company-1', name: 'Northwind' }, 200),
         );
+      }
+
+      if (url.includes('/companies/') && url.endsWith('/locals')) {
+        return Promise.resolve(createJsonResponse([], 200));
       }
 
       throw new Error(`unexpected request: ${url}`);
@@ -496,13 +512,24 @@ describe('App dashboard shell', () => {
 
     render(<App initialEntries={['/dashboard']} />);
 
-    expect(await screen.findByRole('heading', { name: 'ERP dashboard' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Bienvenido a Northwind' }),
+    ).toBeInTheDocument();
+
+    const inicioLink = screen.getByRole('link', { name: 'Inicio' });
+    expect(inicioLink).toHaveAttribute('href', '/dashboard');
 
     const itemsLink = screen.getByRole('link', { name: 'Items' });
     expect(itemsLink).toHaveAttribute('href', '/dashboard/items');
 
     const categoriesLink = screen.getByRole('link', { name: 'Categorías' });
     expect(categoriesLink).toHaveAttribute('href', '/dashboard/categories');
+
+    expect(screen.queryByRole('link', { name: 'Sales' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Compras' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Produccion' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Finanzas' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Proyectos' })).not.toBeInTheDocument();
   });
 
   it('shows company-owner dashboard modules without requesting admin endpoints', async () => {
@@ -533,6 +560,10 @@ describe('App dashboard shell', () => {
         );
       }
 
+      if (url.includes('/companies/') && url.endsWith('/locals')) {
+        return Promise.resolve(createJsonResponse([], 200));
+      }
+
       throw new Error(`unexpected request: ${url}`);
     });
 
@@ -540,7 +571,7 @@ describe('App dashboard shell', () => {
 
     render(<App initialEntries={['/dashboard']} />);
 
-    expect(await screen.findByRole('heading', { name: 'ERP dashboard' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Bienvenido a Northwind' })).toBeInTheDocument();
     expect(screen.getAllByText('Northwind')).not.toHaveLength(0);
     expect(
       screen.getAllByRole('link', { name: 'Inicio' }).find((element) =>
@@ -550,7 +581,7 @@ describe('App dashboard shell', () => {
     expect(screen.getByRole('link', { name: 'Open CRM module' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open Sales module' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open Inventory module' })).toBeInTheDocument();
-    expect(screen.queryByText('Todo bajo control')).not.toBeInTheDocument();
+    expect(screen.queryByText('Bienvenido hermoso')).not.toBeInTheDocument();
 
     expect(fetchMock).not.toHaveBeenCalledWith(
       '/api/admin/companies/summary',
@@ -646,8 +677,8 @@ describe('App dashboard shell', () => {
       ).toBe(true);
     });
 
-    expect(await screen.findByRole('heading', { name: 'Todo bajo control' })).toBeInTheDocument();
-    expect(await screen.findByText('Northwind registered')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Bienvenido hermoso' })).toBeInTheDocument();
+    expect((await screen.findAllByText('Northwind registered')).length).toBeGreaterThan(0);
     expect(await screen.findByText('Actividad operativa')).toBeInTheDocument();
   });
 
@@ -763,6 +794,10 @@ describe('App dashboard shell', () => {
         );
       }
 
+      if (url.includes('/companies/') && url.endsWith('/locals')) {
+        return Promise.resolve(createJsonResponse([], 200));
+      }
+
       throw new Error(`unexpected request: ${url}`);
     });
 
@@ -770,7 +805,7 @@ describe('App dashboard shell', () => {
 
     render(<App initialEntries={['/dashboard']} />);
 
-    expect(await screen.findByRole('heading', { name: 'ERP dashboard' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Bienvenido a Northwind' })).toBeInTheDocument();
 
     await waitFor(() => {
       expect(document.documentElement.dataset.palette).toBe('forest');
@@ -883,6 +918,10 @@ describe('App dashboard shell', () => {
         return Promise.resolve(new Response(null, { status: 204 }));
       }
 
+      if (url.includes('/companies/') && url.endsWith('/locals')) {
+        return Promise.resolve(createJsonResponse([], 200));
+      }
+
       throw new Error(`unexpected request: ${url}`);
     });
 
@@ -891,10 +930,10 @@ describe('App dashboard shell', () => {
     const { unmount } = render(<App initialEntries={['/dashboard']} />);
 
     expect(
-      await screen.findByRole('heading', { name: 'ERP dashboard' }),
+      await screen.findByRole('heading', { name: 'Bienvenido a Northwind' }),
     ).toBeInTheDocument();
 
-    const switcherButton = screen.getByRole('button', { name: /Northwind/i });
+    const switcherButton = screen.getByRole('button', { name: /^Northwind/i });
     fireEvent.pointerDown(switcherButton);
     fireEvent.click(switcherButton);
     fireEvent.click(await screen.findByText(/Empresa 2/i));

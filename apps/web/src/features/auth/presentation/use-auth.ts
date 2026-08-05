@@ -11,6 +11,7 @@ import type {
   LoginInput,
   RegisterInput,
   SwitchActiveCompanyInput,
+  SwitchActiveLocalInput,
 } from '../domain/auth';
 
 export const authQueryKey = ['auth', 'me'] as const;
@@ -115,6 +116,25 @@ export const useSwitchActiveCompany = (apiBaseUrl?: string) => {
     onSuccess: (session: AuthSession) => {
       setSession(session);
       queryClient.setQueryData(authQueryKey, session);
+    },
+  });
+};
+
+export const useSwitchActiveLocal = (apiBaseUrl?: string) => {
+  const repository = createAuthRepository(apiBaseUrl);
+  const queryClient = useQueryClient();
+  const setSession = useAuthStore((state) => state.setSession);
+
+  return useMutation({
+    mutationFn: async (input: SwitchActiveLocalInput) => {
+      await repository.switchActiveLocal(input);
+      return await repository.getMe();
+    },
+    onSuccess: (session: AuthSession) => {
+      setSession(session);
+      queryClient.setQueryData(authQueryKey, session);
+      void queryClient.invalidateQueries({ queryKey: ['items'] });
+      void queryClient.invalidateQueries({ queryKey: ['categories'] });
     },
   });
 };

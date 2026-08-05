@@ -1,11 +1,10 @@
 import {
-  Boxes,
   Building2,
-  ClipboardList,
   FileWarning,
   LayoutDashboard,
+  Network,
   Package,
-  ShieldCheck,
+  Store,
   Tags,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
@@ -26,20 +25,14 @@ import type { AuthSession } from '../../auth/domain/auth';
 import { getCompanyMemberships } from '../../auth/domain/auth';
 import { TeamSwitcher } from '../../auth/presentation/components/team-switcher';
 import { useSwitchActiveCompany } from '../../auth/presentation/use-auth';
+import { ActiveLocalSwitcher } from '../../org-hierarchy/presentation/active-local-switcher';
 import { canViewAdminSignals } from '../domain/dashboard';
 
 const workspaceItems = [
   { label: 'Inicio', href: '/dashboard', icon: LayoutDashboard, end: true },
-  { label: 'Sales', href: '#sales', icon: ClipboardList },
-  { label: 'Compras', href: '#purchases', icon: Building2 },
   { label: 'Items', href: '/dashboard/items', icon: Package },
   { label: 'Categorías', href: '/dashboard/categories', icon: Tags },
-  { label: 'Produccion', href: '#production', icon: Boxes },
-  { label: 'Finanzas', href: '#finance', icon: ShieldCheck },
-  { label: 'Proyectos', href: '#projects', icon: ClipboardList },
 ];
-
-const isHashLink = (href: string) => href.startsWith('#');
 
 const sidebarItemClass =
   'hover:bg-black hover:text-white hover:pl-4 hover:rounded-2xl data-[active=true]:bg-black data-[active=true]:text-white data-[active=true]:pl-4 data-[active=true]:rounded-2xl transition-[width,height,padding,color,background-color] transition-all duration-400 ease-in-out';
@@ -67,6 +60,12 @@ export const DashboardAppSidebar = ({
   apiBaseUrl?: string;
 }) => {
   const isPlatformAdmin = canViewAdminSignals(session);
+  const activeRole = session.activeCompany
+    ? (session.memberships.find(
+        (m) => m.companyId === session.activeCompany?.companyId,
+      )?.role ?? null)
+    : null;
+  const isCompanyOwner = activeRole === 'company-owner';
   const switchActiveCompany = useSwitchActiveCompany(apiBaseUrl);
   const companyMemberships = getCompanyMemberships(session);
   const companyOptions = companyMemberships.map((membership, index) => ({
@@ -109,6 +108,9 @@ export const DashboardAppSidebar = ({
             </SidebarMenuItem>
           </SidebarMenu>
         )}
+        {session.activeCompany ? (
+          <ActiveLocalSwitcher session={session} {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+        ) : null}
       </SidebarHeader>
 
       <SidebarContent>
@@ -118,42 +120,73 @@ export const DashboardAppSidebar = ({
             <SidebarMenu>
               {workspaceItems.map((item) => (
                 <SidebarMenuItem key={item.label}>
-                  {isHashLink(item.href) ? (
-                    <SidebarMenuButton
-                      asChild
-                      tooltip={item.label}
-                      className={sidebarItemClass}
-                    >
-                      <a href={item.href}>
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </a>
-                    </SidebarMenuButton>
-                  ) : (
-                    <NavLink
-                      to={item.href}
-                      {...(item.end ? { end: true } : {})}
-                    >
-                      {({ isActive }) => (
-                        <SidebarMenuButton
-                          className={sidebarItemClass}
-                          asChild
-                          tooltip={item.label}
-                          isActive={isActive}
-                        >
-                          <span>
-                            <item.icon />
-                            <span>{item.label}</span>
-                          </span>
-                        </SidebarMenuButton>
-                      )}
-                    </NavLink>
-                  )}
+                  <NavLink
+                    to={item.href}
+                    {...(item.end ? { end: true } : {})}
+                  >
+                    {({ isActive }) => (
+                      <SidebarMenuButton
+                        className={sidebarItemClass}
+                        asChild
+                        tooltip={item.label}
+                        isActive={isActive}
+                      >
+                        <span>
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </span>
+                      </SidebarMenuButton>
+                    )}
+                  </NavLink>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {isCompanyOwner ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>Organización</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <NavLink to="/dashboard/divisions">
+                    {({ isActive }) => (
+                      <SidebarMenuButton
+                        className={sidebarItemClass}
+                        asChild
+                        tooltip="Divisiones"
+                        isActive={isActive}
+                      >
+                        <span>
+                          <Network />
+                          <span>Divisiones</span>
+                        </span>
+                      </SidebarMenuButton>
+                    )}
+                  </NavLink>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <NavLink to="/dashboard/locals">
+                    {({ isActive }) => (
+                      <SidebarMenuButton
+                        className={sidebarItemClass}
+                        asChild
+                        tooltip="Locales"
+                        isActive={isActive}
+                      >
+                        <span>
+                          <Store />
+                          <span>Locales</span>
+                        </span>
+                      </SidebarMenuButton>
+                    )}
+                  </NavLink>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
 
         {isPlatformAdmin ? (
           <SidebarGroup>
