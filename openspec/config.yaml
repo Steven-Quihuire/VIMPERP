@@ -9,9 +9,13 @@ context: |
   Architecture: feature-first vertical slices with domain/application/infrastructure/presentation across apps/api and apps/web.
   Quality: ESLint 9 shared configs, TypeScript 5.9 typecheck, Prettier 3.6, Docker Compose for local Postgres.
   Testing: Vitest at root/apps, Playwright E2E, Supertest available in api, API coverage via V8 thresholds.
-  Artifact store: hybrid (Engram observations + openspec files).
+  Artifact store: openspec (repo-local source of truth; Engram stores session context only).
 
 rules:
+  workflow:
+    - Keep one active change per feature boundary; do not append unrelated work to an existing change.
+    - Split deferred work into a new change instead of leaving unchecked tasks in an old change.
+    - Archive only after persisted tasks are complete and verification has passed.
   proposal:
     - Include rollback plan for risky changes
     - Distinguish detected facts from proposed defaults; confirm the stack before apply
