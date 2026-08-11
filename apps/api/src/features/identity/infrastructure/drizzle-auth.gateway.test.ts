@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { AppDb } from '../../../shared/infrastructure/db/client';
 import {
-  branchesTable,
+  localsTable,
   membershipsTable,
   userPreferencesTable,
 } from '../../../shared/infrastructure/db/schema';
@@ -22,7 +22,7 @@ type PreferencesRow = {
   activeLocalId: string | null;
 };
 
-type BranchRow = {
+type LocalRow = {
   id: string;
   companyId: string;
   divisionId: string | null;
@@ -50,16 +50,16 @@ const createSelectBuilder = <T>(rows: T[]) => {
 const createFakeDb = ({
   memberships = [],
   preferences = [],
-  branches = [],
+  locals = [],
 }: {
   memberships?: MembershipRow[];
   preferences?: PreferencesRow[];
-  branches?: BranchRow[];
+  locals?: LocalRow[];
 } = {}) => {
   const state = {
     memberships: memberships.map((m) => clone(m)),
     preferences: preferences.map((p) => clone(p)),
-    branches: branches.map((b) => clone(b)),
+    locals: locals.map((local) => clone(local)),
   };
   const writes: Array<{
     kind: 'insert' | 'update';
@@ -75,8 +75,8 @@ const createFakeDb = ({
       if (table === userPreferencesTable) {
         return createSelectBuilder(state.preferences);
       }
-      if (table === branchesTable) {
-        return createSelectBuilder(state.branches);
+      if (table === localsTable) {
+        return createSelectBuilder(state.locals);
       }
       return createSelectBuilder([]);
     },
@@ -243,7 +243,7 @@ describe('createDrizzleAuthIdentityGateway', () => {
 
   it('findLocalCompanyById returns the companyId of a branch row', async () => {
     const { db } = createFakeDb({
-      branches: [
+      locals: [
         {
           id: 'local-1',
           companyId: 'company-1',
@@ -260,8 +260,8 @@ describe('createDrizzleAuthIdentityGateway', () => {
     );
   });
 
-  it('findLocalCompanyById returns null when no branch row exists', async () => {
-    const { db } = createFakeDb({ branches: [] });
+  it('findLocalCompanyById returns null when no local row exists', async () => {
+    const { db } = createFakeDb({ locals: [] });
     const gateway = createDrizzleAuthIdentityGateway(db);
 
     await expect(gateway.findLocalCompanyById('missing')).resolves.toBeNull();

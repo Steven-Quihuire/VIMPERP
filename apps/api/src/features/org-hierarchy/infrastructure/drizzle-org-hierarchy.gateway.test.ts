@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import type { AppDb } from '../../../shared/infrastructure/db/client';
 import {
-  branchesTable,
   divisionsTable,
   itemsTable,
+  localsTable,
   membershipsTable,
 } from '../../../shared/infrastructure/db/schema';
 import {
@@ -24,7 +24,7 @@ type DivisionRow = {
   createdAt: Date;
 };
 
-type BranchRow = {
+type LocalRow = {
   id: string;
   companyId: string;
   divisionId: string | null;
@@ -86,18 +86,18 @@ const applyReturningWhere = (
 
 const createFakeDb = ({
   divisions = [],
-  branches = [],
+  locals = [],
   items = [],
   memberships = [],
 }: {
   divisions?: DivisionRow[];
-  branches?: BranchRow[];
+  locals?: LocalRow[];
   items?: ItemRow[];
   memberships?: MembershipRow[];
 } = {}) => {
   const state = {
     divisions: divisions.map((d) => clone(d)),
-    branches: branches.map((b) => clone(b)),
+    locals: locals.map((local) => clone(local)),
     items: items.map((i) => clone(i)),
     memberships: memberships.map((m) => clone(m)),
   };
@@ -107,8 +107,8 @@ const createFakeDb = ({
       if (table === divisionsTable) {
         return createSelectBuilder(state.divisions);
       }
-      if (table === branchesTable) {
-        return createSelectBuilder(state.branches);
+      if (table === localsTable) {
+        return createSelectBuilder(state.locals);
       }
       if (table === itemsTable) {
         return createSelectBuilder(state.items);
@@ -132,8 +132,8 @@ const createFakeDb = ({
           void uniqueViolation;
           return Promise.resolve([]);
         }
-        if (table === branchesTable) {
-          state.branches.push(clone(values as BranchRow));
+        if (table === localsTable) {
+          state.locals.push(clone(values as LocalRow));
           return Promise.resolve([]);
         }
         return Promise.resolve([]);
@@ -150,8 +150,8 @@ const createFakeDb = ({
                 Object.assign(first, values);
               }
             }
-            if (table === branchesTable) {
-              const first = state.branches[0];
+            if (table === localsTable) {
+              const first = state.locals[0];
               if (first) {
                 Object.assign(first, values);
               }
@@ -162,8 +162,8 @@ const createFakeDb = ({
               const first = state.divisions[0];
               return first ? [clone(first)] : [];
             }
-            if (table === branchesTable) {
-              const first = state.branches[0];
+            if (table === localsTable) {
+              const first = state.locals[0];
               return first ? [clone(first)] : [];
             }
             return [];
@@ -184,8 +184,8 @@ const createFakeDb = ({
             const first = state.divisions.shift();
             return first ? [clone(first)] : [];
           }
-          if (table === branchesTable) {
-            const first = state.branches.shift();
+          if (table === localsTable) {
+            const first = state.locals.shift();
             return first ? [clone(first)] : [];
           }
           return [];
@@ -285,7 +285,7 @@ describe('createDrizzleOrgHierarchyGateway', () => {
 
   it('countLocalsInDivision returns the number of locals with divisionId', async () => {
     const { db } = createFakeDb({
-      branches: [
+      locals: [
         { id: 'b-1', companyId: 'company-a', divisionId: 'd-1', name: 'A', locale: null },
         { id: 'b-2', companyId: 'company-a', divisionId: 'd-1', name: 'B', locale: null },
       ],
@@ -313,7 +313,7 @@ describe('createDrizzleOrgHierarchyGateway', () => {
       name: 'Main Store',
       locale: null,
     });
-    expect(state.branches[0]).toEqual({
+    expect(state.locals[0]).toEqual({
       id: 'local-1',
       companyId: 'company-a',
       divisionId: null,
@@ -334,12 +334,12 @@ describe('createDrizzleOrgHierarchyGateway', () => {
       divisionId: 'retail-1',
     });
 
-    expect(state.branches[0]?.divisionId).toBe('retail-1');
+    expect(state.locals[0]?.divisionId).toBe('retail-1');
   });
 
   it('throws LocalNameConflictError when creating a local with an existing name', async () => {
     const { db } = createFakeDb({
-      branches: [
+      locals: [
         { id: 'local-1', companyId: 'company-a', divisionId: null, name: 'Main', locale: null },
       ],
     });
@@ -354,7 +354,7 @@ describe('createDrizzleOrgHierarchyGateway', () => {
 
   it('lists locals', async () => {
     const { db } = createFakeDb({
-      branches: [
+      locals: [
         { id: 'l-1', companyId: 'company-a', divisionId: null, name: 'A', locale: null },
         { id: 'l-2', companyId: 'company-b', divisionId: null, name: 'B', locale: null },
       ],
@@ -370,7 +370,7 @@ describe('createDrizzleOrgHierarchyGateway', () => {
 
   it('updates a local name and re-parents to another division', async () => {
     const { db, state } = createFakeDb({
-      branches: [
+      locals: [
         { id: 'l-1', companyId: 'company-a', divisionId: 'retail-1', name: 'A', locale: null },
       ],
     });
@@ -384,12 +384,12 @@ describe('createDrizzleOrgHierarchyGateway', () => {
 
     expect(updated.name).toBe('A Updated');
     expect(updated.divisionId).toBe('wholesale-1');
-    expect(state.branches[0]?.divisionId).toBe('wholesale-1');
+    expect(state.locals[0]?.divisionId).toBe('wholesale-1');
   });
 
   it('re-parents a local to company level via divisionId null', async () => {
     const { db, state } = createFakeDb({
-      branches: [
+      locals: [
         { id: 'l-1', companyId: 'company-a', divisionId: 'retail-1', name: 'A', locale: null },
       ],
     });
@@ -401,12 +401,12 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     });
 
     expect(updated.divisionId).toBeNull();
-    expect(state.branches[0]?.divisionId).toBeNull();
+    expect(state.locals[0]?.divisionId).toBeNull();
   });
 
   it('throws LocalNameConflictError when renaming a local to an existing name', async () => {
     const { db } = createFakeDb({
-      branches: [
+      locals: [
         { id: 'l-1', companyId: 'company-a', divisionId: null, name: 'A', locale: null },
         { id: 'l-2', companyId: 'company-a', divisionId: null, name: 'B', locale: null },
       ],
@@ -429,7 +429,7 @@ describe('createDrizzleOrgHierarchyGateway', () => {
 
   it('deletes a local', async () => {
     const { db, state } = createFakeDb({
-      branches: [
+      locals: [
         { id: 'l-1', companyId: 'company-a', divisionId: null, name: 'A', locale: null },
       ],
     });
@@ -437,7 +437,7 @@ describe('createDrizzleOrgHierarchyGateway', () => {
 
     await gateway.deleteLocal('l-1');
 
-    expect(state.branches).toHaveLength(0);
+    expect(state.locals).toHaveLength(0);
   });
 
   it('countItemsInLocal returns count of items with matching localId', async () => {
@@ -466,7 +466,7 @@ describe('createDrizzleOrgHierarchyGateway', () => {
 
   it('findLocalById returns the local when present, otherwise null', async () => {
     const { db } = createFakeDb({
-      branches: [
+      locals: [
         { id: 'l-1', companyId: 'company-a', divisionId: null, name: 'A', locale: null },
       ],
     });

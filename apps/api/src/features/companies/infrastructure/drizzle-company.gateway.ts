@@ -1,18 +1,22 @@
 import { randomUUID } from 'node:crypto';
 
-import { and, eq, isNotNull } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 
 import type { AppDb } from '../../../shared/infrastructure/db/client';
 import {
   auditEventsTable,
-  branchesTable,
   companiesTable,
   companyProfilesTable,
   companyServicesTable,
+  localsTable,
   membershipsTable,
   notificationsTable,
+  permissionsTable,
   privacyConsentsTable,
   privacyPolicyAcceptancesTable,
+  roleAssignmentsTable,
+  rolePermissionsTable,
+  rolesTable,
   themePreferencesTable,
   userPreferencesTable,
 } from '../../../shared/infrastructure/db/schema';
@@ -24,6 +28,14 @@ import {
   type PaletteId,
   PrivacyPolicyNotAcceptedError,
 } from '../domain/company';
+import { toScopeNodeId } from '../../roles-management/infrastructure/scope-node-id';
+import {
+  getCompanyOwnerPermissionKeys,
+  getCompanyUserPermissionKeys,
+  permissionCatalogSeeds,
+} from '../../roles-management/domain/permissions';
+
+type CompanyTx = Parameters<Parameters<AppDb['transaction']>[0]>[0];
 
 const toPaletteId = (value: string): PaletteId => {
   if (paletteValues.includes(value as PaletteId)) {
@@ -31,6 +43,120 @@ const toPaletteId = (value: string): PaletteId => {
   }
 
   return 'ocean';
+};
+
+const ensurePermissionCatalog = async (tx: CompanyTx) => {
+  const existingPermissions = await tx.select().from(permissionsTable);
+  const existingKeys = new Set(existingPermissions.map((permission) => permission.key));
+  const missingPermissions = permissionCatalogSeeds.filter(
+    (permission) => !existingKeys.has(permission.key),
+  );
+
+  if (missingPermissions.length === 0) {
+    return;
+  }
+
+  await tx.insert(permissionsTable).values(
+    missingPermissions.map((permission) => ({
+      id: randomUUID(),
+      key: permission.key,
+      family: permission.family,
+    })),
+  );
+};
+
+const ensureSystemRole = async (
+  tx: CompanyTx,
+  {
+    companyId,
+    userId,
+    key,
+    name,
+    permissionKeys,
+    createId,
+    createdAt,
+  }: {
+    companyId: string;
+    userId: string;
+    key: string;
+    name: string;
+    permissionKeys: string[];
+    createId: () => string;
+    createdAt: Date;
+  },
+) => {
+  const [existingRole] = await tx
+    .select({ id: rolesTable.id })
+    .from(rolesTable)
+    .where(and(eq(rolesTable.companyId, companyId), eq(rolesTable.key, key)))
+    .limit(1);
+
+  const roleId = existingRole?.id ?? createId();
+
+  if (!existingRole) {
+    await tx.insert(rolesTable).values({
+      id: roleId,
+      companyId,
+      key,
+      name,
+      isSystem: true,
+      createdAt,
+    });
+  }
+
+  const permissions = await tx
+    .select({ id: permissionsTable.id })
+    .from(permissionsTable)
+    .where(inArray(permissionsTable.key, permissionKeys));
+  const existingRolePermissions = await tx
+    .select({ permissionId: rolePermissionsTable.permissionId })
+    .from(rolePermissionsTable)
+    .where(eq(rolePermissionsTable.roleId, roleId));
+  const existingPermissionIds = new Set(
+    existingRolePermissions.map((entry) => entry.permissionId),
+  );
+  const missingRolePermissions = permissions.filter(
+    (permission) => !existingPermissionIds.has(permission.id),
+  );
+
+  if (missingRolePermissions.length > 0) {
+    await tx.insert(rolePermissionsTable).values(
+      missingRolePermissions.map((permission) => ({
+        roleId,
+        permissionId: permission.id,
+      })),
+    );
+  }
+
+  const [existingAssignment] = await tx
+    .select({ id: roleAssignmentsTable.id })
+    .from(roleAssignmentsTable)
+    .where(
+      and(
+        eq(roleAssignmentsTable.companyId, companyId),
+        eq(roleAssignmentsTable.userId, userId),
+        eq(roleAssignmentsTable.roleId, roleId),
+        eq(roleAssignmentsTable.scopeType, 'company'),
+      ),
+    )
+    .limit(1);
+
+  if (!existingAssignment) {
+    await tx.insert(roleAssignmentsTable).values({
+      id: createId(),
+      companyId,
+      userId,
+      roleId,
+      scopeNodeId: toScopeNodeId({
+        companyId,
+        scopeType: 'company',
+        scopeId: companyId,
+      }),
+      scopeType: 'company',
+      scopeId: companyId,
+      createdAt,
+    });
+  }
 };
 
 export const createDrizzleCompanyOnboardingGateway = (
@@ -115,7 +241,7 @@ export const createDrizzleCompanyOnboardingGateway = (
       );
 
       if (input.branches.length > 0) {
-        await tx.insert(branchesTable).values(
+        await tx.insert(localsTable).values(
           input.branches.map((branch) => ({
             id: generateId(),
             companyId,
@@ -129,6 +255,28 @@ export const createDrizzleCompanyOnboardingGateway = (
         userId: input.ownerUserId,
         companyId,
         role: 'company-owner',
+      });
+
+      await ensurePermissionCatalog(tx);
+
+      await ensureSystemRole(tx, {
+        companyId,
+        userId: input.ownerUserId,
+        key: 'company-owner',
+        name: 'Company Owner',
+        permissionKeys: getCompanyOwnerPermissionKeys([input.erpModuleId]),
+        createId: generateId,
+        createdAt,
+      });
+
+      await ensureSystemRole(tx, {
+        companyId,
+        userId: input.ownerUserId,
+        key: 'company-user',
+        name: 'Company User',
+        permissionKeys: getCompanyUserPermissionKeys([input.erpModuleId]),
+        createId: generateId,
+        createdAt,
       });
 
       const [existingThemePreference] = await tx

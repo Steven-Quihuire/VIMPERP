@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -56,6 +57,22 @@ export const companyStatusEnum = pgEnum('company_status', [
   'active',
   'suspended',
   'provisioning_failed',
+]);
+
+export const areaKindEnum = pgEnum('area_kind', ['area', 'department']);
+
+export const permissionFamilyEnum = pgEnum('permission_family', [
+  'normal',
+  'reserved',
+]);
+
+export const scopeNodeTypeEnum = pgEnum('scope_node_type', [
+  'company',
+  'division',
+  'local',
+  'area',
+  'warehouse',
+  'point-of-sale',
 ]);
 
 export const usersTable = pgTable('users', {
@@ -146,6 +163,135 @@ export const userPreferencesTable = pgTable('user_preferences', {
   activeLocalId: text('active_local_id'),
 });
 
+export const permissionsTable = pgTable(
+  'permissions',
+  {
+    id: text('id').primaryKey(),
+    key: text('key').notNull(),
+    family: permissionFamilyEnum('family').notNull(),
+  },
+  (table) => [uniqueIndex('permissions_key_idx').on(table.key)],
+);
+
+export const rolesTable = pgTable(
+  'roles',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: 'restrict' }),
+    key: text('key').notNull(),
+    name: text('name').notNull(),
+    isSystem: boolean('is_system').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('roles_company_key_idx').on(table.companyId, table.key),
+    index('roles_company_idx').on(table.companyId),
+  ],
+);
+
+export const rolePermissionsTable = pgTable(
+  'role_permissions',
+  {
+    roleId: text('role_id')
+      .notNull()
+      .references(() => rolesTable.id, { onDelete: 'restrict' }),
+    permissionId: text('permission_id')
+      .notNull()
+      .references(() => permissionsTable.id, { onDelete: 'restrict' }),
+  },
+  (table) => [
+    uniqueIndex('role_permissions_role_permission_idx').on(
+      table.roleId,
+      table.permissionId,
+    ),
+    index('role_permissions_permission_idx').on(table.permissionId),
+  ],
+);
+
+export const roleAssignmentsTable = pgTable(
+  'role_assignments',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: 'restrict' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => usersTable.id, { onDelete: 'restrict' }),
+    roleId: text('role_id')
+      .notNull()
+      .references(() => rolesTable.id, { onDelete: 'restrict' }),
+    scopeNodeId: text('scope_node_id')
+      .notNull()
+      .references(() => scopeNodesTable.id, { onDelete: 'restrict' }),
+    scopeType: scopeNodeTypeEnum('scope_type').notNull(),
+    scopeId: text('scope_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('role_assignments_user_company_idx').on(table.userId, table.companyId),
+    index('role_assignments_scope_node_idx').on(table.scopeNodeId),
+    index('role_assignments_scope_idx').on(table.scopeType, table.scopeId),
+    uniqueIndex('role_assignments_unique_scope_idx').on(
+      table.companyId,
+      table.userId,
+      table.roleId,
+      table.scopeType,
+      table.scopeId,
+    ),
+  ],
+);
+
+export const staleRoleAssignmentsTable = pgTable(
+  'stale_role_assignments',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id').notNull(),
+    userId: text('user_id').notNull(),
+    roleId: text('role_id').notNull(),
+    scopeType: scopeNodeTypeEnum('scope_type').notNull(),
+    scopeId: text('scope_id'),
+    expectedScopeNodeId: text('expected_scope_node_id'),
+    quarantineReason: text('quarantine_reason').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+    quarantinedAt: timestamp('quarantined_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index('stale_role_assignments_company_idx').on(table.companyId)],
+);
+
+export const scopeNodesTable = pgTable(
+  'scope_nodes',
+  {
+    id: text('id').primaryKey(),
+    nodeType: scopeNodeTypeEnum('node_type').notNull(),
+    sourceId: text('source_id').notNull(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: 'restrict' }),
+    parentScopeNodeId: text('parent_scope_node_id').references(
+      (): AnyPgColumn => scopeNodesTable.id,
+      { onDelete: 'restrict' },
+    ),
+    name: text('name').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('scope_nodes_node_source_idx').on(table.nodeType, table.sourceId),
+    index('scope_nodes_company_idx').on(table.companyId),
+    index('scope_nodes_parent_scope_node_idx').on(table.parentScopeNodeId),
+  ],
+);
+
 export const companyProfilesTable = pgTable('company_profiles', {
   companyId: text('company_id').primaryKey(),
   legalIdentifier: text('legal_identifier').notNull(),
@@ -235,13 +381,155 @@ export const itemsTable = pgTable(
   ],
 );
 
-export const branchesTable = pgTable('branches', {
-  id: text('id').primaryKey(),
-  companyId: text('company_id').notNull(),
-  divisionId: text('division_id').references(() => divisionsTable.id),
-  name: text('name').notNull(),
-  locale: text('locale'),
-});
+export const localsTable = pgTable(
+  'locals',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: 'restrict' }),
+    divisionId: text('division_id').references(() => divisionsTable.id, {
+      onDelete: 'restrict',
+    }),
+    name: text('name').notNull(),
+    locale: text('locale'),
+  },
+  (table) => [
+    uniqueIndex('locals_company_name_root_idx')
+      .on(table.companyId, table.name)
+      .where(sql`${table.divisionId} IS NULL`),
+    uniqueIndex('locals_division_name_idx')
+      .on(table.divisionId, table.name)
+      .where(sql`${table.divisionId} IS NOT NULL`),
+    index('locals_company_idx').on(table.companyId),
+    index('locals_division_idx').on(table.divisionId),
+  ],
+);
+
+export const areasTable = pgTable(
+  'areas',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id),
+    divisionId: text('division_id').references(() => divisionsTable.id, {
+      onDelete: 'restrict',
+    }),
+    localId: text('local_id').references(() => localsTable.id, {
+      onDelete: 'restrict',
+    }),
+    name: text('name').notNull(),
+    kind: areaKindEnum('kind').notNull().default('area'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      'areas_exactly_one_parent_check',
+      sql`((${table.divisionId} IS NOT NULL AND ${table.localId} IS NULL) OR (${table.divisionId} IS NULL AND ${table.localId} IS NOT NULL))`,
+    ),
+    uniqueIndex('areas_company_division_kind_name_idx')
+      .on(table.companyId, table.divisionId, table.kind, table.name)
+      .where(sql`${table.divisionId} IS NOT NULL AND ${table.localId} IS NULL`),
+    uniqueIndex('areas_company_local_kind_name_idx')
+      .on(table.companyId, table.localId, table.kind, table.name)
+      .where(sql`${table.localId} IS NOT NULL AND ${table.divisionId} IS NULL`),
+    index('areas_company_idx').on(table.companyId),
+    index('areas_division_idx').on(table.divisionId),
+    index('areas_local_idx').on(table.localId),
+  ],
+);
+
+export const employeesTable = pgTable(
+  'employees',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: 'restrict' }),
+    userId: text('user_id').references(() => usersTable.id, { onDelete: 'restrict' }),
+    position: text('position').notNull(),
+    areaId: text('area_id').references(() => areasTable.id, { onDelete: 'restrict' }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('employees_company_idx').on(table.companyId),
+    index('employees_area_idx').on(table.areaId),
+    uniqueIndex('employees_company_user_unique_idx')
+      .on(table.companyId, table.userId)
+      .where(sql`${table.userId} IS NOT NULL`),
+  ],
+);
+
+export const warehousesTable = pgTable(
+  'warehouses',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id),
+    areaId: text('area_id').references(() => areasTable.id),
+    localId: text('local_id').references(() => localsTable.id, {
+      onDelete: 'restrict',
+    }),
+    name: text('name').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      'warehouses_exactly_one_parent_check',
+      sql`((${table.areaId} IS NOT NULL AND ${table.localId} IS NULL) OR (${table.areaId} IS NULL AND ${table.localId} IS NOT NULL))`,
+    ),
+    uniqueIndex('warehouses_company_area_name_idx')
+      .on(table.companyId, table.areaId, table.name)
+      .where(sql`${table.areaId} IS NOT NULL AND ${table.localId} IS NULL`),
+    uniqueIndex('warehouses_company_local_name_idx')
+      .on(table.companyId, table.localId, table.name)
+      .where(sql`${table.localId} IS NOT NULL AND ${table.areaId} IS NULL`),
+    index('warehouses_company_idx').on(table.companyId),
+    index('warehouses_local_idx').on(table.localId),
+    index('warehouses_area_idx').on(table.areaId),
+  ],
+);
+
+export const pointsOfSaleTable = pgTable(
+  'points_of_sale',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id),
+    areaId: text('area_id').references(() => areasTable.id),
+    localId: text('local_id').references(() => localsTable.id, {
+      onDelete: 'restrict',
+    }),
+    name: text('name').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      'points_of_sale_exactly_one_parent_check',
+      sql`((${table.areaId} IS NOT NULL AND ${table.localId} IS NULL) OR (${table.areaId} IS NULL AND ${table.localId} IS NOT NULL))`,
+    ),
+    uniqueIndex('points_of_sale_company_area_name_idx')
+      .on(table.companyId, table.areaId, table.name)
+      .where(sql`${table.areaId} IS NOT NULL AND ${table.localId} IS NULL`),
+    uniqueIndex('points_of_sale_company_local_name_idx')
+      .on(table.companyId, table.localId, table.name)
+      .where(sql`${table.localId} IS NOT NULL AND ${table.areaId} IS NULL`),
+    index('points_of_sale_company_idx').on(table.companyId),
+    index('points_of_sale_local_idx').on(table.localId),
+    index('points_of_sale_area_idx').on(table.areaId),
+  ],
+);
 
 export const themePreferencesTable = pgTable('theme_preferences', {
   userId: text('user_id').primaryKey(),

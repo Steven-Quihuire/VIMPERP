@@ -5,8 +5,8 @@ import { and, count, eq, gte, or } from 'drizzle-orm';
 import type { AppDb } from '../../../shared/infrastructure/db/client';
 import {
   auditEventsTable,
-  branchesTable,
   companiesTable,
+  localsTable,
   membershipsTable,
   sessionsTable,
   userPreferencesTable,
@@ -175,9 +175,9 @@ export const createDrizzleAuthIdentityGateway = (
   },
   findLocalCompanyById: async (localId) => {
     const rows = await db
-      .select({ id: branchesTable.id, companyId: branchesTable.companyId })
-      .from(branchesTable)
-      .where(eq(branchesTable.id, localId))
+      .select({ id: localsTable.id, companyId: localsTable.companyId })
+      .from(localsTable)
+      .where(eq(localsTable.id, localId))
       .limit(1);
 
     const match = rows.find((row) => row.id === localId);

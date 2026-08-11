@@ -4,9 +4,9 @@ import { and, eq } from 'drizzle-orm';
 
 import type { AppDb } from '../../../shared/infrastructure/db/client';
 import {
-  branchesTable,
   divisionsTable,
   itemsTable,
+  localsTable,
   membershipsTable,
 } from '../../../shared/infrastructure/db/schema';
 import {
@@ -20,7 +20,7 @@ import {
 } from '../domain/org-hierarchy';
 
 type DivisionRow = typeof divisionsTable.$inferSelect;
-type BranchRow = typeof branchesTable.$inferSelect;
+type LocalRow = typeof localsTable.$inferSelect;
 
 const normalizeDivisions = (
   rows: DivisionRow[],
@@ -28,14 +28,14 @@ const normalizeDivisions = (
 ): DivisionRow[] => rows.filter((row) => row.companyId === companyId);
 
 const normalizeLocals = (
-  rows: BranchRow[],
+  rows: LocalRow[],
   companyId: string,
-): BranchRow[] => rows.filter((row) => row.companyId === companyId);
+): LocalRow[] => rows.filter((row) => row.companyId === companyId);
 
 const normalizeLocalsByDivision = (
-  rows: BranchRow[],
+  rows: LocalRow[],
   divisionId: string,
-): BranchRow[] => rows.filter((row) => row.divisionId === divisionId);
+): LocalRow[] => rows.filter((row) => row.divisionId === divisionId);
 
 const normalizeItemsByLocal = (
   rows: { localId: string | null; deletedAt: Date | null }[],
@@ -63,7 +63,7 @@ const toDivision = (row: DivisionRow): Division => ({
   createdAt: row.createdAt,
 });
 
-const toLocal = (row: BranchRow): Local => ({
+const toLocal = (row: LocalRow): Local => ({
   id: row.id,
   companyId: row.companyId,
   divisionId: row.divisionId,
@@ -141,10 +141,10 @@ export const createDrizzleOrgHierarchyGateway = (
       }
     },
     countLocalsInDivision: async (divisionId) => {
-      const rows = await db
-        .select()
-        .from(branchesTable)
-        .where(eq(branchesTable.divisionId, divisionId));
+        const rows = await db
+          .select()
+          .from(localsTable)
+          .where(eq(localsTable.divisionId, divisionId));
 
       return normalizeLocalsByDivision(rows, divisionId).length;
     },
@@ -153,12 +153,12 @@ export const createDrizzleOrgHierarchyGateway = (
       const divisionId = input.divisionId ?? null;
 
       const [existingLocal] = await db
-        .select({ id: branchesTable.id })
-        .from(branchesTable)
+        .select({ id: localsTable.id })
+        .from(localsTable)
         .where(
           and(
-            eq(branchesTable.companyId, input.companyId),
-            eq(branchesTable.name, input.name),
+            eq(localsTable.companyId, input.companyId),
+            eq(localsTable.name, input.name),
           ),
         )
         .limit(1);
@@ -167,7 +167,7 @@ export const createDrizzleOrgHierarchyGateway = (
         throw new LocalNameConflictError();
       }
 
-      await db.insert(branchesTable).values({
+      await db.insert(localsTable).values({
         id: localId,
         companyId: input.companyId,
         divisionId,
@@ -186,8 +186,8 @@ export const createDrizzleOrgHierarchyGateway = (
     listLocals: async (companyId) => {
       const rows = await db
         .select()
-        .from(branchesTable)
-        .where(eq(branchesTable.companyId, companyId));
+        .from(localsTable)
+        .where(eq(localsTable.companyId, companyId));
 
       return normalizeLocals(rows, companyId).map(toLocal);
     },
@@ -204,8 +204,8 @@ export const createDrizzleOrgHierarchyGateway = (
 
       const [current] = await db
         .select()
-        .from(branchesTable)
-        .where(eq(branchesTable.id, input.localId))
+        .from(localsTable)
+        .where(eq(localsTable.id, input.localId))
         .limit(1);
 
       if (!current) {
@@ -214,12 +214,12 @@ export const createDrizzleOrgHierarchyGateway = (
 
       if (input.name !== undefined && input.name !== current.name) {
         const conflictRows = await db
-          .select({ id: branchesTable.id, companyId: branchesTable.companyId, name: branchesTable.name })
-          .from(branchesTable)
+          .select({ id: localsTable.id, companyId: localsTable.companyId, name: localsTable.name })
+          .from(localsTable)
           .where(
             and(
-              eq(branchesTable.companyId, current.companyId),
-              eq(branchesTable.name, input.name),
+              eq(localsTable.companyId, current.companyId),
+              eq(localsTable.name, input.name),
             ),
           )
           .limit(1);
@@ -237,9 +237,9 @@ export const createDrizzleOrgHierarchyGateway = (
       }
 
       const [updated] = await db
-        .update(branchesTable)
+        .update(localsTable)
         .set(set)
-        .where(eq(branchesTable.id, input.localId))
+        .where(eq(localsTable.id, input.localId))
         .returning();
 
       if (!updated) {
@@ -250,8 +250,8 @@ export const createDrizzleOrgHierarchyGateway = (
     },
     deleteLocal: async (localId) => {
       const [deleted] = await db
-        .delete(branchesTable)
-        .where(eq(branchesTable.id, localId))
+        .delete(localsTable)
+        .where(eq(localsTable.id, localId))
         .returning();
 
       if (!deleted) {
@@ -277,8 +277,8 @@ export const createDrizzleOrgHierarchyGateway = (
     findLocalById: async (localId) => {
       const [row] = await db
         .select()
-        .from(branchesTable)
-        .where(eq(branchesTable.id, localId))
+        .from(localsTable)
+        .where(eq(localsTable.id, localId))
         .limit(1);
 
       return row && row.id === localId ? toLocal(row) : null;
