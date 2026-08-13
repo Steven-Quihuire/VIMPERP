@@ -564,19 +564,171 @@ export const employeesTable = pgTable(
     companyId: text('company_id')
       .notNull()
       .references(() => companiesTable.id, { onDelete: 'restrict' }),
-    userId: text('user_id').references(() => usersTable.id, { onDelete: 'restrict' }),
-    position: text('position').notNull(),
-    areaId: text('area_id').references(() => areasTable.id, { onDelete: 'restrict' }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index('employees_company_idx').on(table.companyId)],
+);
+
+export const positionsTable = pgTable(
+  'positions',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: 'restrict' }),
+    name: text('name').notNull(),
+    reportsToPositionId: text('reports_to_position_id').references(
+      (): AnyPgColumn => positionsTable.id,
+      { onDelete: 'restrict' },
+    ),
+    headcount: integer('headcount').notNull().default(1),
+    isActive: boolean('is_active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (table) => [
-    index('employees_company_idx').on(table.companyId),
-    index('employees_area_idx').on(table.areaId),
-    uniqueIndex('employees_company_user_unique_idx')
-      .on(table.companyId, table.userId)
-      .where(sql`${table.userId} IS NOT NULL`),
+    index('positions_company_idx').on(table.companyId),
+    uniqueIndex('positions_company_name_idx').on(table.companyId, table.name),
+    index('positions_reports_to_position_idx').on(table.reportsToPositionId),
+    check('positions_headcount_nonnegative_chk', sql`${table.headcount} >= 0`),
+  ],
+);
+
+export const employeeAssignmentsTable = pgTable(
+  'employee_assignments',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: 'restrict' }),
+    employeeId: text('employee_id')
+      .notNull()
+      .references(() => employeesTable.id, { onDelete: 'restrict' }),
+    scopeNodeId: text('scope_node_id')
+      .notNull()
+      .references(() => scopeNodesTable.id, { onDelete: 'restrict' }),
+    positionId: text('position_id')
+      .notNull()
+      .references(() => positionsTable.id, { onDelete: 'restrict' }),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
+    isPrimary: boolean('is_primary').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('employee_assignments_company_idx').on(table.companyId),
+    index('employee_assignments_employee_idx').on(table.employeeId),
+    index('employee_assignments_scope_node_idx').on(table.scopeNodeId),
+    index('employee_assignments_position_idx').on(table.positionId),
+    uniqueIndex('employee_assignments_active_primary_idx')
+      .on(table.employeeId)
+      .where(sql`${table.endedAt} IS NULL AND ${table.isPrimary} = true`),
+  ],
+);
+
+export const erpAccessLinksTable = pgTable(
+  'erp_access_links',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: 'restrict' }),
+    employeeId: text('employee_id')
+      .notNull()
+      .references(() => employeesTable.id, { onDelete: 'restrict' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => usersTable.id, { onDelete: 'restrict' }),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  },
+  (table) => [
+    index('erp_access_links_company_idx').on(table.companyId),
+    uniqueIndex('erp_access_links_active_employee_idx')
+      .on(table.employeeId, table.companyId)
+      .where(sql`${table.isActive} = true`),
+    uniqueIndex('erp_access_links_active_user_idx')
+      .on(table.userId, table.companyId)
+      .where(sql`${table.isActive} = true`),
+  ],
+);
+
+export const erpAccessInvitationsTable = pgTable(
+  'erp_access_invitations',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: 'restrict' }),
+    employeeId: text('employee_id')
+      .notNull()
+      .references(() => employeesTable.id, { onDelete: 'restrict' }),
+    inviteeEmail: text('invitee_email').notNull(),
+    tokenHash: text('token_hash').notNull(),
+    createdByUserId: text('created_by_user_id')
+      .notNull()
+      .references(() => usersTable.id, { onDelete: 'restrict' }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    acceptedByUserId: text('accepted_by_user_id').references(() => usersTable.id, {
+      onDelete: 'restrict',
+    }),
+  },
+  (table) => [
+    index('erp_access_invitations_company_idx').on(table.companyId),
+    index('erp_access_invitations_employee_idx').on(table.employeeId),
+    uniqueIndex('erp_access_invitations_token_hash_idx').on(table.tokenHash),
+    index('erp_access_invitations_invitee_email_idx').on(table.inviteeEmail),
+    check(
+      'erp_access_invitations_acceptance_chk',
+      sql`(${table.acceptedAt} IS NULL AND ${table.acceptedByUserId} IS NULL) OR (${table.acceptedAt} IS NOT NULL AND ${table.acceptedByUserId} IS NOT NULL)`,
+    ),
+  ],
+);
+
+export const approvalPoliciesTable = pgTable(
+  'approval_policies',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: 'restrict' }),
+    scopeType: scopeNodeTypeEnum('scope_type').notNull(),
+    scopeNodeId: text('scope_node_id').references(() => scopeNodesTable.id, {
+      onDelete: 'restrict',
+    }),
+    name: text('name').notNull(),
+    definition: jsonb('definition').notNull(),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('approval_policies_company_idx').on(table.companyId),
+    index('approval_policies_scope_node_idx').on(table.scopeNodeId),
+    check(
+      'approval_policies_scope_company_chk',
+      sql`${table.scopeType} <> 'company' OR ${table.scopeNodeId} IS NULL`,
+    ),
+    check(
+      'approval_policies_scope_node_required_chk',
+      sql`${table.scopeType} = 'company' OR ${table.scopeNodeId} IS NOT NULL`,
+    ),
   ],
 );
 

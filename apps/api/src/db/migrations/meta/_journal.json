@@ -148,6 +148,13 @@
       "when": 1786632442808,
       "tag": "0021_node_management_invitations",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1786725900000,
+      "tag": "0022_rrhh_foundation",
+      "breakpoints": true
     }
   ]
 }
