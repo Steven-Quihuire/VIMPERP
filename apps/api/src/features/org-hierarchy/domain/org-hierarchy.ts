@@ -32,12 +32,10 @@ export type Area = {
 };
 
 export type WarehouseParent =
-  | { areaId: string; localId?: never }
-  | { areaId?: never; localId: string };
+  { areaId: string; localId?: never } | { areaId?: never; localId: string };
 
 export type WarehouseParentUpdate =
-  | { areaId: string; localId?: never }
-  | { areaId?: never; localId: string };
+  { areaId: string; localId?: never } | { areaId?: never; localId: string };
 
 export type Warehouse = {
   id: string;
@@ -87,34 +85,48 @@ export const orgHierarchyAuditEventTypes = {
 } as const;
 
 export type OrgHierarchyGateway = {
-  createDivision: (input: {
-    companyId: string;
-    name: string;
-  } & OrgHierarchyAuditContext) =>
-    Promise<Division>;
+  getScopeNodeDependencyCounts: (input: {
+    nodeType: 'division' | 'local' | 'area' | 'warehouse' | 'point-of-sale';
+    sourceId: string;
+  }) => Promise<ScopeNodeDependencyCounts>;
+  createDivision: (
+    input: {
+      companyId: string;
+      name: string;
+    } & OrgHierarchyAuditContext,
+  ) => Promise<Division>;
   listDivisions: (companyId: string) => Promise<Division[]>;
-  updateDivision: (input: {
-    divisionId: string;
-    name: string;
-  } & OrgHierarchyAuditContext) =>
-    Promise<Division>;
-  deleteDivision: (input: {
-    divisionId: string;
-  } & OrgHierarchyAuditContext) => Promise<void>;
+  updateDivision: (
+    input: {
+      divisionId: string;
+      name: string;
+    } & OrgHierarchyAuditContext,
+  ) => Promise<Division>;
+  deleteDivision: (
+    input: {
+      divisionId: string;
+    } & OrgHierarchyAuditContext,
+  ) => Promise<void>;
   countLocalsInDivision: (divisionId: string) => Promise<number>;
 
-  createLocal: (input: {
-    companyId: string;
-    name: string;
-    divisionId?: string | null;
-  } & OrgHierarchyAuditContext) => Promise<Local>;
+  createLocal: (
+    input: {
+      companyId: string;
+      name: string;
+      divisionId?: string | null;
+    } & OrgHierarchyAuditContext,
+  ) => Promise<Local>;
   listLocals: (companyId: string) => Promise<Local[]>;
-  updateLocal: (input: {
-    localId: string;
-    name?: string;
-    divisionId?: string | null;
-  } & OrgHierarchyAuditContext) => Promise<Local>;
-  deleteLocal: (input: { localId: string } & OrgHierarchyAuditContext) => Promise<void>;
+  updateLocal: (
+    input: {
+      localId: string;
+      name?: string;
+      divisionId?: string | null;
+    } & OrgHierarchyAuditContext,
+  ) => Promise<Local>;
+  deleteLocal: (
+    input: { localId: string } & OrgHierarchyAuditContext,
+  ) => Promise<void>;
   countItemsInLocal: (localId: string) => Promise<number>;
   countMembershipsInLocal: (localId: string) => Promise<number>;
   countAreasInDivision: (divisionId: string) => Promise<number>;
@@ -125,40 +137,77 @@ export type OrgHierarchyGateway = {
 
   findDivisionById: (divisionId: string) => Promise<Division | null>;
 
-  createArea: (input: { companyId: string; name: string } & AreaParent & OrgHierarchyAuditContext) =>
-    Promise<Area>;
+  createArea: (
+    input: { companyId: string; name: string } & AreaParent &
+      OrgHierarchyAuditContext,
+  ) => Promise<Area>;
   listAreas: (companyId: string) => Promise<Area[]>;
-  updateArea: (input:
-    | ({ areaId: string; name: string } & OrgHierarchyAuditContext)
-    | (({ areaId: string; name?: string | undefined } & AreaParentUpdate) & OrgHierarchyAuditContext)) => Promise<Area>;
-  deleteArea: (input: { areaId: string } & OrgHierarchyAuditContext) => Promise<void>;
+  updateArea: (
+    input:
+      | ({ areaId: string; name: string } & OrgHierarchyAuditContext)
+      | (({ areaId: string; name?: string | undefined } & AreaParentUpdate) &
+          OrgHierarchyAuditContext),
+  ) => Promise<Area>;
+  deleteArea: (
+    input: { areaId: string } & OrgHierarchyAuditContext,
+  ) => Promise<void>;
   countWarehousesInArea: (areaId: string) => Promise<number>;
   countPointsOfSaleInArea: (areaId: string) => Promise<number>;
   countEmployeesInArea: (areaId: string) => Promise<number>;
 
   createWarehouse: (
-    input: { companyId: string; name: string } & WarehouseParent & OrgHierarchyAuditContext,
+    input: { companyId: string; name: string } & WarehouseParent &
+      OrgHierarchyAuditContext,
   ) => Promise<Warehouse>;
   listWarehouses: (companyId: string) => Promise<Warehouse[]>;
-  updateWarehouse: (input:
-    | ({ warehouseId: string; name: string } & OrgHierarchyAuditContext)
-    | (({ warehouseId: string; name?: string | undefined } & WarehouseParentUpdate) & OrgHierarchyAuditContext)) => Promise<Warehouse>;
-  deleteWarehouse: (input: { warehouseId: string } & OrgHierarchyAuditContext) => Promise<void>;
+  updateWarehouse: (
+    input:
+      | ({ warehouseId: string; name: string } & OrgHierarchyAuditContext)
+      | (({
+          warehouseId: string;
+          name?: string | undefined;
+        } & WarehouseParentUpdate) &
+          OrgHierarchyAuditContext),
+  ) => Promise<Warehouse>;
+  deleteWarehouse: (
+    input: { warehouseId: string } & OrgHierarchyAuditContext,
+  ) => Promise<void>;
 
   createPointOfSale: (
-    input: { companyId: string; name: string } & WarehouseParent & OrgHierarchyAuditContext,
+    input: { companyId: string; name: string } & WarehouseParent &
+      OrgHierarchyAuditContext,
   ) => Promise<PointOfSale>;
   listPointsOfSale: (companyId: string) => Promise<PointOfSale[]>;
-  updatePointOfSale: (input:
-    | ({ pointOfSaleId: string; name: string } & OrgHierarchyAuditContext)
-    | (({ pointOfSaleId: string; name?: string | undefined } & WarehouseParentUpdate) & OrgHierarchyAuditContext)) => Promise<PointOfSale>;
-  deletePointOfSale: (input: {
-    pointOfSaleId: string;
-  } & OrgHierarchyAuditContext) => Promise<void>;
+  updatePointOfSale: (
+    input:
+      | ({ pointOfSaleId: string; name: string } & OrgHierarchyAuditContext)
+      | (({
+          pointOfSaleId: string;
+          name?: string | undefined;
+        } & WarehouseParentUpdate) &
+          OrgHierarchyAuditContext),
+  ) => Promise<PointOfSale>;
+  deletePointOfSale: (
+    input: {
+      pointOfSaleId: string;
+    } & OrgHierarchyAuditContext,
+  ) => Promise<void>;
   findAreaById: (areaId: string) => Promise<Area | null>;
   findWarehouseById: (warehouseId: string) => Promise<Warehouse | null>;
   findPointOfSaleById: (pointOfSaleId: string) => Promise<PointOfSale | null>;
 };
+
+export type ScopeNodeDependencyCounts = {
+  roleAssignments: number;
+  responsibilities: number;
+  managementInvitations: number;
+  activeScopePreferences: number;
+};
+
+export const hasScopeNodeDependencies = (counts: ScopeNodeDependencyCounts) =>
+  counts.roleAssignments > 0 ||
+  counts.responsibilities > 0 ||
+  counts.managementInvitations > 0;
 
 export class ParentOwnershipError extends Error {
   readonly code = 'PARENT_OWNERSHIP_CONFLICT';
@@ -181,7 +230,9 @@ export class InvalidHierarchyParentError extends Error {
 export class DivisionConflictError extends Error {
   readonly code = 'DIVISION_CONFLICT';
 
-  constructor(message = 'Cannot delete division with existing locals or areas.') {
+  constructor(
+    message = 'Cannot delete division with existing locals or areas.',
+  ) {
     super(message);
     this.name = 'DivisionConflictError';
   }

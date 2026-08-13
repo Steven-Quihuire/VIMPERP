@@ -1,6 +1,7 @@
 import {
   AreaConflictError,
   AreaNotFoundError,
+  hasScopeNodeDependencies,
   type OrgHierarchyGateway,
 } from '../domain/org-hierarchy';
 
@@ -14,13 +15,27 @@ export const createDeleteAreaUseCase = ({
     actorUserId: string;
     correlationId: string;
   }): Promise<void> => {
-    const [warehouseCount, pointOfSaleCount, employeeCount] = await Promise.all([
+    const [
+      warehouseCount,
+      pointOfSaleCount,
+      employeeCount,
+      scopeNodeDependencies,
+    ] = await Promise.all([
       gateway.countWarehousesInArea(input.areaId),
       gateway.countPointsOfSaleInArea(input.areaId),
       gateway.countEmployeesInArea(input.areaId),
+      gateway.getScopeNodeDependencyCounts({
+        nodeType: 'area',
+        sourceId: input.areaId,
+      }),
     ]);
 
-    if (warehouseCount > 0 || pointOfSaleCount > 0 || employeeCount > 0) {
+    if (
+      warehouseCount > 0 ||
+      pointOfSaleCount > 0 ||
+      employeeCount > 0 ||
+      hasScopeNodeDependencies(scopeNodeDependencies)
+    ) {
       throw new AreaConflictError();
     }
 

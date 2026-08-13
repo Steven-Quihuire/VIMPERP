@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseEnv } from './env';
+import { parseDotEnv, parseEnv } from './env';
 
 describe('parseEnv', () => {
   it('refuses seeded admin in production', () => {
@@ -50,6 +50,7 @@ describe('parseEnv', () => {
 
     expect(env.PROVISIONING_STALE_TIMEOUT_MS).toBe(15 * 60 * 1000);
     expect(env.PROVISIONING_SWEEP_INTERVAL_MS).toBe(5 * 60 * 1000);
+    expect(env.APP_BASE_URL).toBe('http://127.0.0.1:5173');
   });
 
   it('rejects non-positive provisioning sweep settings', () => {
@@ -63,5 +64,50 @@ describe('parseEnv', () => {
         PROVISIONING_SWEEP_INTERVAL_MS: '-1',
       }),
     ).toThrow();
+  });
+
+  it('requires complete Resend config when email delivery is enabled', () => {
+    expect(() =>
+      parseEnv({
+        DATABASE_URL: 'postgres://postgres:postgres@127.0.0.1:5432/vimcore',
+        HOST: '127.0.0.1',
+        PORT: '3000',
+        NODE_ENV: 'development',
+        RESEND_API_KEY: 're_test_123',
+      }),
+    ).toThrow('RESEND_FROM_EMAIL is required when Resend email delivery is enabled');
+  });
+
+  it('accepts complete Resend config', () => {
+    const env = parseEnv({
+      DATABASE_URL: 'postgres://postgres:postgres@127.0.0.1:5432/vimcore',
+      HOST: '127.0.0.1',
+      PORT: '3000',
+      NODE_ENV: 'development',
+      RESEND_API_KEY: 're_test_123',
+      RESEND_FROM_EMAIL: 'noreply@vimcore.test',
+      APP_BASE_URL: 'https://app.vimcore.test',
+    });
+
+    expect(env.RESEND_API_KEY).toBe('re_test_123');
+    expect(env.RESEND_FROM_EMAIL).toBe('noreply@vimcore.test');
+    expect(env.APP_BASE_URL).toBe('https://app.vimcore.test');
+  });
+
+  it('parses dotenv syntax used by repo-root local env files', () => {
+    expect(
+      parseDotEnv([
+        '# comment',
+        'DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/vimcore',
+        'RESEND_API_KEY="re_test_123"',
+        "RESEND_FROM_EMAIL='noreply@vimcore.test'",
+        'EMPTY=',
+      ].join('\n')),
+    ).toEqual({
+      DATABASE_URL: 'postgres://postgres:postgres@127.0.0.1:5432/vimcore',
+      RESEND_API_KEY: 're_test_123',
+      RESEND_FROM_EMAIL: 'noreply@vimcore.test',
+      EMPTY: '',
+    });
   });
 });

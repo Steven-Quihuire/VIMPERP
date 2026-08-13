@@ -57,7 +57,9 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
   }
 
   async findUserByIdentifier(identifier: string) {
-    return Promise.resolve(this.usersByIdentifier.get(identifier.toLowerCase()) ?? null);
+    return Promise.resolve(
+      this.usersByIdentifier.get(identifier.toLowerCase()) ?? null,
+    );
   }
   async findUserById(userId: string) {
     return Promise.resolve(this.usersById.get(userId) ?? null);
@@ -85,7 +87,9 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
     return Promise.resolve(this.activeCompanyByUserId.get(userId) ?? null);
   }
   async findCompanyStatus(companyId: string) {
-    return Promise.resolve(this.companyStatusByCompanyId.get(companyId) ?? 'active');
+    return Promise.resolve(
+      this.companyStatusByCompanyId.get(companyId) ?? 'active',
+    );
   }
   async setActiveCompanyId(userId: string, companyId: string) {
     this.activeCompanyByUserId.set(userId, companyId);
@@ -152,6 +156,15 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
   }> = [];
   itemCountsByLocalId = new Map<string, number>();
   membershipCountsByLocalId = new Map<string, number>();
+
+  async getScopeNodeDependencyCounts() {
+    return {
+      roleAssignments: 0,
+      responsibilities: 0,
+      managementInvitations: 0,
+      activeScopePreferences: 0,
+    };
+  }
 
   async createDivision(input: { companyId: string; name: string }) {
     const existing = this.divisions.find(
@@ -298,10 +311,12 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
     return this.areas.filter((area) => area.localId === localId).length;
   }
   async countWarehousesInLocal(localId: string) {
-    return this.warehouses.filter((warehouse) => warehouse.localId === localId).length;
+    return this.warehouses.filter((warehouse) => warehouse.localId === localId)
+      .length;
   }
   async countPointsOfSaleInLocal(localId: string) {
-    return this.pointsOfSale.filter((point) => point.localId === localId).length;
+    return this.pointsOfSale.filter((point) => point.localId === localId)
+      .length;
   }
   async createArea(input: {
     companyId: string;
@@ -369,7 +384,8 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
     this.areas.splice(idx, 1);
   }
   async countWarehousesInArea(areaId: string) {
-    return this.warehouses.filter((warehouse) => warehouse.areaId === areaId).length;
+    return this.warehouses.filter((warehouse) => warehouse.areaId === areaId)
+      .length;
   }
   async countPointsOfSaleInArea(areaId: string) {
     return this.pointsOfSale.filter((point) => point.areaId === areaId).length;
@@ -395,10 +411,14 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
     return warehouse;
   }
   async listWarehouses(companyId: string) {
-    return this.warehouses.filter((warehouse) => warehouse.companyId === companyId);
+    return this.warehouses.filter(
+      (warehouse) => warehouse.companyId === companyId,
+    );
   }
   async findWarehouseById(warehouseId: string) {
-    return this.warehouses.find((warehouse) => warehouse.id === warehouseId) ?? null;
+    return (
+      this.warehouses.find((warehouse) => warehouse.id === warehouseId) ?? null
+    );
   }
   async updateWarehouse(input: {
     warehouseId: string;
@@ -466,7 +486,9 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
     return this.pointsOfSale.filter((point) => point.companyId === companyId);
   }
   async findPointOfSaleById(pointOfSaleId: string) {
-    return this.pointsOfSale.find((point) => point.id === pointOfSaleId) ?? null;
+    return (
+      this.pointsOfSale.find((point) => point.id === pointOfSaleId) ?? null
+    );
   }
   async updatePointOfSale(input: {
     pointOfSaleId: string;
@@ -769,9 +791,7 @@ describe('org-hierarchy routes', () => {
     ).resolves.toMatchObject({ status: 403 });
 
     await expect(
-      request(app)
-        .delete('/locals/local-other')
-        .set('Cookie', cookie),
+      request(app).delete('/locals/local-other').set('Cookie', cookie),
     ).resolves.toMatchObject({ status: 403 });
 
     await expect(
@@ -782,9 +802,7 @@ describe('org-hierarchy routes', () => {
     ).resolves.toMatchObject({ status: 403 });
 
     await expect(
-      request(app)
-        .delete('/warehouses/warehouse-other')
-        .set('Cookie', cookie),
+      request(app).delete('/warehouses/warehouse-other').set('Cookie', cookie),
     ).resolves.toMatchObject({ status: 403 });
 
     await expect(

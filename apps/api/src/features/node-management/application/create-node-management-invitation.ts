@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
-import type { NodeManagementGateway, NodeManagementScopeType } from '../domain/node-management';
+import type {
+  NodeManagementGateway,
+  NodeManagementInvitationEmailSender,
+  NodeManagementScopeType,
+} from '../domain/node-management';
 import { NodeManagementScopeNotFoundError } from '../domain/node-management';
 import {
   createNodeManagementInvitationToken,
@@ -20,12 +24,22 @@ export const defaultNodeManagementInvitationLifetimeMs =
 
 export const createCreateNodeManagementInvitationUseCase = ({
   gateway,
+  emailSender,
+  buildInvitationLink,
+  onEmailDeliveryFailure,
   now = () => new Date(),
   createId = randomUUID,
   createToken = createNodeManagementInvitationToken,
   invitationLifetimeMs = defaultNodeManagementInvitationLifetimeMs,
 }: {
   gateway: NodeManagementGateway;
+  emailSender: NodeManagementInvitationEmailSender;
+  buildInvitationLink: (token: string) => string;
+  onEmailDeliveryFailure?: (input: {
+    invitationId: string;
+    inviteeEmail: string;
+    errorMessage: string;
+  }) => void;
   now?: () => Date;
   createId?: () => string;
   createToken?: () => string;
@@ -45,6 +59,7 @@ export const createCreateNodeManagementInvitationUseCase = ({
 
     const token = createToken();
     const expiresAt = new Date(now().getTime() + invitationLifetimeMs);
+    const invitationLink = buildInvitationLink(token);
     const invitation = await gateway.createInvitation({
       id: createId(),
       companyId: input.companyId,
@@ -57,6 +72,33 @@ export const createCreateNodeManagementInvitationUseCase = ({
       expiresAt,
     });
 
+    const delivery = await (async () => {
+      try {
+        return await emailSender.sendInvitationEmail({
+          invitationId: invitation.id,
+          inviteeEmail,
+          companyName: scopeNode.companyName,
+          scopeName: scopeNode.scopeName,
+          scopeType: input.scopeType,
+          invitationLink,
+          expiresAt: invitation.expiresAt,
+        });
+      } catch (error) {
+        return {
+          status: 'failed' as const,
+          message: error instanceof Error ? error.message : 'Unknown email delivery error',
+        };
+      }
+    })();
+
+    if (delivery.status === 'failed' && delivery.message) {
+      onEmailDeliveryFailure?.({
+        invitationId: invitation.id,
+        inviteeEmail,
+        errorMessage: delivery.message,
+      });
+    }
+
     return {
       invitationId: invitation.id,
       invitationToken: token,
@@ -68,6 +110,7 @@ export const createCreateNodeManagementInvitationUseCase = ({
       scopeId: invitation.scopeId,
       scopeName: scopeNode.scopeName,
       expiresAt: invitation.expiresAt,
+      delivery,
     };
   };
 };

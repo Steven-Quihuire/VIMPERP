@@ -6,12 +6,16 @@ export const orgTreeQueryKeys = {
   tree: (companyId: string) => ['org-tree', companyId] as const,
 };
 
-export const useOrgTree = (companyId: string | undefined, apiBaseUrl?: string) => {
+export const useOrgTree = (
+  companyId: string | undefined,
+  apiBaseUrl?: string,
+  enabled = true,
+) => {
   const gateway = createOrgTreeGateway(apiBaseUrl);
 
   return useQuery({
     queryKey: orgTreeQueryKeys.tree(companyId ?? ''),
     queryFn: () => gateway.listOrgTree(companyId as string),
-    enabled: Boolean(companyId),
+    enabled: Boolean(companyId) && enabled,
   });
 };

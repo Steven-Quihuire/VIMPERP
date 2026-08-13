@@ -1,6 +1,7 @@
 import {
   DivisionConflictError,
   DivisionNotFoundError,
+  hasScopeNodeDependencies,
   type OrgHierarchyGateway,
 } from '../domain/org-hierarchy';
 
@@ -14,12 +15,20 @@ export const createDeleteDivisionUseCase = ({
     actorUserId: string;
     correlationId: string;
   }): Promise<void> => {
-    const [localCount, areaCount] = await Promise.all([
+    const [localCount, areaCount, scopeNodeDependencies] = await Promise.all([
       gateway.countLocalsInDivision(input.divisionId),
       gateway.countAreasInDivision(input.divisionId),
+      gateway.getScopeNodeDependencyCounts({
+        nodeType: 'division',
+        sourceId: input.divisionId,
+      }),
     ]);
 
-    if (localCount > 0 || areaCount > 0) {
+    if (
+      localCount > 0 ||
+      areaCount > 0 ||
+      hasScopeNodeDependencies(scopeNodeDependencies)
+    ) {
       throw new DivisionConflictError();
     }
 

@@ -83,6 +83,10 @@ import { createListNodeManagementPendingInvitationsUseCase } from '../features/n
 import { createListNodeResponsibilitiesUseCase } from '../features/node-management/application/list-node-responsibilities';
 import type { NodeManagementGateway } from '../features/node-management/domain/node-management';
 import { createDrizzleNodeManagementGateway } from '../features/node-management/infrastructure/drizzle-node-management.gateway';
+import {
+  createNoopNodeManagementInvitationEmailSender,
+  createResendNodeManagementInvitationEmailSender,
+} from '../features/node-management/infrastructure/resend-node-management-invitation-email-sender';
 import { createNodeManagementRouter } from '../features/node-management/presentation/node-management.router';
 import { createComputeEffectivePermissionsUseCase } from '../features/roles-management/application/compute-effective-permissions';
 import { createCreateAreaUseCase } from '../features/org-hierarchy/application/create-area';
@@ -153,6 +157,9 @@ type CreateAppInput = {
   seedAdminEnabled?: boolean;
   sessionCookieName?: string;
   provisioningStaleTimeoutMs?: number;
+  appBaseUrl?: string;
+  resendApiKey?: string;
+  resendFromEmail?: string;
 };
 
 const ACTIVE_COMPANY_SWITCH_WINDOW_MS = 60 * 1000;
@@ -189,17 +196,80 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
         getScopeLineage: scopeResolver.getLineage,
       },
     });
-  const orgTreeGateway =
-    input.orgTreeGateway ?? createDrizzleOrgTreeGateway({ scopeResolver });
-  const orgHierarchyGateway =
-    input.orgHierarchyGateway ?? createDrizzleOrgHierarchyGateway(db);
-  const nodeManagementGateway =
-    input.nodeManagementGateway ?? createDrizzleNodeManagementGateway(db);
   const nodeEnv = input.nodeEnv ?? 'development';
   const seedAdminEnabled = nodeEnv !== 'production' && (input.seedAdminEnabled ?? false);
   const sessionCookieName = input.sessionCookieName ?? 'vimcore_session';
   const requestMetrics = createRequestMetrics();
   const logger = createLogger(nodeEnv !== 'test');
+  const orgTreeGateway =
+    input.orgTreeGateway ?? createDrizzleOrgTreeGateway({ scopeResolver });
+  const orgHierarchyGateway =
+    input.orgHierarchyGateway ?? createDrizzleOrgHierarchyGateway(db, { logger });
+  const nodeManagementGateway =
+    input.nodeManagementGateway ?? createDrizzleNodeManagementGateway(db);
+  const rawInvitationEmailSender =
+    input.resendApiKey && input.resendFromEmail
+      ? createResendNodeManagementInvitationEmailSender({
+          apiKey: input.resendApiKey,
+          fromEmail: input.resendFromEmail,
+        })
+      : createNoopNodeManagementInvitationEmailSender();
+  const invitationEmailMode =
+    input.resendApiKey && input.resendFromEmail ? 'resend' : 'noop';
+  const invitationEmailSender = {
+    sendInvitationEmail: async (emailInput: Parameters<typeof rawInvitationEmailSender.sendInvitationEmail>[0]) => {
+      logger.info(
+        {
+          invitationId: emailInput.invitationId,
+          inviteeEmail: emailInput.inviteeEmail,
+          mode: invitationEmailMode,
+          scopeType: emailInput.scopeType,
+        },
+        'Node management invitation email delivery attempt started',
+      );
+
+      try {
+        const delivery = await rawInvitationEmailSender.sendInvitationEmail(emailInput);
+
+        logger.info(
+          {
+            invitationId: emailInput.invitationId,
+            inviteeEmail: emailInput.inviteeEmail,
+            mode: invitationEmailMode,
+            status: delivery.status,
+            message: delivery.message,
+          },
+          'Node management invitation email delivery finished',
+        );
+
+        return delivery;
+      } catch (error) {
+        logger.error(
+          {
+            invitationId: emailInput.invitationId,
+            inviteeEmail: emailInput.inviteeEmail,
+            mode: invitationEmailMode,
+            err: error,
+          },
+          'Node management invitation email delivery crashed',
+        );
+
+        throw error;
+      }
+    },
+  };
+  logger.info(
+    {
+      mode: invitationEmailMode,
+      configured: invitationEmailMode === 'resend',
+      hasResendApiKey: Boolean(input.resendApiKey),
+      hasResendFromEmail: Boolean(input.resendFromEmail),
+    },
+    invitationEmailMode === 'resend'
+      ? 'Node management invitation email delivery configured'
+      : 'Node management invitation email delivery running in noop mode',
+  );
+  const appBaseUrl = input.appBaseUrl ?? 'http://127.0.0.1:5173';
   const resolveAuthSession = createResolveAuthSession({
     authIdentityGateway,
     scopeResolver,
@@ -390,6 +460,14 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       requireAuth,
       createInvitation: createCreateNodeManagementInvitationUseCase({
         gateway: nodeManagementGateway,
+        emailSender: invitationEmailSender,
+        buildInvitationLink: (token) => `${appBaseUrl}/accept-invitation/${token}`,
+        onEmailDeliveryFailure: ({ invitationId, inviteeEmail, errorMessage }) => {
+          logger.error(
+            { invitationId, inviteeEmail, err: errorMessage },
+            'Node management invitation email delivery failed',
+          );
+        },
       }),
       listResponsibilities: createListNodeResponsibilitiesUseCase({
         gateway: nodeManagementGateway,

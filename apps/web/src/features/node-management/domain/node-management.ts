@@ -59,6 +59,10 @@ export type CreatedNodeManagementInvitation = {
   scopeId: string;
   scopeName: string;
   expiresAt: string;
+  delivery?: {
+    status: 'sent' | 'failed' | 'skipped';
+    message?: string;
+  };
 };
 
 export type NodeManagementInvitationDetails = {

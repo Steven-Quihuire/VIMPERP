@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { sileo } from 'sileo';
 
 import type { AuthSession } from '../../auth/domain/auth';
 
@@ -64,6 +65,14 @@ vi.mock('../../node-management/application/node-management-queries', () => ({
   useNodeManagementResponsibilities: () => useNodeManagementResponsibilitiesMock(),
   useNodeManagementPendingInvitations: () => useNodeManagementPendingInvitationsMock(),
   useCreateNodeManagementInvitation: () => useCreateNodeManagementInvitationMock(),
+}));
+
+vi.mock('sileo', () => ({
+  sileo: {
+    success: vi.fn(),
+    warning: vi.fn(),
+    error: vi.fn(),
+  },
 }));
 
 const session: AuthSession = {
@@ -199,33 +208,208 @@ describe('OrganizationPage', () => {
     expect(screen.getAllByText('Sin responsable').length).toBeGreaterThan(0);
   });
 
-  it('creates an invitation from the compact panel', async () => {
-    const mutateAsync = vi.fn().mockResolvedValue({
+  it('creates a node and its optional responsible invitation from the create sheet', async () => {
+    const createDivisionMutateAsync = vi.fn().mockResolvedValue({
+      id: 'division-2',
+      companyId: 'company-1',
+      name: 'New Division',
+      createdAt: '2026-08-13T10:00:00.000Z',
+    });
+    const createInvitationMutateAsync = vi.fn().mockResolvedValue({
       invitationId: 'inv-2',
       invitationToken: 'token-2',
       inviteeEmail: 'new.manager@vimcore.test',
+      companyId: 'company-1',
+      companyName: 'Vimcore Labs',
+      scopeNodeId: 'scope-division-2',
+      scopeType: 'division',
+      scopeId: 'division-2',
+      scopeName: 'New Division',
+      expiresAt: '2026-08-20T10:00:00.000Z',
+      delivery: { status: 'sent' },
+    });
+    useCreateDivisionMock.mockReturnValue({
+      mutateAsync: createDivisionMutateAsync,
+      isPending: false,
+      isError: false,
+      error: null,
     });
     useCreateNodeManagementInvitationMock.mockReturnValue({
-      mutateAsync,
+      mutateAsync: createInvitationMutateAsync,
       isPending: false,
     });
 
     render(<OrganizationPage session={session} />, { wrapper: createWrapper() });
 
-    fireEvent.change(await screen.findByLabelText('Correo del responsable'), {
+    fireEvent.click(await screen.findByLabelText('Agregar hijo a Empresa'));
+
+    const dialog = await screen.findByText((content) => content.includes('Crear') && content.includes('división'));
+    const sheet = dialog.closest('[role="dialog"]');
+    expect(sheet).not.toBeNull();
+    const scope = within(sheet as HTMLElement);
+
+    fireEvent.change(scope.getByLabelText('Nombre'), {
+      target: { value: 'New Division' },
+    });
+    fireEvent.change(scope.getByLabelText('Correo del responsable'), {
       target: { value: 'new.manager@vimcore.test' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Crear invitación' }));
+    fireEvent.click(scope.getByRole('button', { name: 'Guardar' }));
 
     await waitFor(() => {
-      expect(mutateAsync).toHaveBeenCalledWith({
+      expect(createDivisionMutateAsync).toHaveBeenCalledWith({
         companyId: 'company-1',
-        scopeType: 'local',
-        scopeId: 'local-1',
+        name: 'New Division',
+      });
+      expect(createInvitationMutateAsync).toHaveBeenCalledWith({
+        companyId: 'company-1',
+        scopeType: 'division',
+        scopeId: 'division-2',
         inviteeEmail: 'new.manager@vimcore.test',
       });
     });
 
-    expect(await screen.findByText(/accept-invitation\/token-2/i)).toBeInTheDocument();
+    expect(sileo.success).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: 'Invitation email sent to new.manager@vimcore.test.',
+      }),
+    );
+  });
+
+  it('warns when the invitation is created but email delivery is skipped or fails', async () => {
+    const createDivisionMutateAsync = vi.fn().mockResolvedValue({
+      id: 'division-2',
+      companyId: 'company-1',
+      name: 'New Division',
+      createdAt: '2026-08-13T10:00:00.000Z',
+    });
+    const createInvitationMutateAsync = vi.fn().mockResolvedValue({
+      invitationId: 'inv-2',
+      invitationToken: 'token-2',
+      inviteeEmail: 'new.manager@vimcore.test',
+      companyId: 'company-1',
+      companyName: 'Vimcore Labs',
+      scopeNodeId: 'scope-division-2',
+      scopeType: 'division',
+      scopeId: 'division-2',
+      scopeName: 'New Division',
+      expiresAt: '2026-08-20T10:00:00.000Z',
+      delivery: {
+        status: 'failed',
+        message: 'provider timeout',
+      },
+    });
+    useCreateDivisionMock.mockReturnValue({
+      mutateAsync: createDivisionMutateAsync,
+      isPending: false,
+      isError: false,
+      error: null,
+    });
+    useCreateNodeManagementInvitationMock.mockReturnValue({
+      mutateAsync: createInvitationMutateAsync,
+      isPending: false,
+    });
+
+    render(<OrganizationPage session={session} />, { wrapper: createWrapper() });
+
+    fireEvent.click(await screen.findByLabelText('Agregar hijo a Empresa'));
+
+    const dialog = await screen.findByText((content) => content.includes('Crear') && content.includes('división'));
+    const sheet = dialog.closest('[role="dialog"]');
+    expect(sheet).not.toBeNull();
+    const scope = within(sheet as HTMLElement);
+
+    fireEvent.change(scope.getByLabelText('Nombre'), {
+      target: { value: 'New Division' },
+    });
+    fireEvent.change(scope.getByLabelText('Correo del responsable'), {
+      target: { value: 'new.manager@vimcore.test' },
+    });
+    fireEvent.click(scope.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => {
+      expect(sileo.warning).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description:
+            'Invitation created for new.manager@vimcore.test, but email delivery failed: provider timeout',
+        }),
+      );
+    });
+  });
+
+  it('keeps the create sheet open when the invitation fails after node creation', async () => {
+    const createDivisionMutateAsync = vi.fn().mockResolvedValue({
+      id: 'division-2',
+      companyId: 'company-1',
+      name: 'New Division',
+      createdAt: '2026-08-13T10:00:00.000Z',
+    });
+    const createInvitationMutateAsync = vi
+      .fn()
+      .mockRejectedValue(new Error('No se pudo crear la invitación.'));
+    useCreateDivisionMock.mockReturnValue({
+      mutateAsync: createDivisionMutateAsync,
+      isPending: false,
+      isError: false,
+      error: null,
+    });
+    useCreateNodeManagementInvitationMock.mockReturnValue({
+      mutateAsync: createInvitationMutateAsync,
+      isPending: false,
+    });
+
+    render(<OrganizationPage session={session} />, { wrapper: createWrapper() });
+
+    fireEvent.click(await screen.findByLabelText('Agregar hijo a Empresa'));
+
+    const dialog = await screen.findByText((content) => content.includes('Crear') && content.includes('división'));
+    const sheet = dialog.closest('[role="dialog"]');
+    expect(sheet).not.toBeNull();
+    const scope = within(sheet as HTMLElement);
+
+    fireEvent.change(scope.getByLabelText('Nombre'), {
+      target: { value: 'New Division' },
+    });
+    fireEvent.change(scope.getByLabelText('Correo del responsable'), {
+      target: { value: 'new.manager@vimcore.test' },
+    });
+    fireEvent.click(scope.getByRole('button', { name: 'Guardar' }));
+
+    expect(
+      await scope.findByText('No se pudo crear la invitación.'),
+    ).toBeInTheDocument();
+    expect(
+      scope.getByText(
+        /el nodo ya fue creado. podés corregir el correo y reintentar la invitación/i,
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.change(scope.getByLabelText('Correo del responsable'), {
+      target: { value: 'retry.manager@vimcore.test' },
+    });
+
+    createInvitationMutateAsync.mockResolvedValueOnce({
+      invitationId: 'inv-3',
+      invitationToken: 'token-3',
+      inviteeEmail: 'retry.manager@vimcore.test',
+      companyId: 'company-1',
+      companyName: 'Vimcore Labs',
+      scopeNodeId: 'scope-division-2',
+      scopeType: 'division',
+      scopeId: 'division-2',
+      scopeName: 'New Division',
+      expiresAt: '2026-08-20T10:00:00.000Z',
+    });
+    fireEvent.click(scope.getByRole('button', { name: 'Reintentar invitación' }));
+
+    await waitFor(() => {
+      expect(createDivisionMutateAsync).toHaveBeenCalledTimes(1);
+      expect(createInvitationMutateAsync).toHaveBeenLastCalledWith({
+        companyId: 'company-1',
+        scopeType: 'division',
+        scopeId: 'division-2',
+        inviteeEmail: 'retry.manager@vimcore.test',
+      });
+    });
   });
 });

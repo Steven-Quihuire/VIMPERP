@@ -141,6 +141,10 @@ class InMemoryNodeManagementGateway implements NodeManagementGateway {
     return await Promise.resolve(this.responsibilities);
   }
 
+  async listPendingInvitationsByCompany() {
+    return await Promise.resolve([]);
+  }
+
   async getResponsibilityState(): Promise<NodeResponsibilityState | null> {
     return await Promise.resolve(this.responsibilityState);
   }
@@ -320,6 +324,10 @@ describe('node management routes', () => {
       scopeId: 'local-1',
       scopeName: 'Main Local',
       expiresAt: expect.any(String),
+      delivery: {
+        status: 'skipped',
+        message: 'Invitation email delivery is not configured.',
+      },
     });
 
     const token = createResponse.body.invitationToken as string;
@@ -479,7 +487,7 @@ describe('node management routes', () => {
         scopeName: 'Main Local',
         responsibleUserId: 'user-1',
         responsibleUserEmail: 'manager@vimcore.test',
-        responsibleUserUsername: 'manager',
+        responsibleUsername: 'manager',
         managedRoleKey: nodeManagementRoleKey,
         assignmentMode: nodeManagementAssignmentMode,
         baseMembershipRole: nodeManagementBaseMembershipRole,
@@ -531,7 +539,7 @@ describe('node management routes', () => {
         scopeName: 'Main Local',
         responsibleUserId: 'user-1',
         responsibleUserEmail: 'manager@vimcore.test',
-        responsibleUserUsername: 'manager',
+        responsibleUsername: 'manager',
         managedRoleKey: 'node-manager',
         assignmentMode: 'subtree_inclusive',
         baseMembershipRole: 'company-user',
@@ -562,7 +570,7 @@ describe('node management routes', () => {
         scopeName: 'Main Local',
         responsibleUserId: 'user-1',
         responsibleUserEmail: 'manager@vimcore.test',
-        responsibleUserUsername: 'manager',
+        responsibleUsername: 'manager',
         managedRoleKey: 'node-manager',
         assignmentMode: 'subtree_inclusive',
         baseMembershipRole: 'company-user',
@@ -581,7 +589,7 @@ describe('node management routes', () => {
           scopeName: 'Main Local',
           responsibleUserId: 'user-1',
           responsibleUserEmail: 'manager@vimcore.test',
-          responsibleUserUsername: 'manager',
+          responsibleUsername: 'manager',
           managedRoleKey: 'node-manager',
           assignmentMode: 'subtree_inclusive',
           baseMembershipRole: 'company-user',

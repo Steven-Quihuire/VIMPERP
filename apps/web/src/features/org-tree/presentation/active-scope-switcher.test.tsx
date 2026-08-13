@@ -11,7 +11,7 @@ const useOrgTreeMock = vi.fn<() => OrgTreeQueryResult>(), useSwitchActiveScopeMo
 const renderSwitcher = (sessionOverride?: Partial<AuthSession>) => render(<SidebarProvider><ActiveScopeSwitcher session={{ ...session, ...sessionOverride }} /></SidebarProvider>);
 
 vi.mock('../application/org-tree-queries', () => ({
-  useOrgTree: () => useOrgTreeMock(),
+  useOrgTree: (...args: Parameters<typeof useOrgTreeMock>) => useOrgTreeMock(...args),
 }));
 vi.mock('@/shared/ui/dropdown-menu', () => ({
   DropdownMenu: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -60,5 +60,24 @@ describe('ActiveScopeSwitcher', () => {
     const warehouseOption = await screen.findByRole('menuitem', { name: /Warehouse East/i });
     fireEvent.click(warehouseOption);
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith({ scope: { scopeType: 'warehouse', scopeId: 'warehouse-1' } }));
+  });
+
+  it('does not request the org tree when there is no active scope and still allows company switching', async () => {
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    useSwitchActiveScopeMock.mockReturnValue({ mutateAsync, isPending: false });
+
+    renderSwitcher({ activeScope: null, activeLocalId: null });
+
+    expect(useOrgTreeMock).toHaveBeenCalledWith('company-1', undefined, false);
+    expect(await screen.findByText('Nivel empresa')).toBeInTheDocument();
+    expect(screen.queryByText('North Division')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('menuitem', { name: /Nivel empresa/i }));
+
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith({
+        scope: { scopeType: 'company', scopeId: 'company-1' },
+      }),
+    );
   });
 });

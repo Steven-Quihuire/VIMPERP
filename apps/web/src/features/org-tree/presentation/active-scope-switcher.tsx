@@ -79,13 +79,16 @@ export const ActiveScopeSwitcher = ({
   apiBaseUrl,
 }: ActiveScopeSwitcherProps) => {
   const companyId = session.activeCompany?.companyId;
-  const orgTreeQuery = useOrgTree(companyId, apiBaseUrl);
+  const hasActiveScope = session.activeScope !== null;
+  const orgTreeQuery = useOrgTree(companyId, apiBaseUrl, hasActiveScope);
   const switchActiveScope = useSwitchActiveScope(apiBaseUrl);
   const [isOpen, setIsOpen] = useState(false);
-  const options = toTreeOptions(orgTreeQuery.data ?? []).filter(
-    ({ node }) =>
-      !(node.ref.scopeType === 'company' && node.ref.scopeId === companyId),
-  );
+  const options = hasActiveScope
+    ? toTreeOptions(orgTreeQuery.data ?? []).filter(
+        ({ node }) =>
+          !(node.ref.scopeType === 'company' && node.ref.scopeId === companyId),
+      )
+    : [];
   if (!companyId) return null;
   const activeNode =
     session.activeScope === null

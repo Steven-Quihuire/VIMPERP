@@ -19,6 +19,10 @@ class InMemoryNodeManagementGateway implements NodeManagementGateway {
     return await Promise.resolve([]);
   }
 
+  async listPendingInvitationsByCompany() {
+    return await Promise.resolve([]);
+  }
+
   async getResponsibilityState(): Promise<NodeResponsibilityState | null> {
     return await Promise.resolve(this.state);
   }

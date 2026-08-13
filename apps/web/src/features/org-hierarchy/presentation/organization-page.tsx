@@ -80,10 +80,12 @@ import { Skeleton } from '@/shared/ui/skeleton';
 import type { AuthSession } from '../../auth/domain/auth';
 import { useDashboardCurrentCompany } from '../../dashboard/presentation/use-dashboard';
 import {
+  useCreateNodeManagementInvitation,
   useNodeManagementPendingInvitations,
   useNodeManagementResponsibilities,
 } from '../../node-management/application/node-management-queries';
 import type {
+  CreatedNodeManagementInvitation,
   NodeResponsibilitySummary,
   NodeManagementScopeType,
 } from '../../node-management/domain/node-management';
@@ -91,7 +93,6 @@ import {
   buildNodeResponsibilitySummary,
   getNodeResponsibilityBadgeClassName,
 } from '../../node-management/presentation/node-responsibility-badge';
-import { NodeManagementInvitePanel } from '../../node-management/presentation/node-management-invite-panel';
 import {
   useAreas,
   useCreateArea,
@@ -277,6 +278,39 @@ const getDeleteErrorMessage = (
   }
 
   return `No se pudo eliminar ${kindLabel[kind].toLowerCase()}.`;
+};
+
+const getInvitationErrorMessage = (error: unknown) => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'El nodo fue creado, pero no se pudo generar la invitación del responsable.';
+};
+
+const notifyInvitationDelivery = (invitation: CreatedNodeManagementInvitation) => {
+  const description = (() => {
+    if (!invitation.delivery || invitation.delivery.status === 'sent') {
+      return `Invitation email sent to ${invitation.inviteeEmail}.`;
+    }
+
+    if (invitation.delivery.status === 'skipped') {
+      return invitation.delivery.message
+        ? `Invitation created for ${invitation.inviteeEmail}, but email delivery was skipped: ${invitation.delivery.message}`
+        : `Invitation created for ${invitation.inviteeEmail}, but email delivery was skipped.`;
+    }
+
+    return invitation.delivery.message
+      ? `Invitation created for ${invitation.inviteeEmail}, but email delivery failed: ${invitation.delivery.message}`
+      : `Invitation created for ${invitation.inviteeEmail}, but email delivery failed.`;
+  })();
+
+  if (!invitation.delivery || invitation.delivery.status === 'sent') {
+    sileo.success({ description, position: 'bottom-right', duration: 2400 });
+    return;
+  }
+
+  sileo.warning({ description, position: 'bottom-right', duration: 3600 });
 };
 
 const getGraphEntries = ({
@@ -828,6 +862,7 @@ const OrganizationEntityDialog = ({
   const updateWarehouse = useUpdateWarehouse(companyId);
   const createPointOfSale = useCreatePointOfSale();
   const updatePointOfSale = useUpdatePointOfSale(companyId);
+  const createInvitation = useCreateNodeManagementInvitation();
 
   const selectedDivision =
     state.mode === 'edit' && state.kind === 'division'
@@ -905,6 +940,14 @@ const OrganizationEntityDialog = ({
         : NO_PARENT),
   );
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [responsibleEmail, setResponsibleEmail] = useState('');
+  const [createdInviteTarget, setCreatedInviteTarget] = useState<{
+    scopeType: NodeManagementScopeType;
+    scopeId: string;
+  } | null>(null);
+  const [invitationResult, setInvitationResult] =
+    useState<CreatedNodeManagementInvitation | null>(null);
+  const [invitationError, setInvitationError] = useState<string | null>(null);
 
   const isPending =
     createDivision.isPending ||
@@ -916,7 +959,8 @@ const OrganizationEntityDialog = ({
     createWarehouse.isPending ||
     updateWarehouse.isPending ||
     createPointOfSale.isPending ||
-    updatePointOfSale.isPending;
+    updatePointOfSale.isPending ||
+    createInvitation.isPending;
 
   const submissionError =
     createDivision.error ??
@@ -930,18 +974,46 @@ const OrganizationEntityDialog = ({
     createPointOfSale.error ??
     updatePointOfSale.error;
 
-  const creatableKinds =
-    state.mode === 'create' ? getCreatableKinds(state.parentKind) : [];
-  const Surface = state.mode === 'create' ? Sheet : Dialog;
-  const SurfaceContent = state.mode === 'create' ? SheetContent : DialogContent;
-  const SurfaceHeader = state.mode === 'create' ? SheetHeader : DialogHeader;
-  const SurfaceTitle = state.mode === 'create' ? SheetTitle : DialogTitle;
+  const isCreateMode = state.mode === 'create';
+  const canEditCreateFields = !createdInviteTarget;
+
+  const creatableKinds = isCreateMode ? getCreatableKinds(state.parentKind) : [];
+  const Surface = isCreateMode ? Sheet : Dialog;
+  const SurfaceContent = isCreateMode ? SheetContent : DialogContent;
+  const SurfaceHeader = isCreateMode ? SheetHeader : DialogHeader;
+  const SurfaceTitle = isCreateMode ? SheetTitle : DialogTitle;
   const SurfaceDescription =
-    state.mode === 'create' ? SheetDescription : DialogDescription;
-  const SurfaceFooter = state.mode === 'create' ? SheetFooter : DialogFooter;
-  const SurfaceClose = state.mode === 'create' ? SheetClose : DialogClose;
+    isCreateMode ? SheetDescription : DialogDescription;
+  const SurfaceFooter = isCreateMode ? SheetFooter : DialogFooter;
+  const SurfaceClose = isCreateMode ? SheetClose : DialogClose;
 
   const handleSubmit = async () => {
+    const trimmedEmail = responsibleEmail.trim().toLowerCase();
+
+    if (createdInviteTarget) {
+      if (!trimmedEmail) {
+        setInvitationError('Ingresá un correo para generar la invitación.');
+        return;
+      }
+
+      try {
+        const invitation = await createInvitation.mutateAsync({
+          companyId,
+          scopeType: createdInviteTarget.scopeType,
+          scopeId: createdInviteTarget.scopeId,
+          inviteeEmail: trimmedEmail,
+        });
+        setInvitationResult(invitation);
+        setInvitationError(null);
+        notifyInvitationDelivery(invitation);
+        onOpenChange(false);
+      } catch (error) {
+        setInvitationError(getInvitationErrorMessage(error));
+      }
+
+      return;
+    }
+
     const trimmed = name.trim();
 
     if (trimmed.length === 0) {
@@ -950,6 +1022,11 @@ const OrganizationEntityDialog = ({
     }
 
     try {
+      let createdNodeTarget: {
+        scopeType: NodeManagementScopeType;
+        scopeId: string;
+      } | null = null;
+
       if (kind === 'division') {
         if (state.mode === 'edit' && selectedDivision) {
           await updateDivision.mutateAsync({
@@ -957,7 +1034,8 @@ const OrganizationEntityDialog = ({
             name: trimmed,
           });
         } else {
-          await createDivision.mutateAsync({ companyId, name: trimmed });
+          const division = await createDivision.mutateAsync({ companyId, name: trimmed });
+          createdNodeTarget = { scopeType: 'division', scopeId: division.id };
         }
       }
 
@@ -971,11 +1049,12 @@ const OrganizationEntityDialog = ({
             divisionId: resolvedDivisionId,
           });
         } else {
-          await createLocal.mutateAsync({
+          const local = await createLocal.mutateAsync({
             companyId,
             name: trimmed,
             divisionId: resolvedDivisionId,
           });
+          createdNodeTarget = { scopeType: 'local', scopeId: local.id };
         }
       }
 
@@ -1000,11 +1079,12 @@ const OrganizationEntityDialog = ({
                 },
           );
         } else {
-          await createArea.mutateAsync(
+          const area = await createArea.mutateAsync(
             areaParentType === 'division'
               ? { companyId, name: trimmed, divisionId: areaParentId }
               : { companyId, name: trimmed, localId: areaParentId },
           );
+          createdNodeTarget = { scopeType: 'area', scopeId: area.id };
         }
       }
 
@@ -1029,11 +1109,12 @@ const OrganizationEntityDialog = ({
                 },
           );
         } else {
-          await createWarehouse.mutateAsync(
+          const warehouse = await createWarehouse.mutateAsync(
             storageParentType === 'area'
               ? { companyId, name: trimmed, areaId: storageParentId }
               : { companyId, name: trimmed, localId: storageParentId },
           );
+          createdNodeTarget = { scopeType: 'warehouse', scopeId: warehouse.id };
         }
       }
 
@@ -1058,11 +1139,31 @@ const OrganizationEntityDialog = ({
                 },
           );
         } else {
-          await createPointOfSale.mutateAsync(
+          const pointOfSale = await createPointOfSale.mutateAsync(
             storageParentType === 'area'
               ? { companyId, name: trimmed, areaId: storageParentId }
               : { companyId, name: trimmed, localId: storageParentId },
           );
+          createdNodeTarget = { scopeType: 'point-of-sale', scopeId: pointOfSale.id };
+        }
+      }
+
+      if (isCreateMode && trimmedEmail && createdNodeTarget) {
+        try {
+          const invitation = await createInvitation.mutateAsync({
+            companyId,
+            scopeType: createdNodeTarget.scopeType,
+            scopeId: createdNodeTarget.scopeId,
+            inviteeEmail: trimmedEmail,
+          });
+          setInvitationResult(invitation);
+          setInvitationError(null);
+          notifyInvitationDelivery(invitation);
+        } catch (error) {
+          setCreatedInviteTarget(createdNodeTarget);
+          setInvitationResult(null);
+          setInvitationError(getInvitationErrorMessage(error));
+          return;
         }
       }
 
@@ -1074,15 +1175,15 @@ const OrganizationEntityDialog = ({
 
   return (
     <Surface open onOpenChange={onOpenChange}>
-      <SurfaceContent
-        className={
-          state.mode === 'create'
-            ? '!h-auto max-h-[min(720px,100dvh)] w-full gap-0 overflow-y-auto p-0 sm:max-w-md'
-            : undefined
-        }
-      >
+        <SurfaceContent
+          className={
+            isCreateMode
+              ? '!h-auto max-h-[min(720px,100dvh)] w-full gap-0 overflow-y-auto p-0 sm:max-w-md'
+              : undefined
+          }
+        >
         <SurfaceHeader
-          className={state.mode === 'create' ? 'p-5 pb-2' : undefined}
+          className={isCreateMode ? 'p-5 pb-2' : undefined}
         >
           <SurfaceTitle>
             {state.mode === 'edit' ? 'Editar' : 'Crear'}{' '}
@@ -1096,9 +1197,9 @@ const OrganizationEntityDialog = ({
         </SurfaceHeader>
 
         <FieldGroup
-          className={state.mode === 'create' ? 'gap-5 px-5 py-4' : undefined}
+          className={isCreateMode ? 'gap-5 px-5 py-4' : undefined}
         >
-          {state.mode === 'create' && creatableKinds.length > 1 ? (
+          {isCreateMode && creatableKinds.length > 1 ? (
             <Field>
               <FieldLabel>Tipo</FieldLabel>
               <FieldContent>
@@ -1108,7 +1209,7 @@ const OrganizationEntityDialog = ({
                     setKind(value as Exclude<OrgEntityKind, 'company'>);
                     setValidationError(null);
                   }}
-                  disabled={isPending}
+                  disabled={isPending || !canEditCreateFields}
                 >
                   <SelectTrigger aria-label="Tipo de nodo">
                     <SelectValue />
@@ -1131,7 +1232,7 @@ const OrganizationEntityDialog = ({
               <Input
                 id="organization-node-name"
                 aria-label="Nombre"
-                disabled={isPending}
+                disabled={isPending || !canEditCreateFields}
                 value={name}
                 onChange={(event) => {
                   setName(event.target.value);
@@ -1151,7 +1252,7 @@ const OrganizationEntityDialog = ({
                     setDivisionId(value);
                     setValidationError(null);
                   }}
-                  disabled={isPending}
+                  disabled={isPending || !canEditCreateFields}
                 >
                   <SelectTrigger aria-label="División del local">
                     <SelectValue placeholder="Sin división" />
@@ -1186,7 +1287,7 @@ const OrganizationEntityDialog = ({
                       );
                       setValidationError(null);
                     }}
-                    disabled={isPending}
+                    disabled={isPending || !canEditCreateFields}
                   >
                     <SelectTrigger aria-label="Tipo de padre del área">
                       <SelectValue />
@@ -1210,7 +1311,7 @@ const OrganizationEntityDialog = ({
                       setAreaParentId(value);
                       setValidationError(null);
                     }}
-                    disabled={isPending}
+                    disabled={isPending || !canEditCreateFields}
                   >
                     <SelectTrigger aria-label="Padre del área">
                       <SelectValue placeholder="Selecciona un padre" />
@@ -1250,7 +1351,7 @@ const OrganizationEntityDialog = ({
                       );
                       setValidationError(null);
                     }}
-                    disabled={isPending}
+                    disabled={isPending || !canEditCreateFields}
                   >
                     <SelectTrigger aria-label="Tipo de padre del nodo">
                       <SelectValue />
@@ -1274,7 +1375,7 @@ const OrganizationEntityDialog = ({
                       setStorageParentId(value);
                       setValidationError(null);
                     }}
-                    disabled={isPending}
+                    disabled={isPending || !canEditCreateFields}
                   >
                     <SelectTrigger aria-label="Padre del nodo">
                       <SelectValue placeholder="Selecciona un padre" />
@@ -1297,23 +1398,69 @@ const OrganizationEntityDialog = ({
             </>
           ) : null}
 
+          {isCreateMode ? (
+            <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-foreground">
+                  Responsable del nodo (opcional)
+                </p>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  Si completás un correo, al crear el nodo también se generará una invitación para su responsable.
+                </p>
+              </div>
+
+              <Field className="mt-4">
+                <FieldLabel htmlFor="organization-node-responsible-email">
+                  Correo del responsable
+                </FieldLabel>
+                <FieldContent>
+                  <Input
+                    id="organization-node-responsible-email"
+                    aria-label="Correo del responsable"
+                    type="email"
+                    autoComplete="email"
+                    disabled={isPending}
+                    value={responsibleEmail}
+                    onChange={(event) => {
+                      setResponsibleEmail(event.target.value);
+                      setInvitationError(null);
+                    }}
+                    placeholder="responsable@empresa.com"
+                  />
+                </FieldContent>
+              </Field>
+
+              {createdInviteTarget && invitationError ? (
+                <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                  El nodo ya fue creado. Podés corregir el correo y reintentar la invitación sin volver a crear el nodo.
+                </p>
+              ) : null}
+
+              {invitationResult ? (
+                <p className="mt-3 text-xs leading-5 text-emerald-700">
+                  Invitación lista para {invitationResult.inviteeEmail}.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           {validationError ? (
             <FieldError errors={[{ message: validationError }]} />
           ) : null}
         </FieldGroup>
 
-        {submissionError ? (
+        {submissionError || invitationError ? (
           <p
             role="alert"
             className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
           >
-            {getEntityErrorMessage(kind, submissionError)}
+            {invitationError ?? getEntityErrorMessage(kind, submissionError)}
           </p>
         ) : null}
 
         <SurfaceFooter
           className={
-            state.mode === 'create' ? 'mt-0 p-5 pt-2' : undefined
+            isCreateMode ? 'mt-0 p-5 pt-2' : undefined
           }
         >
           <SurfaceClose asChild>
@@ -1333,7 +1480,7 @@ const OrganizationEntityDialog = ({
             onClick={() => void handleSubmit()}
           >
             {isPending ? <Loader2 className="size-4 animate-spin" /> : null}
-            Guardar
+            {createdInviteTarget ? 'Reintentar invitación' : 'Guardar'}
           </Button>
         </SurfaceFooter>
       </SurfaceContent>
@@ -1567,12 +1714,6 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
     warehouses: warehouses.length,
     pointsOfSale: pointsOfSale.length,
   };
-  const inviteTargets = entries.filter((entry) => entry.kind !== 'company').map((entry) => ({
-    scopeType: entry.scopeType,
-    scopeId: entry.scopeId,
-    scopeName: entry.label,
-    responsibility: entry.responsibility,
-  }));
 
   const syncLayout = (preserveManualPositions: boolean) => {
     setIsLayoutReady(false);
@@ -1930,13 +2071,6 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
 
   return (
     <div className="flex h-full min-h-[calc(100dvh-8.5rem)] flex-col overflow-hidden rounded-[36px] border border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(249,248,246,0.96))] shadow-[0_34px_120px_-70px_rgba(0,0,0,0.5)]">
-      <div className="border-b border-border/60 bg-background/85 px-4 py-4 sm:px-6">
-        <NodeManagementInvitePanel
-          companyId={companyId}
-          companyName={currentCompanyQuery.data?.name ?? 'Empresa'}
-          targets={inviteTargets}
-        />
-      </div>
       <div className="relative flex-1 overflow-hidden bg-[radial-gradient(circle,#d4d4d4_1px,transparent_1px)] bg-[length:18px_18px]">
         <ReactFlow<OrganizationFlowNode, OrganizationCanvasEdge>
           nodes={nodes}

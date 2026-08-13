@@ -13,6 +13,12 @@ import { createUpdatePointOfSaleUseCase } from './update-point-of-sale';
 import { createUpdateWarehouseUseCase } from './update-warehouse';
 
 const baseGateway = (): OrgHierarchyGateway => ({
+  getScopeNodeDependencyCounts: async () => ({
+    roleAssignments: 0,
+    responsibilities: 0,
+    managementInvitations: 0,
+    activeScopePreferences: 0,
+  }),
   createDivision: async () => {
     throw new Error('not implemented');
   },
@@ -134,7 +140,9 @@ describe('org hierarchy parent invariants', () => {
       },
     });
 
-    await expect(useCase({ areaId: 'area-1', name: 'Renamed Area' })).resolves.toMatchObject({
+    await expect(
+      useCase({ areaId: 'area-1', name: 'Renamed Area' }),
+    ).resolves.toMatchObject({
       id: 'area-1',
       name: 'Renamed Area',
     });

@@ -29,6 +29,9 @@ export const startServer = () => {
     databaseUrl: env.DATABASE_URL,
     nodeEnv: env.NODE_ENV,
     provisioningStaleTimeoutMs: env.PROVISIONING_STALE_TIMEOUT_MS,
+    appBaseUrl: env.APP_BASE_URL,
+    ...(env.RESEND_API_KEY ? { resendApiKey: env.RESEND_API_KEY } : {}),
+    ...(env.RESEND_FROM_EMAIL ? { resendFromEmail: env.RESEND_FROM_EMAIL } : {}),
     seedAdminEnabled: env.SEED_ADMIN_ENABLED,
     sessionCookieName: env.SESSION_COOKIE_NAME,
   });

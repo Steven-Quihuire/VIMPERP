@@ -55,6 +55,12 @@ const createInvitationResponseSchema = z.object({
   scopeId: z.string().min(1),
   scopeName: z.string().min(1),
   expiresAt: z.date(),
+  delivery: z
+    .object({
+      status: z.enum(['sent', 'failed', 'skipped']),
+      message: z.string().min(1).optional(),
+    })
+    .optional(),
 });
 
 const getInvitationResponseSchema = z.object({
@@ -82,7 +88,7 @@ const nodeResponsibilityRecordSchema = z.object({
   scopeName: z.string().min(1),
   responsibleUserId: z.string().min(1),
   responsibleUserEmail: z.string().email(),
-  responsibleUserUsername: z.string().min(1),
+  responsibleUsername: z.string().min(1),
   managedRoleKey: z.literal('node-manager'),
   assignmentMode: z.literal('subtree_inclusive'),
   baseMembershipRole: z.literal('company-user'),

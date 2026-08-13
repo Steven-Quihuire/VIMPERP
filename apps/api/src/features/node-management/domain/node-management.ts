@@ -74,6 +74,27 @@ export type NodeManagementInvitation = {
   acceptedByUserId: string | null;
 };
 
+export type NodeManagementInvitationDelivery = {
+  status: 'sent' | 'failed' | 'skipped';
+  message?: string;
+};
+
+export type SendNodeManagementInvitationEmailInput = {
+  invitationId: string;
+  inviteeEmail: string;
+  companyName: string;
+  scopeName: string;
+  scopeType: NodeManagementScopeType;
+  invitationLink: string;
+  expiresAt: Date;
+};
+
+export type NodeManagementInvitationEmailSender = {
+  sendInvitationEmail: (
+    input: SendNodeManagementInvitationEmailInput,
+  ) => Promise<NodeManagementInvitationDelivery>;
+};
+
 export type NodeManagementInvitationStatus = 'pending' | 'accepted' | 'expired';
 
 export type NodeManagementInvitationDetails = {

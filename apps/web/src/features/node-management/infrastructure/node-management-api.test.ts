@@ -44,7 +44,14 @@ describe('createNodeManagementApi', () => {
         init?.method === 'POST'
       ) {
         return Promise.resolve(
-          createJsonResponse({ invitationId: 'inv-2', invitationToken: 'token-2' }, 201),
+          createJsonResponse(
+            {
+              invitationId: 'inv-2',
+              invitationToken: 'token-2',
+              delivery: { status: 'failed', message: 'provider timeout' },
+            },
+            201,
+          ),
         );
       }
 
@@ -82,7 +89,11 @@ describe('createNodeManagementApi', () => {
         scopeId: 'local-1',
         inviteeEmail: 'manager@vimcore.test',
       }),
-    ).resolves.toEqual({ invitationId: 'inv-2', invitationToken: 'token-2' });
+    ).resolves.toEqual({
+      invitationId: 'inv-2',
+      invitationToken: 'token-2',
+      delivery: { status: 'failed', message: 'provider timeout' },
+    });
     await expect(api.getInvitation('token-2')).resolves.toEqual({ id: 'inv-2', userExists: false });
     await expect(
       api.acceptInvitation({ token: 'token-2', password: 'secret123' }),

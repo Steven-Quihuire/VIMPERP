@@ -21,7 +21,7 @@ describe('org-tree query hooks', () => {
     expect(orgTreeQueryKeys.tree('company-1')).toEqual(['org-tree', 'company-1']);
   });
 
-  it('fetches the authorized org tree and stays idle without an active company', async () => {
+  it('fetches the authorized org tree and stays idle without an active company or active scope', async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
@@ -46,6 +46,12 @@ describe('org-tree query hooks', () => {
     const idle = renderHook(() => useOrgTree(undefined, 'http://api.test'), {
       wrapper: wrapper(queryClient),
     });
+    const disabled = renderHook(
+      () => useOrgTree('company-1', 'http://api.test', false),
+      {
+        wrapper: wrapper(queryClient),
+      },
+    );
 
     await waitFor(() => expect(active.result.current.isSuccess).toBe(true));
 
@@ -62,6 +68,7 @@ describe('org-tree query hooks', () => {
       },
     ]);
     expect(idle.result.current.fetchStatus).toBe('idle');
+    expect(disabled.result.current.fetchStatus).toBe('idle');
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
