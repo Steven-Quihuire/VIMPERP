@@ -11,6 +11,7 @@ import type {
   PasswordHasher,
   SessionTokenService,
 } from '../domain/auth';
+import { createInMemoryScopeResolver, type ScopeAssignmentRecord } from '../../../shared/infrastructure/scope-hierarchy/scope-hierarchy.port';
 
 class InMemoryAuthGateway implements AuthIdentityGateway {
   private usersById = new Map<string, AuthUser>();
@@ -18,6 +19,7 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
   private sessions = new Map<string, AuthSessionRecord>();
   private membershipsByUserId = new Map<string, AuthMembership[]>();
   private activeCompanyByUserId = new Map<string, string | null>();
+  private activeScopeNodeIdByUserId = new Map<string, string | null>();
   private companyStatusByCompanyId = new Map<
     string,
     'active' | 'suspended' | 'provisioning_failed'
@@ -35,6 +37,10 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
 
   setActiveCompany(userId: string, companyId: string | null) {
     this.activeCompanyByUserId.set(userId, companyId);
+  }
+
+  seedActiveScopeNodeId(userId: string, scopeNodeId: string | null) {
+    this.activeScopeNodeIdByUserId.set(userId, scopeNodeId);
   }
 
   setCompanyStatus(
@@ -114,6 +120,15 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
     await Promise.resolve();
   }
 
+  async findActiveScopeNodeId(userId: string) {
+    return await Promise.resolve(this.activeScopeNodeIdByUserId.get(userId) ?? null);
+  }
+
+  async setActiveScopeNodeId(userId: string, scopeNodeId: string | null) {
+    this.activeScopeNodeIdByUserId.set(userId, scopeNodeId);
+    await Promise.resolve();
+  }
+
   async countRecentActiveCompanySwitches() {
     return await Promise.resolve(0);
   }
@@ -145,6 +160,39 @@ const sessionTokenService: SessionTokenService = {
   create: () => 'session-token',
 };
 
+const createScopeResolver = (assignments: ScopeAssignmentRecord[] = []) =>
+  createInMemoryScopeResolver({
+    nodes: [
+      {
+        ref: { scopeType: 'company', scopeId: 'company-1' },
+        parentRef: null,
+        companyId: 'company-1',
+        name: 'Company 1',
+      },
+      {
+        ref: { scopeType: 'local', scopeId: 'local-1' },
+        parentRef: { scopeType: 'company', scopeId: 'company-1' },
+        companyId: 'company-1',
+        name: 'Local 1',
+      },
+      {
+        ref: { scopeType: 'warehouse', scopeId: 'warehouse-1' },
+        parentRef: { scopeType: 'local', scopeId: 'local-1' },
+        companyId: 'company-1',
+        name: 'Warehouse 1',
+      },
+      {
+        ref: { scopeType: 'company', scopeId: 'company-2' },
+        parentRef: null,
+        companyId: 'company-2',
+        name: 'Company 2',
+      },
+    ],
+    assignments,
+  });
+
+const emptyScopeResolver = createScopeResolver();
+
 const adminGateway: AdminGateway = {
   getCompanySummary: async () =>
     await Promise.resolve({
@@ -153,7 +201,8 @@ const adminGateway: AdminGateway = {
       auditEventCount: 0,
       companies: [],
     }),
-  listNotifications: async () => await Promise.resolve([]),
+    listNotifications: async () => await Promise.resolve([]),
+    listNotificationsForCompanyRole: async () => await Promise.resolve([]),
   listProvisioningRuns: async () =>
     await Promise.resolve({ items: [], nextCursor: null }),
   getProvisioningRun: async () =>
@@ -239,6 +288,7 @@ describe('auth routes', () => {
       adminGateway,
       authIdentityGateway: gateway,
       passwordHasher,
+      scopeResolver: emptyScopeResolver,
       sessionTokenService,
       seedAdminEnabled: false,
       nodeEnv: 'test',
@@ -267,6 +317,7 @@ describe('auth routes', () => {
       },
       memberships: [],
       activeCompany: null,
+      activeScope: null,
       activeLocalId: null,
       capabilities: [],
     });
@@ -286,6 +337,7 @@ describe('auth routes', () => {
       adminGateway,
       authIdentityGateway: gateway,
       passwordHasher,
+      scopeResolver: emptyScopeResolver,
       sessionTokenService,
       seedAdminEnabled: false,
       nodeEnv: 'test',
@@ -313,6 +365,7 @@ describe('auth routes', () => {
       adminGateway,
       authIdentityGateway: gateway,
       passwordHasher,
+      scopeResolver: emptyScopeResolver,
       sessionTokenService,
       seedAdminEnabled: false,
       nodeEnv: 'test',
@@ -350,6 +403,7 @@ describe('auth routes', () => {
       adminGateway,
       authIdentityGateway: gateway,
       passwordHasher,
+      scopeResolver: emptyScopeResolver,
       sessionTokenService,
       seedAdminEnabled: false,
       nodeEnv: 'test',
@@ -380,6 +434,7 @@ describe('auth routes', () => {
         companyId: 'company-1',
         status: 'active',
       },
+      activeScope: null,
       activeLocalId: null,
       capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
     });
@@ -405,6 +460,7 @@ describe('auth routes', () => {
       adminGateway,
       authIdentityGateway: gateway,
       passwordHasher,
+      scopeResolver: emptyScopeResolver,
       sessionTokenService,
       seedAdminEnabled: false,
       nodeEnv: 'test',
@@ -434,6 +490,7 @@ describe('auth routes', () => {
         companyId: 'company-2',
         status: 'active',
       },
+      activeScope: null,
       activeLocalId: null,
       capabilities: ['catalog.read', 'catalog.write'],
     });
@@ -458,6 +515,7 @@ describe('auth routes', () => {
       adminGateway,
       authIdentityGateway: gateway,
       passwordHasher,
+      scopeResolver: emptyScopeResolver,
       sessionTokenService,
       seedAdminEnabled: false,
       nodeEnv: 'test',
@@ -484,8 +542,74 @@ describe('auth routes', () => {
         companyId: 'company-1',
         status: 'active',
       },
+      activeScope: null,
       activeLocalId: null,
       capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
+    });
+  });
+
+  it('returns activeScope in auth/me and rejects unauthorized active-scope switches', async () => {
+    const gateway = new InMemoryAuthGateway();
+
+    gateway.addUser({
+      id: 'user-1',
+      email: 'owner@vimcore.test',
+      username: 'owner',
+      passwordHash: 'hashed:secret123',
+    });
+    gateway.setMemberships('user-1', [
+      { companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null },
+    ]);
+    gateway.setActiveCompany('user-1', 'company-1');
+    gateway.seedActiveScopeNodeId('user-1', 'local:local-1');
+
+    const scopeResolver = createScopeResolver([
+      {
+        companyId: 'company-1',
+        userId: 'user-1',
+        scope: { scopeType: 'local', scopeId: 'local-1' },
+        mode: 'exact_node',
+      },
+    ]);
+
+    const app = createApp({
+      adminGateway,
+      authIdentityGateway: gateway,
+      passwordHasher,
+      scopeResolver,
+      sessionTokenService,
+      seedAdminEnabled: false,
+      nodeEnv: 'test',
+    });
+
+    const loginResponse = await request(app).post('/auth/login').send({
+      identifier: 'owner',
+      password: 'secret123',
+    });
+    const sessionCookie = getSessionCookie(loginResponse.headers['set-cookie']);
+
+    const meResponse = await request(app)
+      .get('/auth/me')
+      .set('Cookie', sessionCookie);
+    const switchResponse = await request(app)
+      .post('/auth/me/active-scope')
+      .set('Cookie', sessionCookie)
+      .send({
+        scope: { scopeType: 'warehouse', scopeId: 'warehouse-1' },
+      });
+
+    expect(meResponse.status).toBe(200);
+    expect(meResponse.body.activeScope).toEqual({
+      scopeType: 'local',
+      scopeId: 'local-1',
+    });
+    expect(meResponse.body.activeLocalId).toBe('local-1');
+    expect(switchResponse.status).toBe(403);
+    expect(switchResponse.body).toEqual({
+      error: {
+        code: 'FORBIDDEN',
+        message: 'Forbidden',
+      },
     });
   });
 
@@ -503,6 +627,7 @@ describe('auth routes', () => {
       adminGateway,
       authIdentityGateway: gateway,
       passwordHasher,
+      scopeResolver: emptyScopeResolver,
       sessionTokenService,
       seedAdminEnabled: false,
       nodeEnv: 'test',
@@ -536,6 +661,7 @@ describe('auth routes', () => {
       adminGateway,
       authIdentityGateway: gateway,
       passwordHasher,
+      scopeResolver: emptyScopeResolver,
       sessionTokenService,
       seedAdminEnabled: false,
       nodeEnv: 'test',
@@ -591,6 +717,7 @@ describe('auth routes', () => {
       adminGateway,
       authIdentityGateway: gateway,
       passwordHasher,
+      scopeResolver: emptyScopeResolver,
       sessionTokenService,
       seedAdminEnabled: false,
       nodeEnv: 'test',
@@ -636,6 +763,7 @@ describe('auth routes', () => {
     const app = createApp({
       adminGateway,
       passwordHasher,
+      scopeResolver: emptyScopeResolver,
       sessionTokenService,
       seedAdminEnabled: true,
       nodeEnv: 'development',
@@ -653,6 +781,7 @@ describe('auth routes', () => {
     const app = createApp({
       adminGateway,
       passwordHasher,
+      scopeResolver: emptyScopeResolver,
       sessionTokenService,
       seedAdminEnabled: true,
       nodeEnv: 'production',

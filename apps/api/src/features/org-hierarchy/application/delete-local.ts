@@ -9,18 +9,31 @@ export const createDeleteLocalUseCase = ({
 }: {
   gateway: OrgHierarchyGateway;
 }) => {
-  return async (localId: string): Promise<void> => {
-    const [itemCount, membershipCount] = await Promise.all([
-      gateway.countItemsInLocal(localId),
-      gateway.countMembershipsInLocal(localId),
+  return async (input: {
+    localId: string;
+    actorUserId: string;
+    correlationId: string;
+  }): Promise<void> => {
+    const [itemCount, membershipCount, areaCount, warehouseCount, pointOfSaleCount] = await Promise.all([
+      gateway.countItemsInLocal(input.localId),
+      gateway.countMembershipsInLocal(input.localId),
+      gateway.countAreasInLocal(input.localId),
+      gateway.countWarehousesInLocal(input.localId),
+      gateway.countPointsOfSaleInLocal(input.localId),
     ]);
 
-    if (itemCount > 0 || membershipCount > 0) {
+    if (
+      itemCount > 0 ||
+      membershipCount > 0 ||
+      areaCount > 0 ||
+      warehouseCount > 0 ||
+      pointOfSaleCount > 0
+    ) {
       throw new LocalConflictError();
     }
 
     try {
-      await gateway.deleteLocal(localId);
+      await gateway.deleteLocal(input);
     } catch (error) {
       if (error instanceof LocalNotFoundError) {
         throw error;

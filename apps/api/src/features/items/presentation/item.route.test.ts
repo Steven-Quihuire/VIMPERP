@@ -1,4 +1,5 @@
 import request from 'supertest';
+import express from 'express';
 import { describe, expect, it } from 'vitest';
 
 import { createApp } from '../../../app/create-app';
@@ -11,6 +12,7 @@ import type {
   PasswordHasher,
   SessionTokenService,
 } from '../../identity/domain/auth';
+import { createInMemoryScopeResolver, type ScopeAssignmentRecord } from '../../../shared/infrastructure/scope-hierarchy/scope-hierarchy.port';
 import type {
   CategoryGateway,
   Item,
@@ -20,6 +22,7 @@ import type {
   ItemType,
   ItemUnit,
 } from '../domain/item';
+import { createItemRouter } from './item.router';
 
 class InMemoryAuthGateway implements AuthIdentityGateway {
   private usersById = new Map<string, AuthUser>();
@@ -27,6 +30,7 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
   private sessions = new Map<string, AuthSessionRecord>();
   private membershipsByUserId = new Map<string, AuthMembership[]>();
   private activeCompanyByUserId = new Map<string, string | null>();
+  private activeScopeNodeIdByUserId = new Map<string, string | null>();
   private activeLocalByUserId = new Map<string, string | null>();
   private localCompanyByLocalId = new Map<string, string>();
   private companyStatusByCompanyId = new Map<
@@ -50,6 +54,15 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
 
   setActiveLocal(userId: string, localId: string | null) {
     this.activeLocalByUserId.set(userId, localId);
+
+    this.activeScopeNodeIdByUserId.set(
+      userId,
+      localId === null ? null : `local:${localId}`,
+    );
+  }
+
+  seedActiveScopeNodeId(userId: string, scopeNodeId: string | null) {
+    this.activeScopeNodeIdByUserId.set(userId, scopeNodeId);
   }
 
   setLocalCompany(localId: string, companyId: string) {
@@ -114,6 +127,15 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
 
   async setActiveCompanyId(userId: string, companyId: string) {
     this.activeCompanyByUserId.set(userId, companyId);
+    await Promise.resolve();
+  }
+
+  async findActiveScopeNodeId(userId: string) {
+    return await Promise.resolve(this.activeScopeNodeIdByUserId.get(userId) ?? null);
+  }
+
+  async setActiveScopeNodeId(userId: string, scopeNodeId: string | null) {
+    this.activeScopeNodeIdByUserId.set(userId, scopeNodeId);
     await Promise.resolve();
   }
 
@@ -466,6 +488,37 @@ const applicationErrorRecorder: ApplicationErrorRecorder = {
   record: async () => await Promise.resolve(),
 };
 
+const createScopeResolver = (assignments: ScopeAssignmentRecord[]) =>
+  createInMemoryScopeResolver({
+    nodes: [
+      {
+        ref: { scopeType: 'company', scopeId: 'company-a' },
+        parentRef: null,
+        companyId: 'company-a',
+        name: 'Company A',
+      },
+      {
+        ref: { scopeType: 'local', scopeId: 'local-1' },
+        parentRef: { scopeType: 'company', scopeId: 'company-a' },
+        companyId: 'company-a',
+        name: 'Local 1',
+      },
+      {
+        ref: { scopeType: 'warehouse', scopeId: 'warehouse-1' },
+        parentRef: { scopeType: 'local', scopeId: 'local-1' },
+        companyId: 'company-a',
+        name: 'Warehouse 1',
+      },
+      {
+        ref: { scopeType: 'company', scopeId: 'company-b' },
+        parentRef: null,
+        companyId: 'company-b',
+        name: 'Company B',
+      },
+    ],
+    assignments,
+  });
+
 const getSessionCookie = (headers: string | string[] | undefined): string => {
   const cookieHeaders = Array.isArray(headers)
     ? headers
@@ -499,6 +552,26 @@ const createAuthenticatedApp = async ({
 } = {}) => {
   const authGateway = new InMemoryAuthGateway();
   const sessionTokenService = createSessionTokenService();
+  const scopeResolver = createScopeResolver([
+    {
+      companyId: 'company-a',
+      userId: 'owner-user',
+      scope: { scopeType: 'company', scopeId: 'company-a' },
+      mode: 'subtree_inclusive',
+    },
+    {
+      companyId: 'company-a',
+      userId: 'member-user',
+      scope: { scopeType: 'company', scopeId: 'company-a' },
+      mode: 'subtree_inclusive',
+    },
+    {
+      companyId: 'company-b',
+      userId: 'other-owner-user',
+      scope: { scopeType: 'company', scopeId: 'company-b' },
+      mode: 'subtree_inclusive',
+    },
+  ]);
 
   authGateway.addUser({
     id: 'owner-user',
@@ -510,6 +583,7 @@ const createAuthenticatedApp = async ({
     { companyId: 'company-a', role: 'company-owner', divisionId: null, localId: null },
   ]);
   authGateway.setActiveCompany('owner-user', 'company-a');
+  authGateway.seedActiveScopeNodeId('owner-user', 'company:company-a');
   authGateway.setCompanyStatus('company-a', 'active');
   authGateway.setCompanyStatus('company-b', 'active');
 
@@ -523,6 +597,7 @@ const createAuthenticatedApp = async ({
     { companyId: 'company-a', role: 'company-user', divisionId: null, localId: null },
   ]);
   authGateway.setActiveCompany('member-user', 'company-a');
+  authGateway.seedActiveScopeNodeId('member-user', 'company:company-a');
 
   authGateway.addUser({
     id: 'other-owner-user',
@@ -534,16 +609,18 @@ const createAuthenticatedApp = async ({
     { companyId: 'company-b', role: 'company-owner', divisionId: null, localId: null },
   ]);
   authGateway.setActiveCompany('other-owner-user', 'company-b');
+  authGateway.seedActiveScopeNodeId('other-owner-user', 'company:company-b');
 
   const app = createApp({
     authIdentityGateway: authGateway,
-    passwordHasher,
-    provisioningRecorder: applicationErrorRecorder as never,
-    sessionTokenService,
-    seedAdminEnabled: false,
-    nodeEnv: 'test',
-    itemGateway,
-  } as never);
+      passwordHasher,
+      provisioningRecorder: applicationErrorRecorder as never,
+      sessionTokenService,
+      seedAdminEnabled: false,
+      nodeEnv: 'test',
+      itemGateway,
+      scopeResolver,
+    } as never);
 
   const ownerLoginResponse = await request(app).post('/auth/login').send({
     identifier: 'owner',
@@ -957,6 +1034,23 @@ describe('item routes', () => {
     expect(itemGateway.createItemCalls).toHaveLength(0);
   });
 
+  it('denies scope-bound item routes until a user with multiple authorized scopes selects an active scope', async () => {
+    const { app, authGateway, ownerSessionCookie, itemGateway } =
+      await createAuthenticatedApp();
+
+    authGateway.seedActiveScopeNodeId('owner-user', null);
+
+    const response = await request(app)
+      .get('/items')
+      .set('Cookie', ownerSessionCookie);
+
+    expect(response.status).toBe(403);
+    expect((response.body as { error: { code: string } }).error.code).toBe(
+      'FORBIDDEN',
+    );
+    expect(itemGateway.createItemCalls).toHaveLength(0);
+  });
+
   it('denies tenant routes when the active company lifecycle is blocked', async () => {
     const { app, authGateway, ownerSessionCookie } = await createAuthenticatedApp();
 
@@ -1041,6 +1135,108 @@ describe('item routes', () => {
     expect(response.body.items[0]).toEqual(
       expect.objectContaining({ id: 'item-local-1', localId: 'local-1' }),
     );
+  });
+
+  it('keeps item scope at company level when the active scope is a warehouse', async () => {
+    const itemGateway = new InMemoryItemGateway();
+    itemGateway.items.push(
+      {
+        id: 'item-company',
+        companyId: 'company-a',
+        localId: null,
+        categoryId: null,
+        sku: 'C-1',
+        name: 'Company Item',
+        type: 'product',
+        unit: 'unit',
+        unitPrice: 10,
+        tracksStock: true,
+        trackBatchMode: 'none',
+        deletedAt: null,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      },
+      {
+        id: 'item-local-1',
+        companyId: 'company-a',
+        localId: 'local-1',
+        categoryId: null,
+        sku: 'L-1',
+        name: 'Local Item',
+        type: 'product',
+        unit: 'unit',
+        unitPrice: 12,
+        tracksStock: true,
+        trackBatchMode: 'none',
+        deletedAt: null,
+        createdAt: new Date('2026-01-02T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+      },
+    );
+
+    const { app, authGateway, ownerSessionCookie } = await createAuthenticatedApp({ itemGateway });
+    authGateway.seedActiveScopeNodeId('owner-user', 'warehouse:warehouse-1');
+
+    const response = await request(app)
+      .get('/items')
+      .set('Cookie', ownerSessionCookie);
+
+    expect(response.status).toBe(200);
+    expect(response.body.items).toHaveLength(1);
+    expect(response.body.items[0]).toEqual(
+      expect.objectContaining({ id: 'item-company', localId: null }),
+    );
+  });
+
+  it('derives localId from activeScope only when the active scope is local', async () => {
+    const listItems = async (input: {
+      companyId: string;
+      localId: string | null;
+      capabilities: ('catalog.read' | 'catalog.write' | 'catalog.delete')[];
+      companyStatus: 'active' | 'suspended' | 'provisioning_failed';
+      limit: number;
+      cursor?: string;
+    }) => ({ items: [{ id: input.localId ?? 'company-scope' }], nextCursor: null });
+
+    const app = express();
+    app.use(express.json());
+    app.use(
+      createItemRouter({
+        requireAuth: (_request, response, next) => {
+          response.locals.auth = {
+            user: { id: 'owner-user', email: 'owner@vimcore.test', username: 'owner' },
+            memberships: [
+              {
+                companyId: 'company-a',
+                role: 'company-owner',
+                divisionId: null,
+                localId: null,
+              },
+            ],
+            activeCompany: { companyId: 'company-a', status: 'active' },
+            activeScope: { scopeType: 'warehouse', scopeId: 'warehouse-1' },
+            activeLocalId: 'local-1',
+            capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
+          };
+          next();
+        },
+        createItem: async () => ({ itemId: 'item-1' }),
+        updateItem: async () => ({ itemId: 'item-1' }),
+        softDeleteItem: async () => undefined,
+        getItem: async () => null,
+        listItems,
+        createCategory: async () => ({ categoryId: 'category-1' }),
+        updateCategory: async () => ({ categoryId: 'category-1' }),
+      }),
+    );
+
+    const response = await request(app).get('/items');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      items: [{ id: 'company-scope' }],
+      nextCursor: null,
+    });
   });
 
   it('derives localId from the session on item creation, not from the body', async () => {

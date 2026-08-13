@@ -10,6 +10,7 @@ import type {
   PasswordHasher,
   SessionTokenService,
 } from '../../identity/domain/auth';
+import { createInMemoryScopeResolver } from '../../../shared/infrastructure/scope-hierarchy/scope-hierarchy.port';
 import type {
   AdminGateway,
   AdminApplicationErrorDetail,
@@ -91,6 +92,14 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
     await Promise.resolve();
   }
 
+  async findActiveScopeNodeId() {
+    return await Promise.resolve(null);
+  }
+
+  async setActiveScopeNodeId() {
+    await Promise.resolve();
+  }
+
   async countRecentActiveCompanySwitches() {
     return await Promise.resolve(0);
   }
@@ -145,6 +154,26 @@ class InMemoryAdminGateway implements AdminGateway {
         targetRole: 'platform-admin',
         type: 'company.registered',
         message: 'Northwind registered',
+        createdAt: '2026-07-27T10:01:00.000Z',
+      },
+    ]);
+  }
+
+  async listNotificationsForCompanyRole(input: {
+    companyId: string;
+    targetRole: AuthMembership['role'];
+  }): Promise<AdminNotification[]> {
+    if (input.companyId !== 'company-1' || input.targetRole !== 'company-owner') {
+      return await Promise.resolve([]);
+    }
+
+    return await Promise.resolve([
+      {
+        id: 'notification-company-1',
+        companyId: 'company-1',
+        targetRole: 'company-owner',
+        type: 'company.registered',
+        message: 'Vimcore Labs registered',
         createdAt: '2026-07-27T10:01:00.000Z',
       },
     ]);
@@ -336,6 +365,7 @@ const createAuthenticatedApp = async (role: AuthMembership['role']) => {
     adminGateway,
     authIdentityGateway: gateway,
     passwordHasher,
+    scopeResolver: createInMemoryScopeResolver({ nodes: [], assignments: [] }),
     sessionTokenService,
     seedAdminEnabled: false,
     nodeEnv: 'test',
@@ -406,6 +436,25 @@ describe('admin routes', () => {
           message: 'Northwind registered',
           createdAt: '2026-07-27T10:01:00.000Z',
         },
+      ],
+    });
+  });
+
+  it('returns notifications scoped to the active company owner', async () => {
+    const { app, sessionCookie } = await createCompanyOwnerApp();
+
+    const response = await request(app)
+      .get('/notifications')
+      .set('Cookie', sessionCookie);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      notifications: [
+        expect.objectContaining({
+          companyId: 'company-1',
+          targetRole: 'company-owner',
+          type: 'company.registered',
+        }),
       ],
     });
   });

@@ -1,6 +1,4 @@
 {
-  "id": "1937623d-7694-4d2e-a78e-f485973e0153",
-  "prevId": "5aa88196-afe2-4b87-8772-68a525ef3e48",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -81,9 +79,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "application_errors_fingerprint_idx": {
           "name": "application_errors_fingerprint_idx",
@@ -96,9 +94,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "application_errors_created_at_idx": {
           "name": "application_errors_created_at_idx",
@@ -111,9 +109,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -174,6 +172,40 @@
         }
       },
       "indexes": {
+        "areas_company_division_kind_name_idx": {
+          "name": "areas_company_division_kind_name_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "division_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "kind",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"areas\".\"division_id\" IS NOT NULL AND \"areas\".\"local_id\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "areas_company_local_kind_name_idx": {
           "name": "areas_company_local_kind_name_idx",
           "columns": [
@@ -203,9 +235,10 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "where": "\"areas\".\"local_id\" IS NOT NULL AND \"areas\".\"division_id\" IS NULL",
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "areas_company_idx": {
           "name": "areas_company_idx",
@@ -218,9 +251,24 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
+        },
+        "areas_division_idx": {
+          "name": "areas_division_idx",
+          "columns": [
+            {
+              "expression": "division_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         },
         "areas_local_idx": {
           "name": "areas_local_idx",
@@ -233,56 +281,61 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "areas_company_id_companies_id_fk": {
           "name": "areas_company_id_companies_id_fk",
           "tableFrom": "areas",
+          "tableTo": "companies",
           "columnsFrom": [
             "company_id"
           ],
-          "tableTo": "companies",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
         },
         "areas_division_id_divisions_id_fk": {
           "name": "areas_division_id_divisions_id_fk",
           "tableFrom": "areas",
+          "tableTo": "divisions",
           "columnsFrom": [
             "division_id"
           ],
-          "tableTo": "divisions",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
-        "areas_local_id_branches_id_fk": {
-          "name": "areas_local_id_branches_id_fk",
+        "areas_local_id_locals_id_fk": {
+          "name": "areas_local_id_locals_id_fk",
           "tableFrom": "areas",
+          "tableTo": "locals",
           "columnsFrom": [
             "local_id"
           ],
-          "tableTo": "branches",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "areas_exactly_one_parent_check": {
+          "name": "areas_exactly_one_parent_check",
+          "value": "((\"areas\".\"division_id\" IS NOT NULL AND \"areas\".\"local_id\" IS NULL) OR (\"areas\".\"division_id\" IS NULL AND \"areas\".\"local_id\" IS NOT NULL))"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.audit_events": {
@@ -386,9 +439,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "audit_events_correlation_id_idx": {
           "name": "audit_events_correlation_id_idx",
@@ -401,9 +454,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "audit_events_local_id_idx": {
           "name": "audit_events_local_id_idx",
@@ -416,69 +469,12 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.branches": {
-      "name": "branches",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "company_id": {
-          "name": "company_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "division_id": {
-          "name": "division_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "locale": {
-          "name": "locale",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "branches_division_id_divisions_id_fk": {
-          "name": "branches_division_id_divisions_id_fk",
-          "tableFrom": "branches",
-          "columnsFrom": [
-            "division_id"
-          ],
-          "tableTo": "divisions",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        }
-      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -639,9 +635,9 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -698,24 +694,24 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "divisions_company_id_companies_id_fk": {
           "name": "divisions_company_id_companies_id_fk",
           "tableFrom": "divisions",
+          "tableTo": "companies",
           "columnsFrom": [
             "company_id"
           ],
-          "tableTo": "companies",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -778,9 +774,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "employees_area_idx": {
           "name": "employees_area_idx",
@@ -793,9 +789,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "employees_company_user_unique_idx": {
           "name": "employees_company_user_unique_idx",
@@ -814,51 +810,51 @@
             }
           ],
           "isUnique": true,
-          "with": {},
-          "method": "btree",
           "where": "\"employees\".\"user_id\" IS NOT NULL",
-          "concurrently": false
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
         "employees_company_id_companies_id_fk": {
           "name": "employees_company_id_companies_id_fk",
           "tableFrom": "employees",
+          "tableTo": "companies",
           "columnsFrom": [
             "company_id"
           ],
-          "tableTo": "companies",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "employees_user_id_users_id_fk": {
           "name": "employees_user_id_users_id_fk",
           "tableFrom": "employees",
+          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
-          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "employees_area_id_areas_id_fk": {
           "name": "employees_area_id_areas_id_fk",
           "tableFrom": "employees",
+          "tableTo": "areas",
           "columnsFrom": [
             "area_id"
           ],
-          "tableTo": "areas",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -940,37 +936,37 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "item_categories_company_id_companies_id_fk": {
           "name": "item_categories_company_id_companies_id_fk",
           "tableFrom": "item_categories",
+          "tableTo": "companies",
           "columnsFrom": [
             "company_id"
           ],
-          "tableTo": "companies",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
         },
         "item_categories_parent_id_item_categories_id_fk": {
           "name": "item_categories_parent_id_item_categories_id_fk",
           "tableFrom": "item_categories",
+          "tableTo": "item_categories",
           "columnsFrom": [
             "parent_id"
           ],
-          "tableTo": "item_categories",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -1103,38 +1099,183 @@
             }
           ],
           "isUnique": true,
-          "with": {},
-          "method": "btree",
           "where": "\"items\".\"sku\" IS NOT NULL",
-          "concurrently": false
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
         "items_company_id_companies_id_fk": {
           "name": "items_company_id_companies_id_fk",
           "tableFrom": "items",
+          "tableTo": "companies",
           "columnsFrom": [
             "company_id"
           ],
-          "tableTo": "companies",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
         },
         "items_category_id_item_categories_id_fk": {
           "name": "items_category_id_item_categories_id_fk",
           "tableFrom": "items",
+          "tableTo": "item_categories",
           "columnsFrom": [
             "category_id"
           ],
-          "tableTo": "item_categories",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.locals": {
+      "name": "locals",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "division_id": {
+          "name": "division_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "locale": {
+          "name": "locale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "locals_company_name_root_idx": {
+          "name": "locals_company_name_root_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"locals\".\"division_id\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "locals_division_name_idx": {
+          "name": "locals_division_name_idx",
+          "columns": [
+            {
+              "expression": "division_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"locals\".\"division_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "locals_company_idx": {
+          "name": "locals_company_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "locals_division_idx": {
+          "name": "locals_division_idx",
+          "columns": [
+            {
+              "expression": "division_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "locals_company_id_companies_id_fk": {
+          "name": "locals_company_id_companies_id_fk",
+          "tableFrom": "locals",
+          "tableTo": "companies",
+          "columnsFrom": [
+            "company_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "locals_division_id_divisions_id_fk": {
+          "name": "locals_division_id_divisions_id_fk",
+          "tableFrom": "locals",
+          "tableTo": "divisions",
+          "columnsFrom": [
+            "division_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -1241,9 +1382,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -1289,9 +1430,9 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -1344,6 +1485,34 @@
         }
       },
       "indexes": {
+        "points_of_sale_company_area_name_idx": {
+          "name": "points_of_sale_company_area_name_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "area_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"points_of_sale\".\"area_id\" IS NOT NULL AND \"points_of_sale\".\"local_id\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "points_of_sale_company_local_name_idx": {
           "name": "points_of_sale_company_local_name_idx",
           "columns": [
@@ -1367,9 +1536,10 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "where": "\"points_of_sale\".\"local_id\" IS NOT NULL AND \"points_of_sale\".\"area_id\" IS NULL",
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "points_of_sale_company_idx": {
           "name": "points_of_sale_company_idx",
@@ -1382,9 +1552,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "points_of_sale_local_idx": {
           "name": "points_of_sale_local_idx",
@@ -1397,9 +1567,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "points_of_sale_area_idx": {
           "name": "points_of_sale_area_idx",
@@ -1412,56 +1582,61 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "points_of_sale_company_id_companies_id_fk": {
           "name": "points_of_sale_company_id_companies_id_fk",
           "tableFrom": "points_of_sale",
+          "tableTo": "companies",
           "columnsFrom": [
             "company_id"
           ],
-          "tableTo": "companies",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
         },
         "points_of_sale_area_id_areas_id_fk": {
           "name": "points_of_sale_area_id_areas_id_fk",
           "tableFrom": "points_of_sale",
+          "tableTo": "areas",
           "columnsFrom": [
             "area_id"
           ],
-          "tableTo": "areas",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
         },
-        "points_of_sale_local_id_branches_id_fk": {
-          "name": "points_of_sale_local_id_branches_id_fk",
+        "points_of_sale_local_id_locals_id_fk": {
+          "name": "points_of_sale_local_id_locals_id_fk",
           "tableFrom": "points_of_sale",
+          "tableTo": "locals",
           "columnsFrom": [
             "local_id"
           ],
-          "tableTo": "branches",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "points_of_sale_exactly_one_parent_check": {
+          "name": "points_of_sale_exactly_one_parent_check",
+          "value": "((\"points_of_sale\".\"area_id\" IS NOT NULL AND \"points_of_sale\".\"local_id\" IS NULL) OR (\"points_of_sale\".\"area_id\" IS NULL AND \"points_of_sale\".\"local_id\" IS NOT NULL))"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.privacy_consents": {
@@ -1523,9 +1698,9 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -1582,9 +1757,9 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -1691,10 +1866,10 @@
             }
           ],
           "isUnique": true,
-          "with": {},
-          "method": "btree",
           "where": "\"provisioning_runs\".\"idempotency_key\" IS NOT NULL",
-          "concurrently": false
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         },
         "provisioning_runs_correlation_id_idx": {
           "name": "provisioning_runs_correlation_id_idx",
@@ -1707,9 +1882,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "provisioning_runs_status_created_at_idx": {
           "name": "provisioning_runs_status_created_at_idx",
@@ -1728,9 +1903,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -1807,9 +1982,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "provisioning_steps_status_idx": {
           "name": "provisioning_steps_status_idx",
@@ -1822,9 +1997,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -1858,6 +2033,12 @@
         },
         "role_id": {
           "name": "role_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope_node_id": {
+          "name": "scope_node_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -1901,9 +2082,24 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
+        },
+        "role_assignments_scope_node_idx": {
+          "name": "role_assignments_scope_node_idx",
+          "columns": [
+            {
+              "expression": "scope_node_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         },
         "role_assignments_scope_idx": {
           "name": "role_assignments_scope_idx",
@@ -1922,9 +2118,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "role_assignments_unique_scope_idx": {
           "name": "role_assignments_unique_scope_idx",
@@ -1961,50 +2157,63 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "role_assignments_company_id_companies_id_fk": {
           "name": "role_assignments_company_id_companies_id_fk",
           "tableFrom": "role_assignments",
+          "tableTo": "companies",
           "columnsFrom": [
             "company_id"
           ],
-          "tableTo": "companies",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "role_assignments_user_id_users_id_fk": {
           "name": "role_assignments_user_id_users_id_fk",
           "tableFrom": "role_assignments",
+          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
-          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "role_assignments_role_id_roles_id_fk": {
           "name": "role_assignments_role_id_roles_id_fk",
           "tableFrom": "role_assignments",
+          "tableTo": "roles",
           "columnsFrom": [
             "role_id"
           ],
-          "tableTo": "roles",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "role_assignments_scope_node_id_scope_nodes_id_fk": {
+          "name": "role_assignments_scope_node_id_scope_nodes_id_fk",
+          "tableFrom": "role_assignments",
+          "tableTo": "scope_nodes",
+          "columnsFrom": [
+            "scope_node_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2048,9 +2257,9 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "role_permissions_permission_idx": {
           "name": "role_permissions_permission_idx",
@@ -2063,37 +2272,37 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "role_permissions_role_id_roles_id_fk": {
           "name": "role_permissions_role_id_roles_id_fk",
           "tableFrom": "role_permissions",
+          "tableTo": "roles",
           "columnsFrom": [
             "role_id"
           ],
-          "tableTo": "roles",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "role_permissions_permission_id_permissions_id_fk": {
           "name": "role_permissions_permission_id_permissions_id_fk",
           "tableFrom": "role_permissions",
+          "tableTo": "permissions",
           "columnsFrom": [
             "permission_id"
           ],
-          "tableTo": "permissions",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2163,9 +2372,9 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "roles_company_idx": {
           "name": "roles_company_idx",
@@ -2178,24 +2387,160 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "roles_company_id_companies_id_fk": {
           "name": "roles_company_id_companies_id_fk",
           "tableFrom": "roles",
+          "tableTo": "companies",
           "columnsFrom": [
             "company_id"
           ],
-          "tableTo": "companies",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.scope_nodes": {
+      "name": "scope_nodes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "node_type": {
+          "name": "node_type",
+          "type": "scope_node_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "parent_scope_node_id": {
+          "name": "parent_scope_node_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "scope_nodes_node_source_idx": {
+          "name": "scope_nodes_node_source_idx",
+          "columns": [
+            {
+              "expression": "node_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "source_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "scope_nodes_company_idx": {
+          "name": "scope_nodes_company_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "scope_nodes_parent_scope_node_idx": {
+          "name": "scope_nodes_parent_scope_node_idx",
+          "columns": [
+            {
+              "expression": "parent_scope_node_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "scope_nodes_company_id_companies_id_fk": {
+          "name": "scope_nodes_company_id_companies_id_fk",
+          "tableFrom": "scope_nodes",
+          "tableTo": "companies",
+          "columnsFrom": [
+            "company_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "scope_nodes_parent_scope_node_id_scope_nodes_id_fk": {
+          "name": "scope_nodes_parent_scope_node_id_scope_nodes_id_fk",
+          "tableFrom": "scope_nodes",
+          "tableTo": "scope_nodes",
+          "columnsFrom": [
+            "parent_scope_node_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2228,6 +2573,97 @@
         }
       },
       "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.stale_role_assignments": {
+      "name": "stale_role_assignments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role_id": {
+          "name": "role_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope_type": {
+          "name": "scope_type",
+          "type": "scope_node_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope_id": {
+          "name": "scope_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expected_scope_node_id": {
+          "name": "expected_scope_node_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "quarantine_reason": {
+          "name": "quarantine_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quarantined_at": {
+          "name": "quarantined_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "stale_role_assignments_company_idx": {
+          "name": "stale_role_assignments_company_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -2294,15 +2730,15 @@
         "user_preferences_active_company_id_companies_id_fk": {
           "name": "user_preferences_active_company_id_companies_id_fk",
           "tableFrom": "user_preferences",
+          "tableTo": "companies",
           "columnsFrom": [
             "active_company_id"
           ],
-          "tableTo": "companies",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2346,17 +2782,17 @@
       "uniqueConstraints": {
         "users_email_unique": {
           "name": "users_email_unique",
+          "nullsNotDistinct": false,
           "columns": [
             "email"
-          ],
-          "nullsNotDistinct": false
+          ]
         },
         "users_username_unique": {
           "name": "users_username_unique",
+          "nullsNotDistinct": false,
           "columns": [
             "username"
-          ],
-          "nullsNotDistinct": false
+          ]
         }
       },
       "policies": {},
@@ -2406,6 +2842,34 @@
         }
       },
       "indexes": {
+        "warehouses_company_area_name_idx": {
+          "name": "warehouses_company_area_name_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "area_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"warehouses\".\"area_id\" IS NOT NULL AND \"warehouses\".\"local_id\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "warehouses_company_local_name_idx": {
           "name": "warehouses_company_local_name_idx",
           "columns": [
@@ -2429,9 +2893,10 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "where": "\"warehouses\".\"local_id\" IS NOT NULL AND \"warehouses\".\"area_id\" IS NULL",
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "warehouses_company_idx": {
           "name": "warehouses_company_idx",
@@ -2444,9 +2909,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "warehouses_local_idx": {
           "name": "warehouses_local_idx",
@@ -2459,9 +2924,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "warehouses_area_idx": {
           "name": "warehouses_area_idx",
@@ -2474,56 +2939,61 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "warehouses_company_id_companies_id_fk": {
           "name": "warehouses_company_id_companies_id_fk",
           "tableFrom": "warehouses",
+          "tableTo": "companies",
           "columnsFrom": [
             "company_id"
           ],
-          "tableTo": "companies",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
         },
         "warehouses_area_id_areas_id_fk": {
           "name": "warehouses_area_id_areas_id_fk",
           "tableFrom": "warehouses",
+          "tableTo": "areas",
           "columnsFrom": [
             "area_id"
           ],
-          "tableTo": "areas",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
         },
-        "warehouses_local_id_branches_id_fk": {
-          "name": "warehouses_local_id_branches_id_fk",
+        "warehouses_local_id_locals_id_fk": {
+          "name": "warehouses_local_id_locals_id_fk",
           "tableFrom": "warehouses",
+          "tableTo": "locals",
           "columnsFrom": [
             "local_id"
           ],
-          "tableTo": "branches",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "warehouses_exactly_one_parent_check": {
+          "name": "warehouses_exactly_one_parent_check",
+          "value": "((\"warehouses\".\"area_id\" IS NOT NULL AND \"warehouses\".\"local_id\" IS NULL) OR (\"warehouses\".\"area_id\" IS NULL AND \"warehouses\".\"local_id\" IS NOT NULL))"
+        }
+      },
       "isRLSEnabled": false
     }
   },
@@ -2618,7 +3088,7 @@
       "values": [
         "company",
         "division",
-        "branch",
+        "local",
         "area",
         "warehouse",
         "point-of-sale"
@@ -2626,13 +3096,15 @@
     }
   },
   "schemas": {},
-  "views": {},
   "sequences": {},
   "roles": {},
   "policies": {},
+  "views": {},
   "_meta": {
-    "columns": {},
     "schemas": {},
-    "tables": {}
-  }
+    "tables": {},
+    "columns": {}
+  },
+  "id": "78b23559-bd18-4f35-8763-39b99065c42d",
+  "prevId": "c5bd8a84-60b7-49eb-81b2-135bb68052e8"
 }

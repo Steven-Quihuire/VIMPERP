@@ -14,6 +14,19 @@ export type ActiveCompany = {
   status: CompanyLifecycle;
 };
 
+export type ScopeType =
+  | 'company'
+  | 'division'
+  | 'local'
+  | 'area'
+  | 'warehouse'
+  | 'point-of-sale';
+
+export type ScopeRef = {
+  scopeType: ScopeType;
+  scopeId: string;
+};
+
 export type AuthCapability =
   | 'catalog.read'
   | 'catalog.write'
@@ -29,6 +42,7 @@ export type AuthSession = {
   user: AuthUser;
   memberships: AuthMembership[];
   activeCompany: ActiveCompany | null;
+  activeScope: ScopeRef | null;
   activeLocalId: string | null;
   capabilities: AuthCapability[];
 };
@@ -39,6 +53,10 @@ export type SwitchActiveCompanyInput = {
 
 export type SwitchActiveLocalInput = {
   localId: string | null;
+};
+
+export type SwitchActiveScopeInput = {
+  scope: ScopeRef | null;
 };
 
 export type LoginInput = {
@@ -58,6 +76,7 @@ export type AuthRepository = {
   getMe: () => Promise<AuthSession>;
   switchActiveCompany: (input: SwitchActiveCompanyInput) => Promise<void>;
   switchActiveLocal: (input: SwitchActiveLocalInput) => Promise<void>;
+  switchActiveScope: (input: SwitchActiveScopeInput) => Promise<void>;
   logout: () => Promise<void>;
 };
 

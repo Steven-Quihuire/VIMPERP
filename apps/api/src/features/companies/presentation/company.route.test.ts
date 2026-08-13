@@ -22,6 +22,7 @@ import type {
   PasswordHasher,
   SessionTokenService,
 } from '../../identity/domain/auth';
+import { createInMemoryScopeResolver } from '../../../shared/infrastructure/scope-hierarchy/scope-hierarchy.port';
 
 type AuthMeResponseBody = {
   activeCompany: {
@@ -125,6 +126,14 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
 
   async setActiveCompanyId(userId: string, companyId: string) {
     this.activeCompanyByUserId.set(userId, companyId);
+    await Promise.resolve();
+  }
+
+  async findActiveScopeNodeId() {
+    return await Promise.resolve(null);
+  }
+
+  async setActiveScopeNodeId() {
     await Promise.resolve();
   }
 
@@ -363,6 +372,7 @@ const createAuthenticatedApp = async () => {
     companyOnboardingGateway: companyGateway,
     passwordHasher,
     provisioningRecorder,
+    scopeResolver: createInMemoryScopeResolver({ nodes: [], assignments: [] }),
     sessionTokenService,
     seedAdminEnabled: false,
     nodeEnv: 'test',

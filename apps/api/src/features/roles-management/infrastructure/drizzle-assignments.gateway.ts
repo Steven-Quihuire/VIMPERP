@@ -48,6 +48,7 @@ export const createDrizzleAssignmentsGateway = (
     createAssignment: async (input) => {
       const id = generateId();
       const createdAt = now();
+      const mode = input.mode ?? 'subtree_inclusive';
 
       try {
         await db.insert(roleAssignmentsTable).values({
@@ -60,6 +61,7 @@ export const createDrizzleAssignmentsGateway = (
             scopeType: input.scopeType,
             scopeId: input.scopeId,
           }),
+          mode,
           scopeType: input.scopeType,
           scopeId: input.scopeId,
           createdAt,
@@ -77,6 +79,7 @@ export const createDrizzleAssignmentsGateway = (
         companyId: input.companyId,
         userId: input.userId,
         roleId: input.roleId,
+        mode,
         scopeType: input.scopeType,
         scopeId: input.scopeId,
         createdAt,

@@ -131,7 +131,11 @@ export const createDrizzleAuthIdentityGateway = (
     if (existingPreference) {
       await db
         .update(userPreferencesTable)
-        .set({ activeCompanyId: companyId, activeLocalId: null })
+        .set({
+          activeCompanyId: companyId,
+          activeLocalId: null,
+          activeScopeNodeId: null,
+        })
         .where(eq(userPreferencesTable.userId, userId));
 
       return;
@@ -150,6 +154,15 @@ export const createDrizzleAuthIdentityGateway = (
       .limit(1);
 
     return preference?.activeLocalId ?? null;
+  },
+  findActiveScopeNodeId: async (userId) => {
+    const [preference] = await db
+      .select({ activeScopeNodeId: userPreferencesTable.activeScopeNodeId })
+      .from(userPreferencesTable)
+      .where(eq(userPreferencesTable.userId, userId))
+      .limit(1);
+
+    return preference?.activeScopeNodeId ?? null;
   },
   setActiveLocalId: async (userId, localId) => {
     const [existingPreference] = await db
@@ -171,6 +184,29 @@ export const createDrizzleAuthIdentityGateway = (
       userId,
       activeCompanyId: null,
       activeLocalId: localId,
+    });
+  },
+  setActiveScopeNodeId: async (userId, scopeNodeId) => {
+    const [existingPreference] = await db
+      .select({ userId: userPreferencesTable.userId })
+      .from(userPreferencesTable)
+      .where(eq(userPreferencesTable.userId, userId))
+      .limit(1);
+
+    if (existingPreference) {
+      await db
+        .update(userPreferencesTable)
+        .set({ activeScopeNodeId: scopeNodeId })
+        .where(eq(userPreferencesTable.userId, userId));
+
+      return;
+    }
+
+    await db.insert(userPreferencesTable).values({
+      userId,
+      activeCompanyId: null,
+      activeLocalId: null,
+      activeScopeNodeId: scopeNodeId,
     });
   },
   findLocalCompanyById: async (localId) => {

@@ -138,6 +138,7 @@ describe('createRegister', () => {
         },
         memberships: [],
         activeCompany: null,
+        activeScope: null,
         activeLocalId: null,
         capabilities: [],
       },

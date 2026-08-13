@@ -9,7 +9,7 @@ import type {
 export type DashboardRepository = {
   getCurrentCompanySummary: () => Promise<DashboardCurrentCompanySummary | null>;
   getCompanySummary: () => Promise<DashboardCompanySummary>;
-  getNotifications: () => Promise<{ notifications: DashboardNotification[] }>;
+  getNotifications: (scope?: 'admin' | 'user') => Promise<{ notifications: DashboardNotification[] }>;
 };
 
 export const createDashboardRepository = (
@@ -22,7 +22,9 @@ export const createDashboardRepository = (
       httpClient.get<DashboardCurrentCompanySummary | null>('/me/company'),
     getCompanySummary: async () =>
       httpClient.get<DashboardCompanySummary>('/admin/companies/summary'),
-    getNotifications: async () =>
-      httpClient.get<{ notifications: DashboardNotification[] }>('/admin/notifications'),
+    getNotifications: async (scope = 'admin') =>
+      httpClient.get<{ notifications: DashboardNotification[] }>(
+        scope === 'admin' ? '/admin/notifications' : '/notifications',
+      ),
   };
 };

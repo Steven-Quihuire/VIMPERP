@@ -5,6 +5,7 @@ import type {
   RegisterInput,
   SwitchActiveCompanyInput,
   SwitchActiveLocalInput,
+  SwitchActiveScopeInput,
 } from '../domain/auth';
 import { getApiBaseUrl } from '../../../shared/lib/http/api-base-url';
 import { createHttpClient } from '../../../shared/lib/http/http-client';
@@ -27,6 +28,9 @@ export const createAuthRepository = (
     },
     switchActiveLocal: async (input: SwitchActiveLocalInput) => {
       await httpClient.post('/auth/me/active-local', input);
+    },
+    switchActiveScope: async (input: SwitchActiveScopeInput) => {
+      await httpClient.post('/auth/me/active-scope', input);
     },
     logout: async () => {
       await httpClient.post('/auth/logout');

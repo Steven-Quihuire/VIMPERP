@@ -14,11 +14,16 @@ export type ScopeRef = {
   scopeId: string;
 };
 
+export const assignmentModeValues = ['subtree_inclusive', 'exact_node'] as const;
+
+export type AssignmentMode = (typeof assignmentModeValues)[number];
+
 export type RoleAssignment = {
   id: string;
   companyId: string;
   userId: string;
   roleId: string;
+  mode: AssignmentMode;
   scopeType: ScopeType;
   scopeId: string;
   createdAt: Date;
@@ -29,6 +34,7 @@ export type RoleAssignmentsGateway = {
     companyId: string;
     userId: string;
     roleId: string;
+    mode?: AssignmentMode;
     scopeType: ScopeType;
     scopeId: string;
   }) => Promise<RoleAssignment>;

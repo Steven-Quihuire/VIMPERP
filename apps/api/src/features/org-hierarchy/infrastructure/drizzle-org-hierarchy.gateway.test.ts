@@ -2,18 +2,26 @@ import { describe, expect, it } from 'vitest';
 
 import type { AppDb } from '../../../shared/infrastructure/db/client';
 import {
+  auditEventsTable,
+  areasTable,
   divisionsTable,
+  employeesTable,
   itemsTable,
   localsTable,
   membershipsTable,
+  pointsOfSaleTable,
+  warehousesTable,
 } from '../../../shared/infrastructure/db/schema';
 import {
+  AreaNotFoundError,
   DivisionConflictError,
   DivisionNameConflictError,
   DivisionNotFoundError,
   LocalConflictError,
   LocalNameConflictError,
   LocalNotFoundError,
+  PointOfSaleNotFoundError,
+  WarehouseNotFoundError,
 } from '../domain/org-hierarchy';
 import { createDrizzleOrgHierarchyGateway } from './drizzle-org-hierarchy.gateway';
 
@@ -39,12 +47,55 @@ type ItemRow = {
   deletedAt: Date | null;
 };
 
+type AreaRow = {
+  id: string;
+  companyId: string;
+  divisionId: string | null;
+  localId: string | null;
+  name: string;
+  kind: 'area';
+  createdAt: Date;
+};
+
+type WarehouseRow = {
+  id: string;
+  companyId: string;
+  areaId: string | null;
+  localId: string | null;
+  name: string;
+  createdAt: Date;
+};
+
+type PointOfSaleRow = {
+  id: string;
+  companyId: string;
+  areaId: string | null;
+  localId: string | null;
+  name: string;
+  createdAt: Date;
+};
+
+type EmployeeRow = {
+  id: string;
+  companyId: string;
+  userId: string | null;
+  position: string;
+  areaId: string | null;
+  createdAt: Date;
+};
+
 type MembershipRow = {
   userId: string;
   companyId: string | null;
   divisionId: string | null;
   localId: string | null;
   role: 'platform-admin' | 'company-owner' | 'company-user';
+};
+
+type WriteRecord = {
+  kind: 'insert' | 'update' | 'delete';
+  table: unknown;
+  values: unknown;
 };
 
 const clone = <T>(value: T): T => structuredClone(value);
@@ -87,20 +138,33 @@ const applyReturningWhere = (
 const createFakeDb = ({
   divisions = [],
   locals = [],
+  areas = [],
+  warehouses = [],
+  pointsOfSale = [],
+  employees = [],
   items = [],
   memberships = [],
 }: {
   divisions?: DivisionRow[];
   locals?: LocalRow[];
+  areas?: AreaRow[];
+  warehouses?: WarehouseRow[];
+  pointsOfSale?: PointOfSaleRow[];
+  employees?: EmployeeRow[];
   items?: ItemRow[];
   memberships?: MembershipRow[];
 } = {}) => {
   const state = {
     divisions: divisions.map((d) => clone(d)),
     locals: locals.map((local) => clone(local)),
+    areas: areas.map((area) => clone(area)),
+    warehouses: warehouses.map((warehouse) => clone(warehouse)),
+    pointsOfSale: pointsOfSale.map((point) => clone(point)),
+    employees: employees.map((employee) => clone(employee)),
     items: items.map((i) => clone(i)),
     memberships: memberships.map((m) => clone(m)),
   };
+  const writes: WriteRecord[] = [];
 
   const select = () => ({
     from: (table: unknown) => {
@@ -109,6 +173,18 @@ const createFakeDb = ({
       }
       if (table === localsTable) {
         return createSelectBuilder(state.locals);
+      }
+      if (table === areasTable) {
+        return createSelectBuilder(state.areas);
+      }
+      if (table === warehousesTable) {
+        return createSelectBuilder(state.warehouses);
+      }
+      if (table === pointsOfSaleTable) {
+        return createSelectBuilder(state.pointsOfSale);
+      }
+      if (table === employeesTable) {
+        return createSelectBuilder(state.employees);
       }
       if (table === itemsTable) {
         return createSelectBuilder(state.items);
@@ -122,9 +198,12 @@ const createFakeDb = ({
 
   const db = {
     select,
+    transaction: async <T>(callback: (client: typeof db) => Promise<T>) =>
+      await callback(db as typeof db),
     insert: (table: unknown) => ({
       values: (values: unknown) => {
         if (table === divisionsTable) {
+          writes.push({ kind: 'insert', table, values: clone(values) });
           state.divisions.push(clone(values as DivisionRow));
           const { uniqueViolation }: { uniqueViolation: boolean } = {
             uniqueViolation: false,
@@ -133,7 +212,27 @@ const createFakeDb = ({
           return Promise.resolve([]);
         }
         if (table === localsTable) {
+          writes.push({ kind: 'insert', table, values: clone(values) });
           state.locals.push(clone(values as LocalRow));
+          return Promise.resolve([]);
+        }
+        if (table === areasTable) {
+          writes.push({ kind: 'insert', table, values: clone(values) });
+          state.areas.push(clone(values as AreaRow));
+          return Promise.resolve([]);
+        }
+        if (table === warehousesTable) {
+          writes.push({ kind: 'insert', table, values: clone(values) });
+          state.warehouses.push(clone(values as WarehouseRow));
+          return Promise.resolve([]);
+        }
+        if (table === pointsOfSaleTable) {
+          writes.push({ kind: 'insert', table, values: clone(values) });
+          state.pointsOfSale.push(clone(values as PointOfSaleRow));
+          return Promise.resolve([]);
+        }
+        if (table === auditEventsTable) {
+          writes.push({ kind: 'insert', table, values: clone(values) });
           return Promise.resolve([]);
         }
         return Promise.resolve([]);
@@ -144,6 +243,7 @@ const createFakeDb = ({
         where: () => {
           void table;
           const apply = () => {
+            writes.push({ kind: 'update', table, values: clone(values) });
             if (table === divisionsTable) {
               const first = state.divisions[0];
               if (first) {
@@ -152,6 +252,24 @@ const createFakeDb = ({
             }
             if (table === localsTable) {
               const first = state.locals[0];
+              if (first) {
+                Object.assign(first, values);
+              }
+            }
+            if (table === areasTable) {
+              const first = state.areas[0];
+              if (first) {
+                Object.assign(first, values);
+              }
+            }
+            if (table === warehousesTable) {
+              const first = state.warehouses[0];
+              if (first) {
+                Object.assign(first, values);
+              }
+            }
+            if (table === pointsOfSaleTable) {
+              const first = state.pointsOfSale[0];
               if (first) {
                 Object.assign(first, values);
               }
@@ -166,6 +284,18 @@ const createFakeDb = ({
               const first = state.locals[0];
               return first ? [clone(first)] : [];
             }
+            if (table === areasTable) {
+              const first = state.areas[0];
+              return first ? [clone(first)] : [];
+            }
+            if (table === warehousesTable) {
+              const first = state.warehouses[0];
+              return first ? [clone(first)] : [];
+            }
+            if (table === pointsOfSaleTable) {
+              const first = state.pointsOfSale[0];
+              return first ? [clone(first)] : [];
+            }
             return [];
           };
           return applyReturningWhere(apply, returning);
@@ -176,6 +306,7 @@ const createFakeDb = ({
       where: () => {
         void table;
         const apply = () => {
+          writes.push({ kind: 'delete', table, values: null });
           // no-op; the actual mutation is reported when returning() is invoked
           // because drizzle's DELETE only materializes when consumed.
         };
@@ -188,6 +319,18 @@ const createFakeDb = ({
             const first = state.locals.shift();
             return first ? [clone(first)] : [];
           }
+          if (table === areasTable) {
+            const first = state.areas.shift();
+            return first ? [clone(first)] : [];
+          }
+          if (table === warehousesTable) {
+            const first = state.warehouses.shift();
+            return first ? [clone(first)] : [];
+          }
+          if (table === pointsOfSaleTable) {
+            const first = state.pointsOfSale.shift();
+            return first ? [clone(first)] : [];
+          }
           return [];
         };
         return applyReturningWhere(apply, returning);
@@ -195,14 +338,14 @@ const createFakeDb = ({
     }),
   } as unknown as AppDb;
 
-  return { db, state };
+  return { db, state, writes };
 };
 
 const baseDate = new Date('2026-07-30T18:00:00.000Z');
 
 describe('createDrizzleOrgHierarchyGateway', () => {
   it('creates a division with generated id and createdAt', async () => {
-    const { db, state } = createFakeDb();
+    const { db, state, writes } = createFakeDb();
     const gateway = createDrizzleOrgHierarchyGateway(db, {
       createId: () => 'division-1',
       now: () => baseDate,
@@ -211,6 +354,8 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     const division = await gateway.createDivision({
       companyId: 'company-a',
       name: 'Retail',
+      actorUserId: 'user-1',
+      correlationId: 'corr-1',
     });
 
     expect(division).toEqual({
@@ -226,6 +371,14 @@ describe('createDrizzleOrgHierarchyGateway', () => {
       name: 'Retail',
       createdAt: baseDate,
     });
+    expect(
+      writes.some(
+        (entry) =>
+          entry.kind === 'insert' &&
+          entry.table === auditEventsTable &&
+          (entry.values as { type?: string }).type === 'org_hierarchy.division.created',
+      ),
+    ).toBe(true);
   });
 
   it('lists divisions for a company', async () => {
@@ -255,6 +408,8 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     const updated = await gateway.updateDivision({
       divisionId: 'd-1',
       name: 'Retail Updated',
+      actorUserId: 'user-1',
+      correlationId: 'corr-2',
     });
 
     expect(updated.name).toBe('Retail Updated');
@@ -278,7 +433,11 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     });
     const gateway = createDrizzleOrgHierarchyGateway(db);
 
-    await gateway.deleteDivision('d-1');
+    await gateway.deleteDivision({
+      divisionId: 'd-1',
+      actorUserId: 'user-1',
+      correlationId: 'corr-3',
+    });
 
     expect(state.divisions).toHaveLength(0);
   });
@@ -296,7 +455,7 @@ describe('createDrizzleOrgHierarchyGateway', () => {
   });
 
   it('creates a local at company level with divisionId null', async () => {
-    const { db, state } = createFakeDb();
+    const { db, state, writes } = createFakeDb();
     const gateway = createDrizzleOrgHierarchyGateway(db, {
       createId: () => 'local-1',
     });
@@ -304,6 +463,8 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     const local = await gateway.createLocal({
       companyId: 'company-a',
       name: 'Main Store',
+      actorUserId: 'user-1',
+      correlationId: 'corr-local-create',
     });
 
     expect(local).toEqual({
@@ -320,6 +481,14 @@ describe('createDrizzleOrgHierarchyGateway', () => {
       name: 'Main Store',
       locale: null,
     });
+    expect(
+      writes.some(
+        (entry) =>
+          entry.kind === 'insert' &&
+          entry.table === auditEventsTable &&
+          (entry.values as { type?: string }).type === 'org_hierarchy.local.created',
+      ),
+    ).toBe(true);
   });
 
   it('creates a local under a division', async () => {
@@ -350,6 +519,21 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     await expect(
       gateway.createLocal({ companyId: 'company-a', name: 'Main' }),
     ).rejects.toBeInstanceOf(LocalNameConflictError);
+  });
+
+  it('allows duplicate local names when they belong to different parent scopes', async () => {
+    const { db } = createFakeDb({
+      locals: [
+        { id: 'local-1', companyId: 'company-a', divisionId: null, name: 'Main', locale: null },
+      ],
+    });
+    const gateway = createDrizzleOrgHierarchyGateway(db, {
+      createId: () => 'local-2',
+    });
+
+    await expect(
+      gateway.createLocal({ companyId: 'company-a', name: 'Main', divisionId: 'division-1' }),
+    ).resolves.toMatchObject({ id: 'local-2', divisionId: 'division-1' });
   });
 
   it('lists locals', async () => {
@@ -416,6 +600,20 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     await expect(
       gateway.updateLocal({ localId: 'l-1', name: 'B' }),
     ).rejects.toBeInstanceOf(LocalNameConflictError);
+  });
+
+  it('allows renaming a root local to match a division-scoped local name', async () => {
+    const { db } = createFakeDb({
+      locals: [
+        { id: 'l-1', companyId: 'company-a', divisionId: null, name: 'A', locale: null },
+        { id: 'l-2', companyId: 'company-a', divisionId: 'division-1', name: 'B', locale: null },
+      ],
+    });
+    const gateway = createDrizzleOrgHierarchyGateway(db);
+
+    await expect(
+      gateway.updateLocal({ localId: 'l-1', name: 'B' }),
+    ).resolves.toMatchObject({ id: 'l-1', name: 'B' });
   });
 
   it('throws LocalNotFoundError when updating a missing local', async () => {
@@ -486,5 +684,228 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     const gateway = createDrizzleOrgHierarchyGateway(db);
 
     await expect(gateway.findLocalById('missing')).resolves.toBeNull();
+  });
+
+  it('creates and lists areas', async () => {
+    const { db, state } = createFakeDb();
+    const gateway = createDrizzleOrgHierarchyGateway(db, {
+      createId: () => 'area-1',
+      now: () => baseDate,
+    });
+
+    const area = await gateway.createArea({
+      companyId: 'company-a',
+      name: 'Operations',
+      localId: 'local-1',
+    });
+
+    expect(area).toEqual({
+      id: 'area-1',
+      companyId: 'company-a',
+      divisionId: null,
+      localId: 'local-1',
+      name: 'Operations',
+      kind: 'area',
+      createdAt: baseDate,
+    });
+
+    await expect(gateway.listAreas('company-a')).resolves.toEqual([
+      expect.objectContaining({ id: 'area-1', name: 'Operations' }),
+    ]);
+    expect(state.areas).toHaveLength(1);
+  });
+
+  it('updates and deletes areas', async () => {
+    const { db, state } = createFakeDb({
+      areas: [
+        {
+          id: 'area-1',
+          companyId: 'company-a',
+          divisionId: 'division-1',
+          localId: null,
+          name: 'Operations',
+          kind: 'area',
+          createdAt: baseDate,
+        },
+      ],
+    });
+    const gateway = createDrizzleOrgHierarchyGateway(db);
+
+    const updated = await gateway.updateArea({
+      areaId: 'area-1',
+      name: 'Ops',
+      localId: 'local-1',
+    });
+
+    expect(updated).toMatchObject({
+      id: 'area-1',
+      divisionId: null,
+      localId: 'local-1',
+      name: 'Ops',
+    });
+
+    await gateway.deleteArea('area-1');
+    expect(state.areas).toHaveLength(0);
+  });
+
+  it('throws AreaNotFoundError when updating a missing area', async () => {
+    const { db } = createFakeDb();
+    const gateway = createDrizzleOrgHierarchyGateway(db);
+
+    await expect(
+      gateway.updateArea({ areaId: 'missing', name: 'Ops' }),
+    ).rejects.toBeInstanceOf(AreaNotFoundError);
+  });
+
+  it('counts area dependencies', async () => {
+    const { db } = createFakeDb({
+      areas: [
+        {
+          id: 'area-1',
+          companyId: 'company-a',
+          divisionId: 'division-1',
+          localId: null,
+          name: 'Operations',
+          kind: 'area',
+          createdAt: baseDate,
+        },
+      ],
+      warehouses: [
+        {
+          id: 'warehouse-1',
+          companyId: 'company-a',
+          areaId: 'area-1',
+          localId: null,
+          name: 'Main Warehouse',
+          createdAt: baseDate,
+        },
+      ],
+      pointsOfSale: [
+        {
+          id: 'pos-1',
+          companyId: 'company-a',
+          areaId: 'area-1',
+          localId: null,
+          name: 'POS 01',
+          createdAt: baseDate,
+        },
+      ],
+      employees: [
+        {
+          id: 'employee-1',
+          companyId: 'company-a',
+          userId: 'user-1',
+          position: 'Manager',
+          areaId: 'area-1',
+          createdAt: baseDate,
+        },
+      ],
+    });
+    const gateway = createDrizzleOrgHierarchyGateway(db);
+
+    await expect(gateway.countAreasInDivision('division-1')).resolves.toBe(1);
+    await expect(gateway.countWarehousesInArea('area-1')).resolves.toBe(1);
+    await expect(gateway.countPointsOfSaleInArea('area-1')).resolves.toBe(1);
+    await expect(gateway.countEmployeesInArea('area-1')).resolves.toBe(1);
+  });
+
+  it('creates, lists, updates and deletes warehouses', async () => {
+    const { db, state } = createFakeDb();
+    const gateway = createDrizzleOrgHierarchyGateway(db, {
+      createId: () => 'warehouse-1',
+      now: () => baseDate,
+    });
+
+    const warehouse = await gateway.createWarehouse({
+      companyId: 'company-a',
+      name: 'Main Warehouse',
+      localId: 'local-1',
+    });
+
+    expect(warehouse).toEqual({
+      id: 'warehouse-1',
+      companyId: 'company-a',
+      areaId: null,
+      localId: 'local-1',
+      name: 'Main Warehouse',
+      createdAt: baseDate,
+    });
+
+    await expect(gateway.listWarehouses('company-a')).resolves.toHaveLength(1);
+
+    const updated = await gateway.updateWarehouse({
+      warehouseId: 'warehouse-1',
+      name: 'Warehouse A',
+      areaId: 'area-1',
+    });
+
+    expect(updated).toMatchObject({
+      id: 'warehouse-1',
+      localId: null,
+      areaId: 'area-1',
+      name: 'Warehouse A',
+    });
+
+    await gateway.deleteWarehouse('warehouse-1');
+    expect(state.warehouses).toHaveLength(0);
+  });
+
+  it('throws WarehouseNotFoundError when updating a missing warehouse', async () => {
+    const { db } = createFakeDb();
+    const gateway = createDrizzleOrgHierarchyGateway(db);
+
+    await expect(
+      gateway.updateWarehouse({ warehouseId: 'missing', name: 'Warehouse A' }),
+    ).rejects.toBeInstanceOf(WarehouseNotFoundError);
+  });
+
+  it('creates, lists, updates and deletes points of sale', async () => {
+    const { db, state } = createFakeDb();
+    const gateway = createDrizzleOrgHierarchyGateway(db, {
+      createId: () => 'pos-1',
+      now: () => baseDate,
+    });
+
+    const pointOfSale = await gateway.createPointOfSale({
+      companyId: 'company-a',
+      name: 'POS 01',
+      localId: 'local-1',
+    });
+
+    expect(pointOfSale).toEqual({
+      id: 'pos-1',
+      companyId: 'company-a',
+      areaId: null,
+      localId: 'local-1',
+      name: 'POS 01',
+      createdAt: baseDate,
+    });
+
+    await expect(gateway.listPointsOfSale('company-a')).resolves.toHaveLength(1);
+
+    const updated = await gateway.updatePointOfSale({
+      pointOfSaleId: 'pos-1',
+      name: 'POS A',
+      areaId: 'area-1',
+    });
+
+    expect(updated).toMatchObject({
+      id: 'pos-1',
+      localId: null,
+      areaId: 'area-1',
+      name: 'POS A',
+    });
+
+    await gateway.deletePointOfSale('pos-1');
+    expect(state.pointsOfSale).toHaveLength(0);
+  });
+
+  it('throws PointOfSaleNotFoundError when updating a missing point of sale', async () => {
+    const { db } = createFakeDb();
+    const gateway = createDrizzleOrgHierarchyGateway(db);
+
+    await expect(
+      gateway.updatePointOfSale({ pointOfSaleId: 'missing', name: 'POS A' }),
+    ).rejects.toBeInstanceOf(PointOfSaleNotFoundError);
   });
 });

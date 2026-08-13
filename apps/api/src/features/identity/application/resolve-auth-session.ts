@@ -8,16 +8,35 @@ import {
   type AuthSession,
   toPublicAuthUser,
 } from '../domain/auth';
+import type {
+  ScopeRef,
+  ScopeResolver,
+} from '../../../shared/infrastructure/scope-hierarchy/scope-hierarchy.port';
 
 type CreateResolveAuthSessionInput = {
   authIdentityGateway: AuthIdentityGateway;
+  scopeResolver: ScopeResolver;
   seedAdminSessions?: Map<string, Date>;
   now?: () => Date;
   seedAdminEnabled: boolean;
 };
 
+const toScopeRef = (scopeNodeId: string): ScopeRef | null => {
+  const separatorIndex = scopeNodeId.indexOf(':');
+
+  if (separatorIndex === -1) {
+    return null;
+  }
+
+  return {
+    scopeType: scopeNodeId.slice(0, separatorIndex) as ScopeRef['scopeType'],
+    scopeId: scopeNodeId.slice(separatorIndex + 1),
+  };
+};
+
 export const createResolveAuthSession = ({
   authIdentityGateway,
+  scopeResolver,
   seedAdminSessions,
   now = () => new Date(),
   seedAdminEnabled,
@@ -55,18 +74,52 @@ export const createResolveAuthSession = ({
     };
   };
 
-  const resolveActiveLocalId = async (
+  const isAuthorizedScope = async (
+    userId: string,
+    activeCompany: NonNullable<AuthSession['activeCompany']>,
+    scope: ScopeRef,
+  ) => {
+    try {
+      return await scopeResolver.isAuthorized(activeCompany.companyId, userId, scope);
+    } catch {
+      return false;
+    }
+  };
+
+  const resolveActiveScope = async (
     userId: string,
     activeCompany: AuthSession['activeCompany'],
-  ): Promise<string | null> => {
+  ): Promise<ScopeRef | null> => {
     if (!activeCompany) {
       return null;
     }
 
+    const savedScopeNodeId = await authIdentityGateway.findActiveScopeNodeId(userId);
+
+    if (savedScopeNodeId) {
+      const savedScope = toScopeRef(savedScopeNodeId);
+
+      if (
+        savedScope &&
+        (await isAuthorizedScope(userId, activeCompany, savedScope))
+      ) {
+        return savedScope;
+      }
+    }
+
     const savedLocalId = await authIdentityGateway.findActiveLocalId(userId);
 
+    const resolveSingleAuthorizedScope = async () => {
+      const authorizedScopes = await scopeResolver.listAuthorizedDescendants(
+        activeCompany.companyId,
+        userId,
+      );
+
+      return authorizedScopes.length === 1 ? authorizedScopes[0]?.ref ?? null : null;
+    };
+
     if (!savedLocalId) {
-      return null;
+      return await resolveSingleAuthorizedScope();
     }
 
     const localCompanyId = await authIdentityGateway.findLocalCompanyById(
@@ -77,7 +130,14 @@ export const createResolveAuthSession = ({
       return null;
     }
 
-    return savedLocalId;
+    const fallbackScope: ScopeRef = {
+      scopeType: 'local',
+      scopeId: savedLocalId,
+    };
+
+    return (await isAuthorizedScope(userId, activeCompany, fallbackScope))
+      ? fallbackScope
+      : await resolveSingleAuthorizedScope();
   };
 
   return async (token: string | null | undefined): Promise<AuthSession> => {
@@ -97,6 +157,7 @@ export const createResolveAuthSession = ({
         user: toPublicAuthUser(createSeedAdminUser()),
         memberships: createSeedAdminMemberships(),
         activeCompany: null,
+        activeScope: null,
         activeLocalId: null,
         capabilities: [],
       };
@@ -116,13 +177,15 @@ export const createResolveAuthSession = ({
     const memberships = await authIdentityGateway.listMemberships(user.id);
 
     const activeCompany = await resolveActiveCompany(user.id, memberships);
-    const activeLocalId = await resolveActiveLocalId(user.id, activeCompany);
+    const activeScope = await resolveActiveScope(user.id, activeCompany);
 
     return {
       user: toPublicAuthUser(user),
       memberships,
       activeCompany,
-      activeLocalId,
+      activeScope,
+      activeLocalId:
+        activeScope?.scopeType === 'local' ? activeScope.scopeId : null,
       capabilities: deriveAuthCapabilities({ memberships, activeCompany }),
     };
   };

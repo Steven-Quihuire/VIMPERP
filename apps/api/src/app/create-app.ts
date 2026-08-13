@@ -16,6 +16,7 @@ import {
   createListApplicationErrors,
 } from '../features/admin/application/list-application-errors';
 import { createListAdminNotifications } from '../features/admin/application/list-admin-notifications';
+import { createListCompanyNotifications } from '../features/admin/application/list-company-notifications';
 import { createListAuditEvents } from '../features/admin/application/list-audit-events';
 import {
   createListProvisioningRuns,
@@ -70,14 +71,31 @@ import type {
 } from '../features/items/domain/item';
 import { createDrizzleItemGateway } from '../features/items/infrastructure/drizzle-item.gateway';
 import { createItemRouter } from '../features/items/presentation/item.router';
+import { createListOrgTreeUseCase } from '../features/org-tree/application/list-org-tree';
+import type { OrgTreeGateway } from '../features/org-tree/domain/org-tree';
+import { createDrizzleOrgTreeGateway } from '../features/org-tree/infrastructure/drizzle-org-tree.gateway';
+import { createOrgTreeRouter } from '../features/org-tree/presentation/org-tree.router';
+import { createNodeManagementRouter } from '../features/node-management/presentation/node-management.router';
+import { createCreateAreaUseCase } from '../features/org-hierarchy/application/create-area';
 import { createCreateLocalUseCase } from '../features/org-hierarchy/application/create-local';
+import { createCreatePointOfSaleUseCase } from '../features/org-hierarchy/application/create-point-of-sale';
+import { createCreateWarehouseUseCase } from '../features/org-hierarchy/application/create-warehouse';
+import { createDeleteAreaUseCase } from '../features/org-hierarchy/application/delete-area';
 import { createCreateDivisionUseCase } from '../features/org-hierarchy/application/create-division';
 import { createDeleteDivisionUseCase } from '../features/org-hierarchy/application/delete-division';
 import { createDeleteLocalUseCase } from '../features/org-hierarchy/application/delete-local';
+import { createDeletePointOfSaleUseCase } from '../features/org-hierarchy/application/delete-point-of-sale';
+import { createDeleteWarehouseUseCase } from '../features/org-hierarchy/application/delete-warehouse';
+import { createListAreasUseCase } from '../features/org-hierarchy/application/list-areas';
 import { createListDivisionsUseCase } from '../features/org-hierarchy/application/list-divisions';
 import { createListLocalsUseCase } from '../features/org-hierarchy/application/list-locals';
+import { createListPointsOfSaleUseCase } from '../features/org-hierarchy/application/list-points-of-sale';
+import { createListWarehousesUseCase } from '../features/org-hierarchy/application/list-warehouses';
+import { createUpdateAreaUseCase } from '../features/org-hierarchy/application/update-area';
 import { createUpdateDivisionUseCase } from '../features/org-hierarchy/application/update-division';
 import { createUpdateLocalUseCase } from '../features/org-hierarchy/application/update-local';
+import { createUpdatePointOfSaleUseCase } from '../features/org-hierarchy/application/update-point-of-sale';
+import { createUpdateWarehouseUseCase } from '../features/org-hierarchy/application/update-warehouse';
 import type { OrgHierarchyGateway } from '../features/org-hierarchy/domain/org-hierarchy';
 import { createDrizzleOrgHierarchyGateway } from '../features/org-hierarchy/infrastructure/drizzle-org-hierarchy.gateway';
 import { createOrgHierarchyRouter } from '../features/org-hierarchy/presentation/org-hierarchy.router';
@@ -90,6 +108,8 @@ import {
   type ApplicationErrorRecorder,
 } from '../shared/presentation/error.middleware';
 import { createDb } from '../shared/infrastructure/db/client';
+import { createDrizzleScopeResolver } from '../shared/infrastructure/scope-hierarchy/drizzle-scope-resolver';
+import type { ScopeRef, ScopeResolver } from '../shared/infrastructure/scope-hierarchy/scope-hierarchy.port';
 import {
   createLogger,
   createMetricsRouter,
@@ -107,7 +127,9 @@ type CreateAppInput = {
   provisioningRecorder?: ProvisioningRecorder & ApplicationErrorRecorder;
   adminGateway?: AdminGateway;
   itemGateway?: ItemCatalogGateway & CategoryGateway;
+  orgTreeGateway?: OrgTreeGateway;
   orgHierarchyGateway?: OrgHierarchyGateway;
+  scopeResolver?: ScopeResolver;
   nodeEnv?: 'development' | 'test' | 'production';
   seedAdminEnabled?: boolean;
   sessionCookieName?: string;
@@ -135,6 +157,9 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     input.provisioningRecorder ?? createDrizzleProvisioningRecorder(db);
   const adminGateway = input.adminGateway ?? createDrizzleAdminGateway(db);
   const itemGateway = input.itemGateway ?? createDrizzleItemGateway(db);
+  const scopeResolver = input.scopeResolver ?? createDrizzleScopeResolver(db);
+  const orgTreeGateway =
+    input.orgTreeGateway ?? createDrizzleOrgTreeGateway({ scopeResolver });
   const orgHierarchyGateway =
     input.orgHierarchyGateway ?? createDrizzleOrgHierarchyGateway(db);
   const nodeEnv = input.nodeEnv ?? 'development';
@@ -144,6 +169,7 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
   const logger = createLogger(nodeEnv !== 'test');
   const resolveAuthSession = createResolveAuthSession({
     authIdentityGateway,
+    scopeResolver,
     seedAdminSessions,
     seedAdminEnabled,
   });
@@ -197,6 +223,15 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
   }) => {
     await authIdentityGateway.setActiveLocalId(input.userId, input.localId);
   };
+  const switchActiveScope = async (input: {
+    userId: string;
+    scope: ScopeRef | null;
+  }) => {
+    await authIdentityGateway.setActiveScopeNodeId(
+      input.userId,
+      input.scope ? `${input.scope.scopeType}:${input.scope.scopeId}` : null,
+    );
+  };
 
   app.use(express.json());
   app.use(createRequestContextMiddleware({ logger, metrics: requestMetrics }));
@@ -219,6 +254,8 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       resolveAuthSession,
       logout: createLogout(authIdentityGateway, seedAdminSessions),
       switchActiveLocal,
+      switchActiveScope,
+      scopeResolver,
       findLocalCompanyById: async (localId) => {
         return await authIdentityGateway.findLocalCompanyById(localId);
       },
@@ -232,6 +269,7 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     createAdminRouter({
       getCompanySummary: createGetCompanySummary(adminGateway),
       listNotifications: createListAdminNotifications(adminGateway),
+      listCompanyNotifications: createListCompanyNotifications(adminGateway),
       listProvisioningRuns: createListProvisioningRuns(adminGateway),
       getProvisioningRunDetail: createGetProvisioningRunDetail(adminGateway),
       listApplicationErrors: createListApplicationErrors(adminGateway),
@@ -274,19 +312,47 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     }),
   );
   app.use(
+    createOrgTreeRouter({
+      requireAuth,
+      requireRole: createRequireRole,
+      listOrgTree: createListOrgTreeUseCase({ gateway: orgTreeGateway }),
+    }),
+  );
+  app.use(
     createOrgHierarchyRouter({
       requireAuth,
       requireRole: createRequireRole,
       createDivision: createCreateDivisionUseCase({ gateway: orgHierarchyGateway }),
       listDivisions: createListDivisionsUseCase({ gateway: orgHierarchyGateway }),
+      findDivisionById: async (divisionId) =>
+        await orgHierarchyGateway.findDivisionById(divisionId),
       updateDivision: createUpdateDivisionUseCase({ gateway: orgHierarchyGateway }),
       deleteDivision: createDeleteDivisionUseCase({ gateway: orgHierarchyGateway }),
       createLocal: createCreateLocalUseCase({ gateway: orgHierarchyGateway }),
       listLocals: createListLocalsUseCase({ gateway: orgHierarchyGateway }),
+      findLocalById: async (localId) => await orgHierarchyGateway.findLocalById(localId),
       updateLocal: createUpdateLocalUseCase({ gateway: orgHierarchyGateway }),
       deleteLocal: createDeleteLocalUseCase({ gateway: orgHierarchyGateway }),
+      createArea: createCreateAreaUseCase({ gateway: orgHierarchyGateway }),
+      listAreas: createListAreasUseCase({ gateway: orgHierarchyGateway }),
+      findAreaById: async (areaId) => await orgHierarchyGateway.findAreaById(areaId),
+      updateArea: createUpdateAreaUseCase({ gateway: orgHierarchyGateway }),
+      deleteArea: createDeleteAreaUseCase({ gateway: orgHierarchyGateway }),
+      createWarehouse: createCreateWarehouseUseCase({ gateway: orgHierarchyGateway }),
+      listWarehouses: createListWarehousesUseCase({ gateway: orgHierarchyGateway }),
+      findWarehouseById: async (warehouseId) =>
+        await orgHierarchyGateway.findWarehouseById(warehouseId),
+      updateWarehouse: createUpdateWarehouseUseCase({ gateway: orgHierarchyGateway }),
+      deleteWarehouse: createDeleteWarehouseUseCase({ gateway: orgHierarchyGateway }),
+      createPointOfSale: createCreatePointOfSaleUseCase({ gateway: orgHierarchyGateway }),
+      listPointsOfSale: createListPointsOfSaleUseCase({ gateway: orgHierarchyGateway }),
+      findPointOfSaleById: async (pointOfSaleId) =>
+        await orgHierarchyGateway.findPointOfSaleById(pointOfSaleId),
+      updatePointOfSale: createUpdatePointOfSaleUseCase({ gateway: orgHierarchyGateway }),
+      deletePointOfSale: createDeletePointOfSaleUseCase({ gateway: orgHierarchyGateway }),
     }),
   );
+  app.use(createNodeManagementRouter());
   app.use(createErrorMiddleware({ recorder: provisioningRecorder }));
 
   return {

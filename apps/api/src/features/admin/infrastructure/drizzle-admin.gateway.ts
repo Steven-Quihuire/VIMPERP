@@ -202,6 +202,37 @@ export const createDrizzleAdminGateway = (db: AppDb): AdminGateway => ({
       createdAt: notification.createdAt.toISOString(),
     }));
   },
+  listNotificationsForCompanyRole: async ({ companyId, targetRole }) => {
+    const notifications = await db
+      .select({
+        id: notificationsTable.id,
+        companyId: notificationsTable.companyId,
+        targetRole: notificationsTable.targetRole,
+        type: notificationsTable.type,
+        message: notificationsTable.message,
+        createdAt: notificationsTable.createdAt,
+      })
+      .from(notificationsTable)
+      .where(
+        and(
+          eq(notificationsTable.companyId, companyId),
+          or(
+            eq(notificationsTable.targetRole, targetRole),
+            and(
+              eq(notificationsTable.targetRole, 'platform-admin'),
+              eq(notificationsTable.type, 'company.registered'),
+            ),
+          ),
+        ),
+      )
+      .orderBy(desc(notificationsTable.createdAt))
+      .limit(10);
+
+    return notifications.map((notification) => ({
+      ...notification,
+      createdAt: notification.createdAt.toISOString(),
+    }));
+  },
   listProvisioningRuns: async (filters) => {
     const parsedFilters = listProvisioningRunsSchema.parse(filters);
     const conditions = [];

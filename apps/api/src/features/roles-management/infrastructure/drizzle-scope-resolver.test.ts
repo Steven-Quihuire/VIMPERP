@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createComputeEffectivePermissionsUseCase } from '../application/compute-effective-permissions';
 import { applyMigrationsThrough, createMigrationTestDatabase } from '../../../db/migrations/__tests__/migration-test-helpers';
 import type { AppDb } from '../../../shared/infrastructure/db/client';
+import { createDrizzleScopeResolver } from '../../../shared/infrastructure/scope-hierarchy/drizzle-scope-resolver';
 import {
   areasTable,
   companiesTable,
@@ -37,7 +38,7 @@ afterEach(async () => {
 const createDb = async () => {
   const database = await createMigrationTestDatabase();
   cleanups.push(database.cleanup);
-  await applyMigrationsThrough(database.pool, '0017_role_assignment_scope_fk.sql');
+  await applyMigrationsThrough(database.pool, '0018_role_assignment_mode.sql');
 
   const pool: Pool = database.pool;
   const db = drizzle(pool, {
@@ -49,7 +50,10 @@ const createDb = async () => {
 
 describe('drizzle scope resolver', () => {
   it('uses a recursive scope_nodes lineage query and removes per-entity path loaders', async () => {
-    const sourceFile = path.resolve(__dirname, 'drizzle-scope-resolver.ts');
+    const sourceFile = path.resolve(
+      __dirname,
+      '../../../shared/infrastructure/scope-hierarchy/drizzle-scope-resolver.ts',
+    );
     const source = await readFile(sourceFile, 'utf8');
 
     expect(source).toContain('WITH RECURSIVE');
@@ -76,11 +80,24 @@ describe('drizzle scope resolver', () => {
       name: 'North',
       createdAt: now,
     });
+    await db.insert(divisionsTable).values({
+      id: 'division-2',
+      companyId: 'company-a',
+      name: 'South',
+      createdAt: now,
+    });
     await db.insert(localsTable).values({
       id: 'local-1',
       companyId: 'company-a',
       divisionId: 'division-1',
       name: 'HQ',
+      locale: null,
+    });
+    await db.insert(localsTable).values({
+      id: 'local-2',
+      companyId: 'company-a',
+      divisionId: 'division-2',
+      name: 'South Store',
       locale: null,
     });
     await db.insert(areasTable).values({
@@ -144,6 +161,7 @@ describe('drizzle scope resolver', () => {
     });
 
     const scopeGateway = createDrizzleScopeHierarchyGateway(db);
+    const sharedResolver = createDrizzleScopeResolver(db);
     const computeEffectivePermissions = createComputeEffectivePermissionsUseCase({
       rolesGateway,
       assignmentsGateway,
@@ -171,7 +189,65 @@ describe('drizzle scope resolver', () => {
       { scopeType: 'area', scopeId: 'area-1' },
       { scopeType: 'division', scopeId: 'division-1' },
       { scopeType: 'company', scopeId: 'company-a' },
+      ]);
+
+    await expect(
+      sharedResolver.isAuthorized('company-a', 'user-1', {
+        scopeType: 'warehouse',
+        scopeId: 'warehouse-1',
+      }),
+    ).resolves.toBe(true);
+
+    await expect(
+      sharedResolver.listAuthorizedDescendants('company-a', 'user-1'),
+    ).resolves.toEqual([
+      {
+        ref: { scopeType: 'division', scopeId: 'division-1' },
+        parentRef: { scopeType: 'company', scopeId: 'company-a' },
+        companyId: 'company-a',
+        name: 'North',
+      },
+      {
+        ref: { scopeType: 'local', scopeId: 'local-1' },
+        parentRef: { scopeType: 'division', scopeId: 'division-1' },
+        companyId: 'company-a',
+        name: 'HQ',
+      },
+      {
+        ref: { scopeType: 'area', scopeId: 'area-1' },
+        parentRef: { scopeType: 'division', scopeId: 'division-1' },
+        companyId: 'company-a',
+        name: 'Storage',
+      },
+      {
+        ref: { scopeType: 'warehouse', scopeId: 'warehouse-1' },
+        parentRef: { scopeType: 'area', scopeId: 'area-1' },
+        companyId: 'company-a',
+        name: 'Main Warehouse',
+      },
+      {
+        ref: { scopeType: 'point-of-sale', scopeId: 'pos-1' },
+        parentRef: { scopeType: 'area', scopeId: 'area-1' },
+        companyId: 'company-a',
+        name: 'Checkout',
+      },
     ]);
+
+    const visibleNodes = await sharedResolver.listAuthorizedDescendants(
+      'company-a',
+      'user-1',
+    );
+
+    expect(visibleNodes).not.toContainEqual(
+      expect.objectContaining({
+        ref: { scopeType: 'division', scopeId: 'division-2' },
+      }),
+    );
+    expect(visibleNodes).not.toContainEqual(
+      expect.objectContaining({
+        ref: { scopeType: 'local', scopeId: 'local-2' },
+      }),
+    );
 
     await expect(
       computeEffectivePermissions({

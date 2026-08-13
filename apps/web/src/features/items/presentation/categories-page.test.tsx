@@ -43,6 +43,7 @@ const session: AuthSession = {
   user: { id: 'user-1', email: 'owner@vimcore.test', username: 'owner' },
   memberships: [{ companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null }],
   activeCompany: { companyId: 'company-1', status: 'active' },
+  activeScope: null,
   activeLocalId: null,
   capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
 };

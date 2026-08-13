@@ -37,7 +37,11 @@ import { ItemCatalogPage } from '../features/items/presentation/item-catalog-pag
 import { LandingPage } from '../features/landing/presentation/landing-page';
 import { PrivacyPolicyPage } from '../features/legal/presentation/privacy-policy-page';
 import { DivisionsPage } from '../features/org-hierarchy/presentation/divisions-page';
+import { AreasPage } from '../features/org-hierarchy/presentation/areas-page';
 import { LocalsPage } from '../features/org-hierarchy/presentation/locals-page';
+import { OrganizationPage } from '../features/org-hierarchy/presentation/organization-page';
+import { PointsOfSalePage } from '../features/org-hierarchy/presentation/points-of-sale-page';
+import { WarehousesPage } from '../features/org-hierarchy/presentation/warehouses-page';
 import { needsCompanyOnboarding } from '../features/onboarding/domain/onboarding';
 import { OnboardingPage } from '../features/onboarding/presentation/onboarding-page';
 import { ThemeProvider } from '../features/theme/presentation/theme-provider';
@@ -191,7 +195,7 @@ const DivisionsRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  return <DivisionsPage session={auth.session} />;
+  return <Navigate to="/dashboard/organization" replace />;
 };
 
 const LocalsRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
@@ -221,7 +225,127 @@ const LocalsRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  return <LocalsPage session={auth.session} />;
+  return <Navigate to="/dashboard/organization" replace />;
+};
+
+const AreasRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+  const auth = useAuth(apiBaseUrl);
+
+  if (auth.isLoading) {
+    return <p>Loading...</p>;
+  }
+
+  if (!auth.session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (needsCompanyOnboarding(auth.session)) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  if (needsActiveCompanySelection(auth.session)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (hasBlockedActiveCompany(auth.session)) {
+    return <Navigate to="/dashboard/company-status" replace />;
+  }
+
+  if (getActiveRole(auth.session) !== 'company-owner') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Navigate to="/dashboard/organization" replace />;
+};
+
+const WarehousesRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+  const auth = useAuth(apiBaseUrl);
+
+  if (auth.isLoading) {
+    return <p>Loading...</p>;
+  }
+
+  if (!auth.session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (needsCompanyOnboarding(auth.session)) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  if (needsActiveCompanySelection(auth.session)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (hasBlockedActiveCompany(auth.session)) {
+    return <Navigate to="/dashboard/company-status" replace />;
+  }
+
+  if (getActiveRole(auth.session) !== 'company-owner') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Navigate to="/dashboard/organization" replace />;
+};
+
+const PointsOfSaleRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+  const auth = useAuth(apiBaseUrl);
+
+  if (auth.isLoading) {
+    return <p>Loading...</p>;
+  }
+
+  if (!auth.session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (needsCompanyOnboarding(auth.session)) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  if (needsActiveCompanySelection(auth.session)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (hasBlockedActiveCompany(auth.session)) {
+    return <Navigate to="/dashboard/company-status" replace />;
+  }
+
+  if (getActiveRole(auth.session) !== 'company-owner') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Navigate to="/dashboard/organization" replace />;
+};
+
+const OrganizationRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+  const auth = useAuth(apiBaseUrl);
+
+  if (auth.isLoading) {
+    return <p>Loading...</p>;
+  }
+
+  if (!auth.session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (needsCompanyOnboarding(auth.session)) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  if (needsActiveCompanySelection(auth.session)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (hasBlockedActiveCompany(auth.session)) {
+    return <Navigate to="/dashboard/company-status" replace />;
+  }
+
+  if (getActiveRole(auth.session) !== 'company-owner') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <OrganizationPage session={auth.session} />;
 };
 
 const LoginRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
@@ -356,6 +480,24 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
         <Route
           path="locals"
           element={<LocalsRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="areas"
+          element={<AreasRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="organization"
+          element={<OrganizationRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="warehouses"
+          element={<WarehousesRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="points-of-sale"
+          element={
+            <PointsOfSaleRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+          }
         />
         <Route
           path="settings/profile"

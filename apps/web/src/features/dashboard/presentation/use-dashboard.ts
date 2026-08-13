@@ -67,12 +67,16 @@ export const useDashboardSummary = (apiBaseUrl?: string, enabled = false) => {
   });
 };
 
-export const useDashboardNotifications = (apiBaseUrl?: string, enabled = false) => {
+export const useDashboardNotifications = (
+  apiBaseUrl?: string,
+  enabled = false,
+  scope: 'admin' | 'user' = 'admin',
+) => {
   const repository = createDashboardRepository(apiBaseUrl);
 
   return useQuery({
-    queryKey: dashboardNotificationsQueryKey,
-    queryFn: () => repository.getNotifications(),
+    queryKey: [...dashboardNotificationsQueryKey, scope],
+    queryFn: () => repository.getNotifications(scope),
     enabled,
     refetchInterval: enabled ? 30_000 : false,
   });

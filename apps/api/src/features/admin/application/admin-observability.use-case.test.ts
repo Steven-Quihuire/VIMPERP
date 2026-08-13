@@ -19,6 +19,7 @@ import type {
 const createAdminGateway = (): AdminGateway => ({
   getCompanySummary: vi.fn(),
   listNotifications: vi.fn(),
+  listNotificationsForCompanyRole: vi.fn(),
   listProvisioningRuns: vi.fn().mockResolvedValue({
     items: [
       {

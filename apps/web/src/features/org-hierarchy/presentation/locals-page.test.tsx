@@ -61,6 +61,7 @@ const session: AuthSession = {
     { companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null },
   ],
   activeCompany: { companyId: 'company-1', status: 'active' },
+  activeScope: null,
   activeLocalId: null,
   capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
 };

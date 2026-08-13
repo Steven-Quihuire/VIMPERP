@@ -7,6 +7,7 @@ import {
   Headphones,
   Landmark,
   Loader2,
+  LogOut,
   Mail,
   MapPin,
   Package,
@@ -28,7 +29,6 @@ import { sileo } from 'sileo';
 
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
-import { Checkbox } from '@/shared/ui/checkbox';
 import {
   Card,
   CardContent,
@@ -36,8 +36,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/shared/ui/card';
-import { Input } from '@/shared/ui/input';
-import { Label } from '@/shared/ui/label';
+import { Checkbox } from '@/shared/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -46,7 +45,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/dialog';
+import { Input } from '@/shared/ui/input';
+import { Label } from '@/shared/ui/label';
 import type { AuthSession } from '../../auth/domain/auth';
+import { useLogout } from '../../auth/presentation/use-auth';
 import type { erpModuleValues } from '../domain/onboarding';
 import {
   MAX_ONBOARDING_SERVICES,
@@ -304,11 +306,27 @@ export const OnboardingPage = ({
   const hydrate = useOnboardingStore((state) => state.hydrate);
   const reset = useOnboardingStore((state) => state.reset);
   const createCompany = useCreateCompany(apiBaseUrl);
+  const logout = useLogout(apiBaseUrl);
   const isSubmittingRef = useRef(false);
   const [companyNameSuggestions] = useState(getRandomCompanySuggestions);
   const [isPrivacyDialogOpen, setIsPrivacyDialogOpen] = useState(false);
   const [hasAcceptedPrivacyPolicy, setHasAcceptedPrivacyPolicy] =
     useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await logout.mutateAsync();
+      void navigate('/login', { replace: true });
+    } catch (error) {
+      sileo.error({
+        title: 'No pudimos cerrar sesión',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Intenta nuevamente en unos segundos.',
+      });
+    }
+  };
 
   useEffect(() => {
     hydrate(session);
@@ -783,7 +801,7 @@ export const OnboardingPage = ({
   return (
     <main className="bg-muted/30" aria-busy={createCompany.isPending}>
       <div className="flex h-dvh min-h-0 overflow-hidden">
-        <aside className="hidden w-96 shrink-0 flex-col bg-primary px-4 py-8 text-primary-foreground lg:flex">
+        <aside className="flex relative w-96 shrink-0 flex-col bg-foreground px-4 py-8 text-primary-foreground">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <div className="flex size-8 items-center justify-center rounded-lg">
               <img
@@ -892,6 +910,22 @@ export const OnboardingPage = ({
                 </div>
               </div>
             </div>
+
+            <button
+              className="absolute bottom-4 left-[20%] shrink-0 gap-1.5 transition-all duration-400 ease-in-out text-sm border hover:border-white border-gray-400 hover:bg-white hover:text-black px-12 py-2  rounded-2xl flex items-center justify-center cursor-pointer"
+              onClick={() => void handleLogout()}
+              disabled={logout.isPending}
+              aria-label="Cerrar sesión"
+            >
+              {logout.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <LogOut className="size-3.5" />
+              )}
+              <span className="hidden sm:inline">
+                {logout.isPending ? 'Saliendo...' : 'Cerrar sesión'}
+              </span>
+            </button>
           </div>
         </aside>
         <section className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -900,13 +934,15 @@ export const OnboardingPage = ({
               <div className="flex items-center gap-2 text-sm font-semibold lg:hidden">
                 <Building2 className="size-4" /> Vimcore
               </div>
-              <p className="text-xs font-medium text-muted-foreground">
-                Sesión iniciada con{' '}
-                <span className="text-foreground">{session.user.email}</span>
-              </p>
-              <p className="shrink-0 text-xs font-medium text-muted-foreground">
-                paso {currentStepIndex + 1} / {onboardingSteps.length}
-              </p>
+              <div className="w-full flex justify-between items-center gap-4">
+                <p className="truncate text-xs font-medium text-muted-foreground">
+                  Sesión iniciada con{' '}
+                  <span className="text-foreground">{session.user.email}</span>
+                </p>
+                <p className="hidden shrink-0 text-xs font-medium text-muted-foreground sm:block">
+                  paso {currentStepIndex + 1} / {onboardingSteps.length}
+                </p>
+              </div>
             </div>
             <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-muted">
               <div

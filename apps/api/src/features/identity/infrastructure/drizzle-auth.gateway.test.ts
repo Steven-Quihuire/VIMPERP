@@ -20,6 +20,7 @@ type PreferencesRow = {
   userId: string;
   activeCompanyId: string | null;
   activeLocalId: string | null;
+  activeScopeNodeId?: string | null;
 };
 
 type LocalRow = {
@@ -194,6 +195,24 @@ describe('createDrizzleAuthIdentityGateway', () => {
     await expect(gateway.findActiveLocalId('user-2')).resolves.toBeNull();
   });
 
+  it('findActiveScopeNodeId reads activeScopeNodeId from userPreferences', async () => {
+    const { db } = createFakeDb({
+      preferences: [
+        {
+          userId: 'user-1',
+          activeCompanyId: 'company-1',
+          activeLocalId: 'local-1',
+          activeScopeNodeId: 'warehouse:warehouse-1',
+        },
+      ],
+    });
+    const gateway = createDrizzleAuthIdentityGateway(db);
+
+    await expect(gateway.findActiveScopeNodeId('user-1')).resolves.toBe(
+      'warehouse:warehouse-1',
+    );
+  });
+
   it('setActiveLocalId inserts a preference row when none exists', async () => {
     const { db, state } = createFakeDb();
     const gateway = createDrizzleAuthIdentityGateway(db);
@@ -223,6 +242,42 @@ describe('createDrizzleAuthIdentityGateway', () => {
     expect(state.preferences[0]?.activeCompanyId).toBe('company-1');
   });
 
+  it('setActiveScopeNodeId inserts a preference row when none exists', async () => {
+    const { db, state } = createFakeDb();
+    const gateway = createDrizzleAuthIdentityGateway(db);
+
+    await gateway.setActiveScopeNodeId('user-1', 'warehouse:warehouse-1');
+
+    expect(state.preferences).toEqual([
+      {
+        userId: 'user-1',
+        activeCompanyId: null,
+        activeLocalId: null,
+        activeScopeNodeId: 'warehouse:warehouse-1',
+      },
+    ]);
+  });
+
+  it('setActiveScopeNodeId updates an existing preference row and clears when null', async () => {
+    const { db, state } = createFakeDb({
+      preferences: [
+        {
+          userId: 'user-1',
+          activeCompanyId: 'company-1',
+          activeLocalId: 'local-1',
+          activeScopeNodeId: 'local:local-1',
+        },
+      ],
+    });
+    const gateway = createDrizzleAuthIdentityGateway(db);
+
+    await gateway.setActiveScopeNodeId('user-1', null);
+
+    expect(state.preferences[0]?.activeScopeNodeId).toBeNull();
+    expect(state.preferences[0]?.activeCompanyId).toBe('company-1');
+    expect(state.preferences[0]?.activeLocalId).toBe('local-1');
+  });
+
   it('setActiveCompanyId clears activeLocalId when switching company', async () => {
     const { db, state } = createFakeDb({
       preferences: [
@@ -230,6 +285,7 @@ describe('createDrizzleAuthIdentityGateway', () => {
           userId: 'user-1',
           activeCompanyId: 'company-1',
           activeLocalId: 'local-1',
+          activeScopeNodeId: 'warehouse:warehouse-1',
         },
       ],
     });
@@ -239,6 +295,7 @@ describe('createDrizzleAuthIdentityGateway', () => {
 
     expect(state.preferences[0]?.activeCompanyId).toBe('company-2');
     expect(state.preferences[0]?.activeLocalId).toBeNull();
+    expect(state.preferences[0]?.activeScopeNodeId).toBeNull();
   });
 
   it('findLocalCompanyById returns the companyId of a branch row', async () => {

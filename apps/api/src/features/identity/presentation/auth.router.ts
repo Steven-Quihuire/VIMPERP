@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 
 import { type AuthSession } from '../domain/auth';
+import { scopeTypeValues, type ScopeResolver } from '../../../shared/infrastructure/scope-hierarchy/scope-hierarchy.port';
 
 type Login = (input: {
   identifier: string;
@@ -19,6 +20,10 @@ type Logout = (token: string | null | undefined) => Promise<void>;
 type SwitchActiveLocal = (input: {
   userId: string;
   localId: string | null;
+}) => Promise<void>;
+type SwitchActiveScope = (input: {
+  userId: string;
+  scope: { scopeType: (typeof scopeTypeValues)[number]; scopeId: string } | null;
 }) => Promise<void>;
 type FindLocalCompanyById = (localId: string) => Promise<string | null>;
 
@@ -58,6 +63,12 @@ const authSessionSchema = z.object({
       status: z.enum(['active', 'suspended', 'provisioning_failed']),
     })
     .nullable(),
+  activeScope: z
+    .object({
+      scopeType: z.enum(scopeTypeValues),
+      scopeId: z.string().min(1),
+    })
+    .nullable(),
   activeLocalId: z.string().min(1).nullable(),
   capabilities: z.array(
     z.enum(['catalog.read', 'catalog.write', 'catalog.delete']),
@@ -66,6 +77,15 @@ const authSessionSchema = z.object({
 
 const switchActiveLocalBodySchema = z.object({
   localId: z.string().min(1).nullable(),
+});
+
+const switchActiveScopeBodySchema = z.object({
+  scope: z
+    .object({
+      scopeType: z.enum(scopeTypeValues),
+      scopeId: z.string().min(1),
+    })
+    .nullable(),
 });
 
 export { authSessionSchema, authMembershipSchema };
@@ -92,6 +112,8 @@ export const createAuthRouter = ({
   resolveAuthSession,
   logout,
   switchActiveLocal,
+  switchActiveScope,
+  scopeResolver,
   findLocalCompanyById,
   requireAuth,
   requireRole,
@@ -103,6 +125,8 @@ export const createAuthRouter = ({
   resolveAuthSession: ResolveAuthSession;
   logout: Logout;
   switchActiveLocal: SwitchActiveLocal;
+  switchActiveScope: SwitchActiveScope;
+  scopeResolver: ScopeResolver;
   findLocalCompanyById: FindLocalCompanyById;
   requireAuth: import('express').RequestHandler;
   requireRole: (...roles: import('../domain/auth').AuthRole[]) => import('express').RequestHandler;
@@ -173,6 +197,45 @@ export const createAuthRouter = ({
       next(error);
     }
   });
+
+  router.post(
+    '/auth/me/active-scope',
+    requireAuth,
+    requireRole('company-owner', 'company-user'),
+    async (request, response, next) => {
+      try {
+        const body = switchActiveScopeBodySchema.parse(request.body);
+        const auth = (response.locals as { auth: AuthSession }).auth;
+
+        if (!auth.activeCompany) {
+          response
+            .status(400)
+            .json({ error: { code: 'ACTIVE_COMPANY_REQUIRED', message: 'Active company required' } });
+          return;
+        }
+
+        if (
+          body.scope !== null &&
+          !(await scopeResolver.isAuthorized(
+            auth.activeCompany.companyId,
+            auth.user.id,
+            body.scope,
+          ).catch(() => false))
+        ) {
+          response
+            .status(403)
+            .json({ error: { code: 'FORBIDDEN', message: 'Forbidden' } });
+          return;
+        }
+
+        await switchActiveScope({ userId: auth.user.id, scope: body.scope });
+
+        response.status(204).send();
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
 
   router.post(
     '/auth/me/active-local',

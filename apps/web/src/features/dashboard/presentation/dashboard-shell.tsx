@@ -66,7 +66,8 @@ export const DashboardShell = ({
   const logout = useLogout(apiBaseUrl);
   const notifications = useDashboardNotifications(
     apiBaseUrl,
-    canViewAdminSignals(session),
+    Boolean(session.activeCompany) || canViewAdminSignals(session),
+    canViewAdminSignals(session) ? 'admin' : 'user',
   );
   useNotificationReadVersion();
   const readNotificationIds = getReadNotificationIds();
@@ -103,19 +104,19 @@ export const DashboardShell = ({
         {...(apiBaseUrl ? { apiBaseUrl } : {})}
       />
       <SidebarInset className="h-dvh max-h-dvh overflow-hidden">
-        <header className="flex h-14 shrink-0 items-center justify-between border-b bg-sidebar px-4 text-sidebar-foreground lg:px-6">
+        <header className="flex h-14 shrink-0 items-center justify-between border-b bg-[#FBFAF7] px-4 text-black lg:px-6">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
             <NavLink
               to="/dashboard/notifications"
               aria-label="Abrir notificaciones"
             >
               {({ isActive }) => (
                 <Button
-                  className={`relative w-8 h-auto rounded-full cursor-pointer transition-all ease-in-out duration-[400ms] ${
+                  className={`relative w-8 h-auto rounded-full cursor-pointer transition-all ease-in-out duration-400 ${
                     isActive
                       ? 'bg-black text-white'
                       : 'bg-[#eee] text-black hover:bg-black hover:text-white'
@@ -124,7 +125,7 @@ export const DashboardShell = ({
                 >
                   <Bell size={30} />
                   {newCompanyCount > 0 ? (
-                    <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-red-500" />
+                    <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full" />
                   ) : null}
                 </Button>
               )}
@@ -133,14 +134,11 @@ export const DashboardShell = ({
               <DropdownMenuTrigger asChild>
                 <Button
                   size="icon"
-                  className="rounded-full p-0 cursor-pointer"
+                  className="rounded-full  size-4  p-0 cursor-pointer"
                   aria-label={`Abrir menú de ${companyName}`}
                 >
-                  <Avatar
-                    size="default"
-                    className="size-8 bg-primary text-primary-foreground"
-                  >
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
+                  <Avatar size="default" className="">
+                    <AvatarFallback className="text-xs bg-black text-white">
                       {companyInitials}
                     </AvatarFallback>
                   </Avatar>
@@ -230,7 +228,7 @@ export const DashboardShell = ({
           </div>
         </header>
 
-        <div className="flex-1 overflow-auto p-4 md:p-6">
+        <div className="flex-1 overflow-auto p-1.5 md:p-2">
           <Outlet />
         </div>
       </SidebarInset>

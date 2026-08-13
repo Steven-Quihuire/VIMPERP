@@ -7,9 +7,11 @@ context: |
   Frontend: React 19 + Vite + React Router 7 + TanStack Query + Zustand + React Hook Form + Zod + Tailwind 4.
   Backend: Node + Express 5 + Drizzle ORM + PostgreSQL + Pino + Zod.
   Architecture: feature-first vertical slices with domain/application/infrastructure/presentation across apps/api and apps/web.
+  Business scope: full organizational tree (company → area → warehouse → point-of-sale).
+  Functional source of truth: code/runtime, not docs.
   Quality: ESLint 9 shared configs, TypeScript 5.9 typecheck, Prettier 3.6, Docker Compose for local Postgres.
   Testing: Vitest at root/apps, Playwright E2E, Supertest available in api, API coverage via V8 thresholds.
-  Artifact store: openspec (repo-local source of truth; Engram stores session context only).
+  Artifact store: hybrid (openspec repo-local source of truth + Engram session context).
 
 rules:
   workflow:
@@ -45,7 +47,7 @@ rules:
 
 testing:
   strict_tdd: true
-  detected: "2026-08-01"
+  detected: "2026-08-11"
   runner:
     command: "pnpm test"
     framework: vitest

@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   Network,
   Package,
-  Store,
   Tags,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
@@ -12,6 +11,7 @@ import { NavLink } from 'react-router-dom';
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -25,7 +25,7 @@ import type { AuthSession } from '../../auth/domain/auth';
 import { getCompanyMemberships } from '../../auth/domain/auth';
 import { TeamSwitcher } from '../../auth/presentation/components/team-switcher';
 import { useSwitchActiveCompany } from '../../auth/presentation/use-auth';
-import { ActiveLocalSwitcher } from '../../org-hierarchy/presentation/active-local-switcher';
+import { ActiveScopeSwitcher } from '../../org-tree/presentation/active-scope-switcher';
 import { canViewAdminSignals } from '../domain/dashboard';
 
 const workspaceItems = [
@@ -108,9 +108,6 @@ export const DashboardAppSidebar = ({
             </SidebarMenuItem>
           </SidebarMenu>
         )}
-        {session.activeCompany ? (
-          <ActiveLocalSwitcher session={session} {...(apiBaseUrl ? { apiBaseUrl } : {})} />
-        ) : null}
       </SidebarHeader>
 
       <SidebarContent>
@@ -120,10 +117,7 @@ export const DashboardAppSidebar = ({
             <SidebarMenu>
               {workspaceItems.map((item) => (
                 <SidebarMenuItem key={item.label}>
-                  <NavLink
-                    to={item.href}
-                    {...(item.end ? { end: true } : {})}
-                  >
+                  <NavLink to={item.href} {...(item.end ? { end: true } : {})}>
                     {({ isActive }) => (
                       <SidebarMenuButton
                         className={sidebarItemClass}
@@ -150,34 +144,17 @@ export const DashboardAppSidebar = ({
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <NavLink to="/dashboard/divisions">
+                  <NavLink to="/dashboard/organization">
                     {({ isActive }) => (
                       <SidebarMenuButton
                         className={sidebarItemClass}
                         asChild
-                        tooltip="Divisiones"
+                        tooltip="Organización"
                         isActive={isActive}
                       >
                         <span>
                           <Network />
-                          <span>Divisiones</span>
-                        </span>
-                      </SidebarMenuButton>
-                    )}
-                  </NavLink>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <NavLink to="/dashboard/locals">
-                    {({ isActive }) => (
-                      <SidebarMenuButton
-                        className={sidebarItemClass}
-                        asChild
-                        tooltip="Locales"
-                        isActive={isActive}
-                      >
-                        <span>
-                          <Store />
-                          <span>Locales</span>
+                          <span>Organización</span>
                         </span>
                       </SidebarMenuButton>
                     )}
@@ -232,6 +209,15 @@ export const DashboardAppSidebar = ({
           </SidebarGroup>
         ) : null}
       </SidebarContent>
+
+      {session.activeCompany ? (
+        <SidebarFooter>
+          <ActiveScopeSwitcher
+            session={session}
+            {...(apiBaseUrl ? { apiBaseUrl } : {})}
+          />
+        </SidebarFooter>
+      ) : null}
 
       <SidebarRail />
     </Sidebar>

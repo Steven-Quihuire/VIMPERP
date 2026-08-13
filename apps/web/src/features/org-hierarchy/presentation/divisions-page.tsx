@@ -193,7 +193,7 @@ const DeleteDivisionDialog = ({
       onOpenChange(false);
     } catch (err) {
       if (err instanceof HttpError && err.status === 409) {
-        setError('No se puede eliminar una división con locales asociados.');
+        setError(err.message);
       } else if (err instanceof Error) {
         setError(err.message);
       } else {

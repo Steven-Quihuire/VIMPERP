@@ -55,7 +55,7 @@ const NO_DIVISION = '__none__';
 
 const getFriendlyLocalError = (error: unknown) => {
   if (error instanceof HttpError && error.status === 409) {
-    return 'Ya existe un local con ese nombre.';
+    return error.message;
   }
 
   if (error instanceof Error) {
@@ -233,7 +233,7 @@ const DeleteLocalDialog = ({ open, onOpenChange, local }: DeleteDialogProps) => 
       onOpenChange(false);
     } catch (err) {
       if (err instanceof HttpError && err.status === 409) {
-        setError('No se puede eliminar un local con items o miembros asociados.');
+        setError(err.message);
       } else if (err instanceof Error) {
         setError(err.message);
       } else {

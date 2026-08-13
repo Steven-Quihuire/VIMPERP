@@ -10,7 +10,12 @@ export const createUpdateDivisionUseCase = ({
 }: {
   gateway: OrgHierarchyGateway;
 }) => {
-  return async (input: { divisionId: string; name: string }):
+  return async (input: {
+    divisionId: string;
+    name: string;
+    actorUserId: string;
+    correlationId: string;
+  }):
     Promise<Division> => {
     const name = input.name.trim();
 
@@ -22,6 +27,8 @@ export const createUpdateDivisionUseCase = ({
       return await gateway.updateDivision({
         divisionId: input.divisionId,
         name,
+        actorUserId: input.actorUserId,
+        correlationId: input.correlationId,
       });
     } catch (error) {
       if (error instanceof DivisionNotFoundError) {

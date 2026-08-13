@@ -4,7 +4,7 @@ import type {
   ScopeRef,
 } from '../domain/assignments';
 import type { RolesGateway } from '../domain/roles';
-import { scopeLineageContains } from './scope-matcher';
+import { isSameScopeRef, scopeLineageContains } from '../../../shared/infrastructure/scope-hierarchy/scope-hierarchy.port';
 
 const uniqueSorted = (permissionKeys: Iterable<string>) => [...new Set(permissionKeys)].sort();
 
@@ -40,7 +40,9 @@ export const createComputeEffectivePermissionsUseCase = ({
         scopeId: assignment.scopeId,
       };
 
-      return scopeLineageContains(lineage, assignmentScope);
+      return assignment.mode === 'exact_node'
+        ? isSameScopeRef(assignmentScope, input.currentContext)
+        : scopeLineageContains(lineage, assignmentScope);
     });
 
     if (inScopeAssignments.length === 0) {

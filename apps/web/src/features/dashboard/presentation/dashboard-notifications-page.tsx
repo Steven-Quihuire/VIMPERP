@@ -17,11 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from '../../../shared/ui/card';
-import type { AuthSession } from '../../auth/domain/auth';
-import {
-  canViewAdminSignals,
-  notificationsWorkspaceLinks,
-} from '../domain/dashboard';
+import { notificationsWorkspaceLinks } from '../domain/dashboard';
 import {
   markNotificationsAsRead,
   getReadNotificationIds,
@@ -29,21 +25,21 @@ import {
   useNotificationReadVersion,
 } from './use-dashboard';
 
-const formatDate = (value: string) =>
-  new Intl.DateTimeFormat('es-EC', {
+const formatDate = (value: string) => {
+  const formatted = new Intl.DateTimeFormat('es-EC', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
 
+  return `Creada el ${formatted}`;
+};
+
 export const DashboardNotificationsPage = ({
-  session,
   apiBaseUrl,
 }: {
-  session?: AuthSession;
   apiBaseUrl?: string;
 }) => {
-  const isPlatformAdmin = session ? canViewAdminSignals(session) : true;
-  const notifications = useDashboardNotifications(apiBaseUrl, isPlatformAdmin);
+  const notifications = useDashboardNotifications(apiBaseUrl, true, 'user');
   const location = useLocation();
   const readVersion = useNotificationReadVersion();
   const view = location.pathname.endsWith('/unread')

@@ -9,6 +9,7 @@ import type {
   AdminProvisioningRunDetail,
 } from '../domain/admin';
 import { adminProvisioningRunStatusValues } from '../domain/admin';
+import type { AuthSession } from '../../identity/domain/auth';
 
 const listProvisioningRunsQuerySchema = z.object({
   status: z.enum(adminProvisioningRunStatusValues).optional(),
@@ -39,6 +40,7 @@ const detailParamsSchema = z.object({
 export const createAdminRouter = ({
   getCompanySummary,
   listNotifications,
+  listCompanyNotifications,
   listProvisioningRuns,
   getProvisioningRunDetail,
   listApplicationErrors,
@@ -50,6 +52,10 @@ export const createAdminRouter = ({
 }: {
   getCompanySummary: () => Promise<AdminCompanySummary>;
   listNotifications: () => Promise<AdminNotification[]>;
+  listCompanyNotifications: (input: {
+    companyId: string;
+    targetRole: 'company-owner' | 'company-user';
+  }) => Promise<AdminNotification[]>;
   listProvisioningRuns: (input: {
     status?: (typeof adminProvisioningRunStatusValues)[number] | undefined;
     correlationId?: string | undefined;
@@ -85,6 +91,32 @@ export const createAdminRouter = ({
   requirePlatformAdmin: RequestHandler;
 }): Router => {
   const router = Router();
+
+  router.get('/notifications', requireAuth, async (_request, response, next) => {
+    try {
+      const auth = (response.locals as { auth: AuthSession }).auth;
+      const activeMembership = auth.activeCompany
+        ? auth.memberships.find(
+            (membership) =>
+              membership.companyId === auth.activeCompany?.companyId,
+          )
+        : undefined;
+
+      if (activeMembership?.role === 'company-owner' || activeMembership?.role === 'company-user') {
+        response.status(200).json({
+          notifications: await listCompanyNotifications({
+            companyId: auth.activeCompany!.companyId,
+            targetRole: activeMembership.role,
+          }),
+        });
+        return;
+      }
+
+      response.status(200).json({ notifications: await listNotifications() });
+    } catch (error) {
+      next(error);
+    }
+  });
 
   router.get(
     '/admin/companies/summary',

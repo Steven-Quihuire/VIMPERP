@@ -237,13 +237,22 @@ describe('createDrizzleCompanyOnboardingGateway', () => {
 
     const notificationWrite = writes.find((entry) => entry.table === notificationsTable);
     expect(notificationWrite?.values).toEqual(
-      expect.objectContaining({
-        companyId: 'fixed-id',
-        createdAt: new Date('2026-07-28T12:00:00.000Z'),
-        message: 'Vimcore Labs registered',
-        targetRole: 'platform-admin',
-        type: 'company.registered',
-      }),
+      expect.arrayContaining([
+        expect.objectContaining({
+          companyId: 'fixed-id',
+          createdAt: new Date('2026-07-28T12:00:00.000Z'),
+          message: 'Vimcore Labs registered',
+          targetRole: 'platform-admin',
+          type: 'company.registered',
+        }),
+        expect.objectContaining({
+          companyId: 'fixed-id',
+          createdAt: new Date('2026-07-28T12:00:00.000Z'),
+          message: 'Vimcore Labs registered',
+          targetRole: 'company-owner',
+          type: 'company.registered',
+        }),
+      ]),
     );
 
     const auditWrite = writes.find((entry) => entry.table === auditEventsTable);

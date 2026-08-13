@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -75,6 +76,11 @@ export const scopeNodeTypeEnum = pgEnum('scope_node_type', [
   'point-of-sale',
 ]);
 
+export const roleAssignmentModeEnum = pgEnum('role_assignment_mode', [
+  'subtree_inclusive',
+  'exact_node',
+]);
+
 export const usersTable = pgTable('users', {
   id: text('id').primaryKey(),
   email: text('email').notNull().unique(),
@@ -114,6 +120,7 @@ export const divisionsTable = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
   },
   (table) => [
+    uniqueIndex('divisions_id_company_idx').on(table.id, table.companyId),
     uniqueIndex('divisions_company_name_idx').on(
       table.companyId,
       table.name,
@@ -161,6 +168,10 @@ export const userPreferencesTable = pgTable('user_preferences', {
     () => companiesTable.id,
   ),
   activeLocalId: text('active_local_id'),
+  activeScopeNodeId: text('active_scope_node_id').references(
+    () => scopeNodesTable.id,
+    { onDelete: 'restrict' },
+  ),
 });
 
 export const permissionsTable = pgTable(
@@ -228,6 +239,9 @@ export const roleAssignmentsTable = pgTable(
     scopeNodeId: text('scope_node_id')
       .notNull()
       .references(() => scopeNodesTable.id, { onDelete: 'restrict' }),
+    mode: roleAssignmentModeEnum('mode')
+      .notNull()
+      .default('subtree_inclusive'),
     scopeType: scopeNodeTypeEnum('scope_type').notNull(),
     scopeId: text('scope_id').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -289,6 +303,48 @@ export const scopeNodesTable = pgTable(
     uniqueIndex('scope_nodes_node_source_idx').on(table.nodeType, table.sourceId),
     index('scope_nodes_company_idx').on(table.companyId),
     index('scope_nodes_parent_scope_node_idx').on(table.parentScopeNodeId),
+  ],
+);
+
+export const nodeResponsibilitiesTable = pgTable(
+  'node_responsibilities',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: 'restrict' }),
+    scopeNodeId: text('scope_node_id')
+      .notNull()
+      .references(() => scopeNodesTable.id, { onDelete: 'restrict' }),
+    scopeType: scopeNodeTypeEnum('scope_type').notNull(),
+    scopeId: text('scope_id').notNull(),
+    responsibleUserId: text('responsible_user_id')
+      .notNull()
+      .references(() => usersTable.id, { onDelete: 'restrict' }),
+    managedRoleKey: text('managed_role_key').notNull().default('node-manager'),
+    assignmentMode: roleAssignmentModeEnum('assignment_mode')
+      .notNull()
+      .default('subtree_inclusive'),
+    baseMembershipRole: authRoleEnum('base_membership_role')
+      .notNull()
+      .default('company-user'),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
+  },
+  (table) => [
+    index('node_responsibilities_company_idx').on(table.companyId),
+    index('node_responsibilities_scope_node_idx').on(table.scopeNodeId),
+    index('node_responsibilities_scope_idx').on(table.scopeType, table.scopeId),
+    index('node_responsibilities_user_idx').on(table.responsibleUserId),
+    uniqueIndex('node_responsibilities_active_scope_node_idx')
+      .on(table.scopeNodeId)
+      .where(sql`${table.isActive} = true AND ${table.endedAt} IS NULL`),
   ],
 );
 
@@ -395,6 +451,12 @@ export const localsTable = pgTable(
     locale: text('locale'),
   },
   (table) => [
+    uniqueIndex('locals_id_company_idx').on(table.id, table.companyId),
+    foreignKey({
+      columns: [table.divisionId, table.companyId],
+      foreignColumns: [divisionsTable.id, divisionsTable.companyId],
+      name: 'locals_division_company_fk',
+    }),
     uniqueIndex('locals_company_name_root_idx')
       .on(table.companyId, table.name)
       .where(sql`${table.divisionId} IS NULL`),
@@ -426,10 +488,21 @@ export const areasTable = pgTable(
       .defaultNow(),
   },
   (table) => [
+    uniqueIndex('areas_id_company_idx').on(table.id, table.companyId),
     check(
       'areas_exactly_one_parent_check',
       sql`((${table.divisionId} IS NOT NULL AND ${table.localId} IS NULL) OR (${table.divisionId} IS NULL AND ${table.localId} IS NOT NULL))`,
     ),
+    foreignKey({
+      columns: [table.divisionId, table.companyId],
+      foreignColumns: [divisionsTable.id, divisionsTable.companyId],
+      name: 'areas_division_company_fk',
+    }),
+    foreignKey({
+      columns: [table.localId, table.companyId],
+      foreignColumns: [localsTable.id, localsTable.companyId],
+      name: 'areas_local_company_fk',
+    }),
     uniqueIndex('areas_company_division_kind_name_idx')
       .on(table.companyId, table.divisionId, table.kind, table.name)
       .where(sql`${table.divisionId} IS NOT NULL AND ${table.localId} IS NULL`),
@@ -482,10 +555,21 @@ export const warehousesTable = pgTable(
       .defaultNow(),
   },
   (table) => [
+    uniqueIndex('warehouses_id_company_idx').on(table.id, table.companyId),
     check(
       'warehouses_exactly_one_parent_check',
       sql`((${table.areaId} IS NOT NULL AND ${table.localId} IS NULL) OR (${table.areaId} IS NULL AND ${table.localId} IS NOT NULL))`,
     ),
+    foreignKey({
+      columns: [table.areaId, table.companyId],
+      foreignColumns: [areasTable.id, areasTable.companyId],
+      name: 'warehouses_area_company_fk',
+    }),
+    foreignKey({
+      columns: [table.localId, table.companyId],
+      foreignColumns: [localsTable.id, localsTable.companyId],
+      name: 'warehouses_local_company_fk',
+    }),
     uniqueIndex('warehouses_company_area_name_idx')
       .on(table.companyId, table.areaId, table.name)
       .where(sql`${table.areaId} IS NOT NULL AND ${table.localId} IS NULL`),
@@ -515,10 +599,21 @@ export const pointsOfSaleTable = pgTable(
       .defaultNow(),
   },
   (table) => [
+    uniqueIndex('points_of_sale_id_company_idx').on(table.id, table.companyId),
     check(
       'points_of_sale_exactly_one_parent_check',
       sql`((${table.areaId} IS NOT NULL AND ${table.localId} IS NULL) OR (${table.areaId} IS NULL AND ${table.localId} IS NOT NULL))`,
     ),
+    foreignKey({
+      columns: [table.areaId, table.companyId],
+      foreignColumns: [areasTable.id, areasTable.companyId],
+      name: 'points_of_sale_area_company_fk',
+    }),
+    foreignKey({
+      columns: [table.localId, table.companyId],
+      foreignColumns: [localsTable.id, localsTable.companyId],
+      name: 'points_of_sale_local_company_fk',
+    }),
     uniqueIndex('points_of_sale_company_area_name_idx')
       .on(table.companyId, table.areaId, table.name)
       .where(sql`${table.areaId} IS NOT NULL AND ${table.localId} IS NULL`),

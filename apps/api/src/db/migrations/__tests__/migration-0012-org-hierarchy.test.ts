@@ -141,27 +141,27 @@ expect(divisionsForeignKeys.rows.some(
     });
   });
 
-  it('adds nullable division_id to branches with FK to divisions', async () => {
+  it('adds nullable division_id to locals with FK to divisions', async () => {
     const database = await createMigrationTestDatabase();
     cleanups.push(database.cleanup);
 
     const latestMigration = await getLatestMigrationFile();
     await applyMigrationsThrough(database.pool, latestMigration!);
 
-    const branchDivisionId = await database.pool.query<{
+    const localDivisionId = await database.pool.query<{
       isNullable: 'YES' | 'NO';
       dataType: string;
     }>(`
       SELECT is_nullable AS "isNullable", data_type AS "dataType"
       FROM information_schema.columns
-      WHERE table_name = 'branches' AND column_name = 'division_id'
+      WHERE table_name = 'locals' AND column_name = 'division_id'
     `);
 
-    expect(branchDivisionId.rows).toEqual([
+    expect(localDivisionId.rows).toEqual([
       { isNullable: 'YES', dataType: 'text' },
     ]);
 
-    const branchForeignKeys = await database.pool.query<{
+    const localForeignKeys = await database.pool.query<{
       columnName: string;
       foreignTableName: string;
       foreignColumnName: string;
@@ -178,10 +178,10 @@ expect(divisionsForeignKeys.rows.some(
         ON ccu.constraint_name = tc.constraint_name
        AND ccu.table_schema = tc.table_schema
       WHERE tc.constraint_type = 'FOREIGN KEY'
-        AND tc.table_name = 'branches'
+        AND tc.table_name = 'locals'
     `);
 
-    expect(branchForeignKeys.rows).toContainEqual({
+    expect(localForeignKeys.rows).toContainEqual({
       columnName: 'division_id',
       foreignTableName: 'divisions',
       foreignColumnName: 'id',
@@ -357,6 +357,101 @@ expect(divisionsForeignKeys.rows.some(
     `);
 
     expect(prefLocalId.rows).toEqual([{ isNullable: 'YES', dataType: 'text' }]);
+  });
+
+  it('enforces same-company composite parent foreign keys across hierarchy tables', async () => {
+    const database = await createMigrationTestDatabase();
+    cleanups.push(database.cleanup);
+
+    const latestMigration = await getLatestMigrationFile();
+    await applyMigrationsThrough(database.pool, latestMigration!);
+
+    const foreignKeys = await database.pool.query<{
+      tableName: string;
+      constraintName: string;
+      columnNames: string;
+      foreignTableName: string;
+      foreignColumnNames: string;
+    }>(`
+      SELECT
+        tc.table_name AS "tableName",
+        tc.constraint_name AS "constraintName",
+        array_to_string(array_agg(DISTINCT kcu.column_name ORDER BY kcu.column_name), ',') AS "columnNames",
+        ccu.table_name AS "foreignTableName",
+        array_to_string(array_agg(DISTINCT ccu.column_name ORDER BY ccu.column_name), ',') AS "foreignColumnNames"
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu
+        ON tc.constraint_name = kcu.constraint_name
+       AND tc.table_schema = kcu.table_schema
+      JOIN information_schema.constraint_column_usage ccu
+        ON ccu.constraint_name = tc.constraint_name
+       AND ccu.table_schema = tc.table_schema
+      WHERE tc.constraint_type = 'FOREIGN KEY'
+        AND tc.table_name IN ('locals', 'areas', 'warehouses', 'points_of_sale')
+        AND tc.constraint_name IN (
+          'locals_division_company_fk',
+          'areas_division_company_fk',
+          'areas_local_company_fk',
+          'warehouses_area_company_fk',
+          'warehouses_local_company_fk',
+          'points_of_sale_area_company_fk',
+          'points_of_sale_local_company_fk'
+        )
+      GROUP BY tc.table_name, tc.constraint_name, ccu.table_name
+      ORDER BY tc.table_name, tc.constraint_name
+    `);
+
+    expect(foreignKeys.rows).toEqual([
+      {
+        tableName: 'areas',
+        constraintName: 'areas_division_company_fk',
+        columnNames: 'company_id,division_id',
+        foreignTableName: 'divisions',
+        foreignColumnNames: 'company_id,id',
+      },
+      {
+        tableName: 'areas',
+        constraintName: 'areas_local_company_fk',
+        columnNames: 'company_id,local_id',
+        foreignTableName: 'locals',
+        foreignColumnNames: 'company_id,id',
+      },
+      {
+        tableName: 'locals',
+        constraintName: 'locals_division_company_fk',
+        columnNames: 'company_id,division_id',
+        foreignTableName: 'divisions',
+        foreignColumnNames: 'company_id,id',
+      },
+      {
+        tableName: 'points_of_sale',
+        constraintName: 'points_of_sale_area_company_fk',
+        columnNames: 'area_id,company_id',
+        foreignTableName: 'areas',
+        foreignColumnNames: 'company_id,id',
+      },
+      {
+        tableName: 'points_of_sale',
+        constraintName: 'points_of_sale_local_company_fk',
+        columnNames: 'company_id,local_id',
+        foreignTableName: 'locals',
+        foreignColumnNames: 'company_id,id',
+      },
+      {
+        tableName: 'warehouses',
+        constraintName: 'warehouses_area_company_fk',
+        columnNames: 'area_id,company_id',
+        foreignTableName: 'areas',
+        foreignColumnNames: 'company_id,id',
+      },
+      {
+        tableName: 'warehouses',
+        constraintName: 'warehouses_local_company_fk',
+        columnNames: 'company_id,local_id',
+        foreignTableName: 'locals',
+        foreignColumnNames: 'company_id,id',
+      },
+    ]);
   });
 
   it('adds nullable division_id and local_id to audit_events and indexes local_id', async () => {

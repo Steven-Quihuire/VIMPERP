@@ -32,6 +32,7 @@ describe('auth session shape lockstep (api zod <-> web type)', () => {
       'user',
       'memberships',
       'activeCompany',
+      'activeScope',
       'activeLocalId',
       'capabilities',
     ].sort() as (keyof WebAuthSession)[];

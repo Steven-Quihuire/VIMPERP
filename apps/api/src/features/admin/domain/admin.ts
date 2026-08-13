@@ -131,6 +131,10 @@ export type AdminAuditEventDetail = AdminAuditEventSummary & {
 export type AdminGateway = {
   getCompanySummary: () => Promise<AdminCompanySummary>;
   listNotifications: () => Promise<AdminNotification[]>;
+  listNotificationsForCompanyRole: (input: {
+    companyId: string;
+    targetRole: AuthRole;
+  }) => Promise<AdminNotification[]>;
   listProvisioningRuns: (
     filters: AdminProvisioningRunListFilters,
   ) => Promise<AdminCursorPage<AdminProvisioningRunSummary>>;

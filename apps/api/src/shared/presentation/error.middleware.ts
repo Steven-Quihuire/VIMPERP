@@ -20,12 +20,21 @@ import {
   UnauthorizedError,
 } from '../../features/identity/domain/auth';
 import {
+  AreaConflictError,
+  AreaNameConflictError,
+  AreaNotFoundError,
   DivisionConflictError,
   DivisionNameConflictError,
   DivisionNotFoundError,
+  InvalidHierarchyParentError,
   LocalConflictError,
   LocalNameConflictError,
   LocalNotFoundError,
+  ParentOwnershipError,
+  PointOfSaleNameConflictError,
+  PointOfSaleNotFoundError,
+  WarehouseNameConflictError,
+  WarehouseNotFoundError,
 } from '../../features/org-hierarchy/domain/org-hierarchy';
 import {
   sanitizeApplicationError,
@@ -109,8 +118,14 @@ export const createErrorMiddleware = ({
     if (
       error instanceof DivisionConflictError ||
       error instanceof LocalConflictError ||
+      error instanceof AreaConflictError ||
       error instanceof DivisionNameConflictError ||
-      error instanceof LocalNameConflictError
+      error instanceof LocalNameConflictError ||
+      error instanceof AreaNameConflictError ||
+      error instanceof WarehouseNameConflictError ||
+      error instanceof PointOfSaleNameConflictError ||
+      error instanceof InvalidHierarchyParentError ||
+      error instanceof ParentOwnershipError
     ) {
       response.status(409).json(toResponseBody('CONFLICT', error.message));
       return;
@@ -118,7 +133,10 @@ export const createErrorMiddleware = ({
 
     if (
       error instanceof DivisionNotFoundError ||
-      error instanceof LocalNotFoundError
+      error instanceof LocalNotFoundError ||
+      error instanceof AreaNotFoundError ||
+      error instanceof WarehouseNotFoundError ||
+      error instanceof PointOfSaleNotFoundError
     ) {
       response.status(404).json(toResponseBody('NOT_FOUND', error.message));
       return;

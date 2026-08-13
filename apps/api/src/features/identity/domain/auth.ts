@@ -26,6 +26,10 @@ export type SwitchActiveLocalInput = {
   localId: string | null;
 };
 
+export type SwitchActiveScopeInput = {
+  scope: import('../../../shared/infrastructure/scope-hierarchy/scope-hierarchy.port').ScopeRef | null;
+};
+
 export const companyLifecycleValues = [
   'active',
   'suspended',
@@ -57,6 +61,7 @@ export type AuthSession = {
   user: PublicAuthUser;
   memberships: AuthMembership[];
   activeCompany: ActiveCompany | null;
+  activeScope: import('../../../shared/infrastructure/scope-hierarchy/scope-hierarchy.port').ScopeRef | null;
   activeLocalId: string | null;
   capabilities: AuthCapability[];
 };
@@ -76,6 +81,8 @@ export type AuthIdentityGateway = {
   findActiveCompanyId: (userId: string) => Promise<string | null>;
   findCompanyStatus: (companyId: string) => Promise<CompanyLifecycle>;
   setActiveCompanyId: (userId: string, companyId: string) => Promise<void>;
+  findActiveScopeNodeId: (userId: string) => Promise<string | null>;
+  setActiveScopeNodeId: (userId: string, scopeNodeId: string | null) => Promise<void>;
   findActiveLocalId: (userId: string) => Promise<string | null>;
   setActiveLocalId: (userId: string, localId: string | null) => Promise<void>;
   findLocalCompanyById: (localId: string) => Promise<string | null>;

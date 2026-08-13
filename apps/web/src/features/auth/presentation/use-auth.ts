@@ -12,6 +12,7 @@ import type {
   RegisterInput,
   SwitchActiveCompanyInput,
   SwitchActiveLocalInput,
+  SwitchActiveScopeInput,
 } from '../domain/auth';
 
 export const authQueryKey = ['auth', 'me'] as const;
@@ -135,6 +136,30 @@ export const useSwitchActiveLocal = (apiBaseUrl?: string) => {
       queryClient.setQueryData(authQueryKey, session);
       void queryClient.invalidateQueries({ queryKey: ['items'] });
       void queryClient.invalidateQueries({ queryKey: ['categories'] });
+    },
+  });
+};
+
+export const useSwitchActiveScope = (apiBaseUrl?: string) => {
+  const repository = createAuthRepository(apiBaseUrl);
+  const queryClient = useQueryClient();
+  const setSession = useAuthStore((state) => state.setSession);
+
+  return useMutation({
+    mutationFn: async (input: SwitchActiveScopeInput) => {
+      await repository.switchActiveScope(input);
+      return await repository.getMe();
+    },
+    onSuccess: (session: AuthSession) => {
+      setSession(session);
+      queryClient.setQueryData(authQueryKey, session);
+      void queryClient.invalidateQueries({ queryKey: ['items'] });
+      void queryClient.invalidateQueries({ queryKey: ['categories'] });
+      if (session.activeCompany) {
+        void queryClient.invalidateQueries({
+          queryKey: ['org-tree', session.activeCompany.companyId],
+        });
+      }
     },
   });
 };

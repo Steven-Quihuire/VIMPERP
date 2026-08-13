@@ -2,6 +2,7 @@ import { Router, type RequestHandler } from 'express';
 import { z } from 'zod';
 
 import {
+  ForbiddenError,
   requireTenantCapability,
   type AuthCapability,
   type AuthSession,
@@ -93,11 +94,16 @@ const getRouteContext = (
   const auth = locals.auth;
   const activeCompany = requireTenantCapability(auth, capability);
 
+  if (auth.activeScope === null) {
+    throw new ForbiddenError('Active scope required');
+  }
+
   return {
     actorUserId: auth.user.id,
     capabilities: activeCompany.capabilities,
     companyId: activeCompany.companyId,
-    localId: auth.activeLocalId,
+    localId:
+      auth.activeScope?.scopeType === 'local' ? auth.activeScope.scopeId : null,
     companyStatus: activeCompany.status,
     correlationId:
       locals.requestContext?.correlationId ?? String(response.getHeader('x-correlation-id')),

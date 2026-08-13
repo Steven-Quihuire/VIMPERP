@@ -316,14 +316,24 @@ export const createDrizzleCompanyOnboardingGateway = (
         });
       }
 
-      await tx.insert(notificationsTable).values({
-        id: generateId(),
-        companyId,
-        targetRole: 'platform-admin',
-        type: 'company.registered',
-        message: `${input.name} registered`,
-        createdAt,
-      });
+      await tx.insert(notificationsTable).values([
+        {
+          id: generateId(),
+          companyId,
+          targetRole: 'platform-admin',
+          type: 'company.registered',
+          message: `${input.name} registered`,
+          createdAt,
+        },
+        {
+          id: generateId(),
+          companyId,
+          targetRole: 'company-owner',
+          type: 'company.registered',
+          message: `${input.name} registered`,
+          createdAt,
+        },
+      ]);
 
       await tx.insert(auditEventsTable).values({
         id: generateId(),

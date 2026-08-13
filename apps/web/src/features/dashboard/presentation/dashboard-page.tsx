@@ -4,7 +4,12 @@ import {
   Bell,
   Building2,
   Calendar,
+  Box,
+  Map,
+  Network,
   ShieldCheck,
+  ShoppingBasket,
+  Store,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -17,6 +22,13 @@ import {
   CardTitle,
 } from '../../../shared/ui/card';
 import type { AuthSession } from '../../auth/domain/auth';
+import {
+  useAreas,
+  useDivisions,
+  useLocals,
+  usePointsOfSale,
+  useWarehouses,
+} from '../../org-hierarchy/application/org-hierarchy-queries';
 import {
   adminWorkspaceLinks,
   canViewAdminSignals,
@@ -38,11 +50,21 @@ export const DashboardPage = ({
   const isPlatformAdmin = canViewAdminSignals(session);
   const modules = getVisibleDashboardModules(session);
   const summary = useDashboardSummary(apiBaseUrl, isPlatformAdmin);
-  const notifications = useDashboardNotifications(apiBaseUrl, isPlatformAdmin);
+  const notifications = useDashboardNotifications(
+    apiBaseUrl,
+    Boolean(session.activeCompany) || isPlatformAdmin,
+    isPlatformAdmin ? 'admin' : 'user',
+  );
   const currentCompany = useDashboardCurrentCompany(
     apiBaseUrl,
     Boolean(session.activeCompany) && !isPlatformAdmin,
   );
+  const companyId = session.activeCompany?.companyId;
+  const divisionsQuery = useDivisions(companyId, apiBaseUrl);
+  const localsQuery = useLocals(companyId, apiBaseUrl);
+  const areasQuery = useAreas(companyId, apiBaseUrl);
+  const warehousesQuery = useWarehouses(companyId, apiBaseUrl);
+  const pointsOfSaleQuery = usePointsOfSale(companyId, apiBaseUrl);
   const notificationsList = notifications.data?.notifications ?? [];
   const formatDate = (value: string) =>
     new Intl.DateTimeFormat('es-EC', { dateStyle: 'medium' }).format(
@@ -214,79 +236,94 @@ export const DashboardPage = ({
           </div>
         </section>
       ) : (
-        <Card>
-          <CardHeader>
-            {session.activeCompany ? (
-              <CardTitle>Company modules</CardTitle>
-            ) : (
-              <h1 className="text-3xl font-semibold tracking-tight">
-                Selecciona una empresa
-              </h1>
-            )}
-            <CardDescription>
-              {session.activeCompany
-                ? 'Pick a module from the sidebar to continue your ERP setup.'
-                : 'Elige una empresa activa desde el selector lateral para continuar.'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent
-            className={
-              session.activeCompany ? 'grid gap-3 md:grid-cols-3' : 'space-y-2'
-            }
-          >
-            {session.activeCompany ? (
-              modules.map((module) => (
-                <a
-                  key={module.id}
-                  href={`#${module.id}`}
-                  aria-label={`Open ${module.label} module`}
-                  className="flex items-center gap-3 rounded-lg border p-4 text-sm hover:bg-accent"
+        <section className="grid gap-6">
+          {session.activeCompany ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+              {[
+                {
+                  label: 'Divisiones',
+                  value: divisionsQuery.data?.length ?? 0,
+                  icon: Network,
+                },
+                {
+                  label: 'Locales',
+                  value: localsQuery.data?.length ?? 0,
+                  icon: Store,
+                },
+                {
+                  label: 'Áreas',
+                  value: areasQuery.data?.length ?? 0,
+                  icon: Map,
+                },
+                {
+                  label: 'Almacenes',
+                  value: warehousesQuery.data?.length ?? 0,
+                  icon: Box,
+                },
+                {
+                  label: 'Puntos de venta',
+                  value: pointsOfSaleQuery.data?.length ?? 0,
+                  icon: ShoppingBasket,
+                },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-[28px] border border-border/80 bg-background/80 px-4 py-4 shadow-sm"
                 >
-                  <Building2 className="size-4" />
-                  <span>{module.label}</span>
-                </a>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Cambia de empresa para habilitar los módulos de trabajo y seguir
-                con la operación diaria.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Actividad</CardTitle>
-          <CardDescription>Movimientos recientes</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {notificationsList.slice(0, 4).map((notification) => (
-            <div key={notification.id} className="flex items-start gap-3">
-              <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
-                {notification.type === 'company.registered' ? (
-                  <Building2 className="size-4" />
-                ) : (
-                  <Bell className="size-4" />
-                )}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium leading-5">
-                  {notification.message}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {formatDate(notification.createdAt)}
-                </p>
-              </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                      {item.label}
+                    </p>
+                    <item.icon className="size-4 text-muted-foreground" />
+                  </div>
+                  <p className="mt-3 text-3xl font-semibold">{item.value}</p>
+                </div>
+              ))}
             </div>
-          ))}
-          {notificationsList.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No hay actividad reciente.
-            </p>
           ) : null}
-        </CardContent>
-      </Card>
+
+          <Card>
+            <CardHeader>
+              {session.activeCompany ? (
+                <CardTitle>Company modules</CardTitle>
+              ) : (
+                <h1 className="text-3xl font-semibold tracking-tight">
+                  Selecciona una empresa
+                </h1>
+              )}
+              <CardDescription>
+                {session.activeCompany
+                  ? 'Pick a module from the sidebar to continue your ERP setup.'
+                  : 'Elige una empresa activa desde el selector lateral para continuar.'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent
+              className={
+                session.activeCompany ? 'grid gap-3 md:grid-cols-3' : 'space-y-2'
+              }
+            >
+              {session.activeCompany ? (
+                modules.map((module) => (
+                  <a
+                    key={module.id}
+                    href={`#${module.id}`}
+                    aria-label={`Open ${module.label} module`}
+                    className="flex items-center gap-3 rounded-lg border p-4 text-sm hover:bg-accent"
+                  >
+                    <Building2 className="size-4" />
+                    <span>{module.label}</span>
+                  </a>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Cambia de empresa para habilitar los módulos de trabajo y seguir
+                  con la operación diaria.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+      )}
     </div>
   );
 };
