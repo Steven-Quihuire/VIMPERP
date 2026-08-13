@@ -8,7 +8,7 @@ import {
   auditEventsTable,
   areasTable,
   divisionsTable,
-  employeesTable,
+  employeeAssignmentsTable,
   itemsTable,
   localsTable,
   membershipsTable,
@@ -112,9 +112,9 @@ const normalizePointsOfSaleByLocal = (
 ): PointOfSaleRow[] => rows.filter((row) => row.localId === localId);
 
 const normalizeEmployeesByArea = (
-  rows: { areaId: string | null }[],
-  areaId: string,
-) => rows.filter((row) => row.areaId === areaId);
+  rows: { scopeNodeId: string }[],
+  scopeNodeId: string,
+) => rows.filter((row) => row.scopeNodeId === scopeNodeId);
 
 const hasErrorCode = (
   error: unknown,
@@ -962,12 +962,18 @@ export const createDrizzleOrgHierarchyGateway = (
       return normalizePointsOfSaleByArea(rows, areaId).length;
     },
     countEmployeesInArea: async (areaId) => {
+      const scopeNodeId = `area:${areaId}`;
       const rows = await db
-        .select({ areaId: employeesTable.areaId })
-        .from(employeesTable)
-        .where(eq(employeesTable.areaId, areaId));
+        .select({ scopeNodeId: employeeAssignmentsTable.scopeNodeId })
+        .from(employeeAssignmentsTable)
+        .where(
+          and(
+            eq(employeeAssignmentsTable.scopeNodeId, scopeNodeId),
+            isNull(employeeAssignmentsTable.endedAt),
+          ),
+        );
 
-      return normalizeEmployeesByArea(rows, areaId).length;
+      return normalizeEmployeesByArea(rows, scopeNodeId).length;
     },
     createWarehouse: async (input) => {
       const warehouseId = generateId();

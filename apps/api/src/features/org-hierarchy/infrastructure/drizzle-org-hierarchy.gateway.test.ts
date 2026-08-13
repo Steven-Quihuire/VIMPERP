@@ -5,6 +5,7 @@ import {
   auditEventsTable,
   areasTable,
   divisionsTable,
+  employeeAssignmentsTable,
   employeesTable,
   itemsTable,
   localsTable,
@@ -82,9 +83,18 @@ type PointOfSaleRow = {
 type EmployeeRow = {
   id: string;
   companyId: string;
-  userId: string | null;
-  position: string;
-  areaId: string | null;
+  createdAt: Date;
+};
+
+type EmployeeAssignmentRow = {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  scopeNodeId: string;
+  positionId: string;
+  startedAt: Date;
+  endedAt: Date | null;
+  isPrimary: boolean;
   createdAt: Date;
 };
 
@@ -150,6 +160,7 @@ const createFakeDb = ({
   warehouses = [],
   pointsOfSale = [],
   employees = [],
+  employeeAssignments = [],
   items = [],
   memberships = [],
   roleAssignments = [],
@@ -166,6 +177,7 @@ const createFakeDb = ({
   warehouses?: WarehouseRow[];
   pointsOfSale?: PointOfSaleRow[];
   employees?: EmployeeRow[];
+  employeeAssignments?: EmployeeAssignmentRow[];
   items?: ItemRow[];
   memberships?: MembershipRow[];
   roleAssignments?: { scopeNodeId: string }[];
@@ -183,6 +195,7 @@ const createFakeDb = ({
     warehouses: warehouses.map((warehouse) => clone(warehouse)),
     pointsOfSale: pointsOfSale.map((point) => clone(point)),
     employees: employees.map((employee) => clone(employee)),
+    employeeAssignments: employeeAssignments.map((assignment) => clone(assignment)),
     items: items.map((i) => clone(i)),
     memberships: memberships.map((m) => clone(m)),
     roleAssignments: roleAssignments.map((row) => clone(row)),
@@ -211,6 +224,9 @@ const createFakeDb = ({
       }
       if (table === employeesTable) {
         return createSelectBuilder(state.employees);
+      }
+      if (table === employeeAssignmentsTable) {
+        return createSelectBuilder(state.employeeAssignments);
       }
       if (table === itemsTable) {
         return createSelectBuilder(state.items);
@@ -1119,9 +1135,19 @@ describe('createDrizzleOrgHierarchyGateway', () => {
         {
           id: 'employee-1',
           companyId: 'company-a',
-          userId: 'user-1',
-          position: 'Manager',
-          areaId: 'area-1',
+          createdAt: baseDate,
+        },
+      ],
+      employeeAssignments: [
+        {
+          id: 'assignment-1',
+          companyId: 'company-a',
+          employeeId: 'employee-1',
+          scopeNodeId: 'area:area-1',
+          positionId: 'position-1',
+          startedAt: baseDate,
+          endedAt: null,
+          isPrimary: true,
           createdAt: baseDate,
         },
       ],

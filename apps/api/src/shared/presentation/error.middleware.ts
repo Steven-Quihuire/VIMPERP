@@ -20,6 +20,18 @@ import {
   UnauthorizedError,
 } from '../../features/identity/domain/auth';
 import {
+  EmployeeAssignmentConflictError,
+} from '../../features/hr-employees/domain/employee-assignments';
+import {
+  EmployeeNotFoundError,
+  HrEmployeesScopeNotFoundError,
+} from '../../features/hr-employees/domain/employees';
+import {
+  PositionHeadcountExceededError,
+  PositionHierarchyError,
+  PositionNotFoundError,
+} from '../../features/hr-employees/domain/positions';
+import {
   NodeManagementInvitationAlreadyAcceptedError,
   NodeManagementInvitationExpiredError,
   NodeManagementInvitationNotFoundError,
@@ -98,6 +110,24 @@ export const createErrorMiddleware = ({
 
     if (error instanceof NodeManagementInvitationPasswordRequiredError) {
       response.status(400).json(toResponseBody(error.code, error.message));
+      return;
+    }
+
+    if (
+      error instanceof EmployeeAssignmentConflictError ||
+      error instanceof PositionHeadcountExceededError ||
+      error instanceof PositionHierarchyError
+    ) {
+      response.status(409).json(toResponseBody(error.code, error.message));
+      return;
+    }
+
+    if (
+      error instanceof EmployeeNotFoundError ||
+      error instanceof PositionNotFoundError ||
+      error instanceof HrEmployeesScopeNotFoundError
+    ) {
+      response.status(404).json(toResponseBody(error.code, error.message));
       return;
     }
 

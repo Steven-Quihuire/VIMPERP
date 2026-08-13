@@ -75,6 +75,16 @@ import { createListOrgTreeUseCase } from '../features/org-tree/application/list-
 import type { OrgTreeGateway } from '../features/org-tree/domain/org-tree';
 import { createDrizzleOrgTreeGateway } from '../features/org-tree/infrastructure/drizzle-org-tree.gateway';
 import { createOrgTreeRouter } from '../features/org-tree/presentation/org-tree.router';
+import { createCreateAssignmentUseCase } from '../features/hr-employees/application/create-assignment';
+import { createCreateEmployeeUseCase } from '../features/hr-employees/application/create-employee';
+import { createCreatePositionUseCase } from '../features/hr-employees/application/create-position';
+import { createGetEmployeeUseCase } from '../features/hr-employees/application/get-employee';
+import { createListEmployeesUseCase } from '../features/hr-employees/application/list-employees';
+import { createResolveDirectReportsUseCase } from '../features/hr-employees/application/resolve-direct-reports';
+import { createResolveReportingLineUseCase } from '../features/hr-employees/application/resolve-reporting-line';
+import type { HrEmployeesGateway } from '../features/hr-employees/domain/employees';
+import { createDrizzleHrEmployeesGateway } from '../features/hr-employees/infrastructure/drizzle-hr-employees.gateway';
+import { createHrEmployeesRouter } from '../features/hr-employees/presentation/hr-employees.router';
 import { createAcceptNodeManagementInvitationUseCase } from '../features/node-management/application/accept-node-management-invitation';
 import { createCreateNodeManagementInvitationUseCase } from '../features/node-management/application/create-node-management-invitation';
 import { createGetNodeManagementInvitationUseCase } from '../features/node-management/application/get-node-management-invitation';
@@ -150,6 +160,7 @@ type CreateAppInput = {
   itemGateway?: ItemCatalogGateway & CategoryGateway;
   orgTreeGateway?: OrgTreeGateway;
   orgHierarchyGateway?: OrgHierarchyGateway;
+  hrEmployeesGateway?: HrEmployeesGateway;
   nodeManagementGateway?: NodeManagementGateway;
   scopeResolver?: ScopeResolver;
   computeEffectivePermissions?: ComputeEffectivePermissions;
@@ -205,6 +216,8 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     input.orgTreeGateway ?? createDrizzleOrgTreeGateway({ scopeResolver });
   const orgHierarchyGateway =
     input.orgHierarchyGateway ?? createDrizzleOrgHierarchyGateway(db, { logger });
+  const hrEmployeesGateway =
+    input.hrEmployeesGateway ?? createDrizzleHrEmployeesGateway(db);
   const nodeManagementGateway =
     input.nodeManagementGateway ?? createDrizzleNodeManagementGateway(db);
   const rawInvitationEmailSender =
@@ -453,6 +466,20 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
         await orgHierarchyGateway.findPointOfSaleById(pointOfSaleId),
       updatePointOfSale: createUpdatePointOfSaleUseCase({ gateway: orgHierarchyGateway }),
       deletePointOfSale: createDeletePointOfSaleUseCase({ gateway: orgHierarchyGateway }),
+    }),
+  );
+  app.use(
+    createHrEmployeesRouter({
+      requireAuth,
+      createEmployee: createCreateEmployeeUseCase({ gateway: hrEmployeesGateway }),
+      listEmployees: createListEmployeesUseCase({ gateway: hrEmployeesGateway }),
+      getEmployee: createGetEmployeeUseCase({ gateway: hrEmployeesGateway }),
+      createPosition: createCreatePositionUseCase({ gateway: hrEmployeesGateway }),
+      listPositions: async ({ companyId }) =>
+        await hrEmployeesGateway.listPositions(companyId),
+      createAssignment: createCreateAssignmentUseCase({ gateway: hrEmployeesGateway }),
+      resolveReportingLine: createResolveReportingLineUseCase({ gateway: hrEmployeesGateway }),
+      resolveDirectReports: createResolveDirectReportsUseCase({ gateway: hrEmployeesGateway }),
     }),
   );
   app.use(

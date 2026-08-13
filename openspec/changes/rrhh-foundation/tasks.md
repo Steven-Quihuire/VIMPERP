@@ -30,13 +30,13 @@ Chain strategy: stacked-to-main
 
 ## Phase 2: Backend — hr-employees (PR-2)
 
-- [ ] 2.1 RED `features/hr-employees/domain/__tests__/positions.test.ts`: top-of-hierarchy, vacancy ≤ headcount.
-- [ ] 2.2 Author `domain/{positions,employees,employee-assignments,reporting-line}.ts`.
-- [ ] 2.3 RED `application/__tests__/create-assignment.test.ts`: auto-close prior active primary in one tx; 409 on duplicate.
-- [ ] 2.4 Author `application/{create,update,get,list}-employee.ts`, `create-position.ts`, `create-assignment.ts`, `resolve-reporting-line.ts`, `resolve-direct-reports.ts`.
-- [ ] 2.5 Author `infrastructure/drizzle-hr-employees.gateway.ts` + integration test.
-- [ ] 2.6 Author `presentation/hr-employees.router.ts` (Zod + controller + router) + Supertest.
-- [ ] 2.7 Modify `features/org-hierarchy/infrastructure/drizzle-org-hierarchy.gateway.ts`: `countEmployeesInArea` reads active `employee_assignments`; update test.
+- [x] 2.1 RED `features/hr-employees/domain/__tests__/positions.test.ts`: top-of-hierarchy, vacancy ≤ headcount.
+- [x] 2.2 Author `domain/{positions,employees,employee-assignments,reporting-line}.ts`.
+- [x] 2.3 RED `application/__tests__/create-assignment.test.ts`: auto-close prior active primary in one tx; 409 on duplicate.
+- [x] 2.4 Author `application/{create,update,get,list}-employee.ts`, `create-position.ts`, `create-assignment.ts`, `resolve-reporting-line.ts`, `resolve-direct-reports.ts`.
+- [x] 2.5 Author `infrastructure/drizzle-hr-employees.gateway.ts` + integration test.
+- [x] 2.6 Author `presentation/hr-employees.router.ts` (Zod + controller + router) + Supertest.
+- [x] 2.7 Modify `features/org-hierarchy/infrastructure/drizzle-org-hierarchy.gateway.ts`: `countEmployeesInArea` reads active `employee_assignments`; update test.
 
 ## Phase 3: Backend — hr-erp-access (PR-3)
 
