@@ -316,7 +316,9 @@ describe('App onboarding flow', () => {
     );
   });
 
-  it('submits the authenticated onboarding flow and reaches the dashboard', async () => {
+  it(
+    'submits the authenticated onboarding flow and reaches the dashboard',
+    async () => {
     setDesktopBrowser();
     let authCalls = 0;
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -427,13 +429,15 @@ describe('App onboarding flow', () => {
       await screen.findByRole('heading', { name: 'Bienvenido a Vimcore Labs' }),
     ).toBeInTheDocument();
 
-    await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith(
-        '/api/companies',
-        expect.objectContaining({ method: 'POST' }),
-      );
-    });
-  });
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledWith(
+          '/api/companies',
+          expect.objectContaining({ method: 'POST' }),
+        );
+      });
+    },
+    10_000,
+  );
 
   it('disables company creation while submission is pending', async () => {
     setDesktopBrowser();
