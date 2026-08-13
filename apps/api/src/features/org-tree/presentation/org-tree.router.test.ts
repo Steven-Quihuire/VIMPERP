@@ -23,6 +23,10 @@ const session: AuthSession = {
     companyId: 'company-a',
     status: 'active',
   },
+  activeScope: {
+    scopeType: 'company',
+    scopeId: 'company-a',
+  },
   activeLocalId: null,
   capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
 };
@@ -45,7 +49,6 @@ describe('createOrgTreeRouter', () => {
           response.locals.auth = session;
           next();
         },
-        requireRole: () => (_request, _response, next) => next(),
         listOrgTree,
       }),
     );
@@ -77,7 +80,6 @@ describe('createOrgTreeRouter', () => {
           response.locals.auth = session;
           next();
         },
-        requireRole: () => (_request, _response, next) => next(),
         listOrgTree,
       }),
     );
@@ -98,6 +100,45 @@ describe('createOrgTreeRouter', () => {
     );
 
     const response = await request(app).get('/companies/company-b/org-tree');
+
+    expect(response.status).toBe(403);
+    expect(listOrgTree).not.toHaveBeenCalled();
+  });
+
+  it('rejects org-tree access when the session lacks active scope or catalog read capability', async () => {
+    const listOrgTree = vi.fn();
+
+    const app = express();
+    app.use(
+      createOrgTreeRouter({
+        requireAuth: (_request, response, next) => {
+          response.locals.auth = {
+            ...session,
+            activeScope: null,
+            capabilities: [],
+          } satisfies AuthSession;
+          next();
+        },
+        listOrgTree,
+      }),
+    );
+    app.use(
+      (
+        error: unknown,
+        _request: express.Request,
+        response: express.Response,
+        _next: express.NextFunction,
+      ) => {
+        if (error instanceof ForbiddenError) {
+          response.status(403).json({ error: { code: error.code, message: error.message } });
+          return;
+        }
+
+        response.status(500).json({ error: { code: 'INTERNAL_SERVER_ERROR', message: 'Unexpected server error' } });
+      },
+    );
+
+    const response = await request(app).get('/companies/company-a/org-tree');
 
     expect(response.status).toBe(403);
     expect(listOrgTree).not.toHaveBeenCalled();

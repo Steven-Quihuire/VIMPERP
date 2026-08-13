@@ -80,6 +80,19 @@ import { Skeleton } from '@/shared/ui/skeleton';
 import type { AuthSession } from '../../auth/domain/auth';
 import { useDashboardCurrentCompany } from '../../dashboard/presentation/use-dashboard';
 import {
+  useNodeManagementPendingInvitations,
+  useNodeManagementResponsibilities,
+} from '../../node-management/application/node-management-queries';
+import type {
+  NodeResponsibilitySummary,
+  NodeManagementScopeType,
+} from '../../node-management/domain/node-management';
+import {
+  buildNodeResponsibilitySummary,
+  getNodeResponsibilityBadgeClassName,
+} from '../../node-management/presentation/node-responsibility-badge';
+import { NodeManagementInvitePanel } from '../../node-management/presentation/node-management-invite-panel';
+import {
   useAreas,
   useCreateArea,
   useCreateDivision,
@@ -139,6 +152,7 @@ type OrganizationGraphNodeData = {
   kind: OrgEntityKind;
   label: string;
   meta: string | null;
+  responsibility: NodeResponsibilitySummary;
   canAddChildren: boolean;
   isDropTarget?: boolean;
   onCreateChild: (nodeId: string, kind: OrgEntityKind) => void;
@@ -170,7 +184,13 @@ type GraphEntry = {
   kind: OrgEntityKind;
   label: string;
   meta: string | null;
+  scopeType: NodeManagementScopeType;
+  scopeId: string;
+  responsibility: NodeResponsibilitySummary;
 };
+
+const getScopeKey = (scopeType: NodeManagementScopeType, scopeId: string) =>
+  `${scopeType}:${scopeId}`;
 
 const ROOT_NODE_ID = 'company-root';
 const NO_PARENT = '__none__';
@@ -260,14 +280,18 @@ const getDeleteErrorMessage = (
 };
 
 const getGraphEntries = ({
+  companyId,
   companyName,
+  responsibilitiesByScope,
   divisions,
   locals,
   areas,
   warehouses,
   pointsOfSale,
 }: {
+  companyId: string;
   companyName: string;
+  responsibilitiesByScope: Map<string, NodeResponsibilitySummary>;
   divisions: Division[];
   locals: Local[];
   areas: Area[];
@@ -281,6 +305,11 @@ const getGraphEntries = ({
       kind: 'company' as const,
       label: companyName,
       meta: `${divisions.length} divisiones · ${locals.length} locales`,
+      scopeType: 'company' as const,
+      scopeId: companyId,
+      responsibility:
+        responsibilitiesByScope.get(getScopeKey('company', companyId)) ??
+        buildNodeResponsibilitySummary({}),
     },
     ...divisions.map((division) => ({
       id: division.id,
@@ -288,6 +317,11 @@ const getGraphEntries = ({
       kind: 'division' as const,
       label: division.name,
       meta: 'Gestiona locales y áreas bajo esta división.',
+      scopeType: 'division' as const,
+      scopeId: division.id,
+      responsibility:
+        responsibilitiesByScope.get(getScopeKey('division', division.id)) ??
+        buildNodeResponsibilitySummary({}),
     })),
     ...locals.map((local) => ({
       id: local.id,
@@ -297,6 +331,11 @@ const getGraphEntries = ({
       meta: local.divisionId
         ? 'Local dependiente de una división.'
         : 'Local creado directamente bajo empresa.',
+      scopeType: 'local' as const,
+      scopeId: local.id,
+      responsibility:
+        responsibilitiesByScope.get(getScopeKey('local', local.id)) ??
+        buildNodeResponsibilitySummary({}),
     })),
     ...areas.map((area) => ({
       id: area.id,
@@ -306,6 +345,11 @@ const getGraphEntries = ({
       meta: area.divisionId
         ? 'Área asociada a una división.'
         : 'Área asociada a un local.',
+      scopeType: 'area' as const,
+      scopeId: area.id,
+      responsibility:
+        responsibilitiesByScope.get(getScopeKey('area', area.id)) ??
+        buildNodeResponsibilitySummary({}),
     })),
     ...warehouses.map((warehouse) => ({
       id: warehouse.id,
@@ -315,6 +359,11 @@ const getGraphEntries = ({
       meta: warehouse.areaId
         ? 'Almacén dependiente de un área.'
         : 'Almacén dependiente de un local.',
+      scopeType: 'warehouse' as const,
+      scopeId: warehouse.id,
+      responsibility:
+        responsibilitiesByScope.get(getScopeKey('warehouse', warehouse.id)) ??
+        buildNodeResponsibilitySummary({}),
     })),
     ...pointsOfSale.map((pointOfSale) => ({
       id: pointOfSale.id,
@@ -324,6 +373,11 @@ const getGraphEntries = ({
       meta: pointOfSale.areaId
         ? 'Punto de venta dependiente de un área.'
         : 'Punto de venta dependiente de un local.',
+      scopeType: 'point-of-sale' as const,
+      scopeId: pointOfSale.id,
+      responsibility:
+        responsibilitiesByScope.get(getScopeKey('point-of-sale', pointOfSale.id)) ??
+        buildNodeResponsibilitySummary({}),
     })),
   ] satisfies GraphEntry[];
 
@@ -521,6 +575,7 @@ const buildFlowGraph = ({
       kind: entry.kind,
       label: entry.label,
       meta: entry.meta,
+      responsibility: entry.responsibility,
       canAddChildren:
         entry.kind !== 'warehouse' && entry.kind !== 'point-of-sale',
       isDropTarget: false,
@@ -658,6 +713,17 @@ const OrganizationNodeComponent = ({
                     {data.meta}
                   </p>
                 ) : null}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <Badge
+                  variant="outline"
+                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${getNodeResponsibilityBadgeClassName(data.responsibility.status)}`}
+                >
+                  {data.responsibility.badgeLabel}
+                </Badge>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  {data.responsibility.detail}
+                </p>
               </div>
               {isCompanyNode ? (
                 <div className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-700">
@@ -1401,6 +1467,8 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
   const areasQuery = useAreas(companyId);
   const warehousesQuery = useWarehouses(companyId);
   const pointsOfSaleQuery = usePointsOfSale(companyId);
+  const responsibilitiesQuery = useNodeManagementResponsibilities(companyId);
+  const pendingInvitationsQuery = useNodeManagementPendingInvitations(companyId);
   const [dialogState, setDialogState] =
     useState<OrganizationDialogState | null>(null);
   const [deleteState, setDeleteState] = useState<DeleteDialogState | null>(
@@ -1432,7 +1500,9 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
     localsQuery.isLoading ||
     areasQuery.isLoading ||
     warehousesQuery.isLoading ||
-    pointsOfSaleQuery.isLoading;
+    pointsOfSaleQuery.isLoading ||
+    responsibilitiesQuery.isLoading ||
+    pendingInvitationsQuery.isLoading;
 
   const failedQuery =
     (divisionsQuery.isError && divisionsQuery.error) ||
@@ -1440,6 +1510,8 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
     (areasQuery.isError && areasQuery.error) ||
     (warehousesQuery.isError && warehousesQuery.error) ||
     (pointsOfSaleQuery.isError && pointsOfSaleQuery.error) ||
+    (responsibilitiesQuery.isError && responsibilitiesQuery.error) ||
+    (pendingInvitationsQuery.isError && pendingInvitationsQuery.error) ||
     null;
 
   const divisions = divisionsQuery.data ?? [];
@@ -1447,13 +1519,41 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
   const areas = areasQuery.data ?? [];
   const warehouses = warehousesQuery.data ?? [];
   const pointsOfSale = pointsOfSaleQuery.data ?? [];
+  const responsibilities = responsibilitiesQuery.data ?? [];
+  const pendingInvitations = pendingInvitationsQuery.data ?? [];
   const currentCompanyQuery = useDashboardCurrentCompany(
     undefined,
     Boolean(companyId),
   );
+  const responsibilitiesByScope = new globalThis.Map<
+    string,
+    NodeResponsibilitySummary
+  >();
+
+  for (const responsibility of responsibilities) {
+    if (responsibility.isActive && responsibility.endedAt === null) {
+      responsibilitiesByScope.set(
+        getScopeKey(responsibility.scopeType, responsibility.scopeId),
+        buildNodeResponsibilitySummary({ activeResponsibility: responsibility }),
+      );
+    }
+  }
+
+  for (const invitation of pendingInvitations) {
+    const key = getScopeKey(invitation.scopeType, invitation.scopeId);
+
+    if (!responsibilitiesByScope.has(key)) {
+      responsibilitiesByScope.set(
+        key,
+        buildNodeResponsibilitySummary({ pendingInvitation: invitation }),
+      );
+    }
+  }
 
   const entries = getGraphEntries({
+    companyId,
     companyName: currentCompanyQuery.data?.name ?? 'Empresa',
+    responsibilitiesByScope,
     divisions,
     locals,
     areas,
@@ -1467,6 +1567,12 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
     warehouses: warehouses.length,
     pointsOfSale: pointsOfSale.length,
   };
+  const inviteTargets = entries.filter((entry) => entry.kind !== 'company').map((entry) => ({
+    scopeType: entry.scopeType,
+    scopeId: entry.scopeId,
+    scopeName: entry.label,
+    responsibility: entry.responsibility,
+  }));
 
   const syncLayout = (preserveManualPositions: boolean) => {
     setIsLayoutReady(false);
@@ -1569,6 +1675,8 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
     areasQuery.data,
     warehousesQuery.data,
     pointsOfSaleQuery.data,
+    responsibilitiesQuery.data,
+    pendingInvitationsQuery.data,
     currentCompanyQuery.data,
   ]);
 
@@ -1822,6 +1930,13 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
 
   return (
     <div className="flex h-full min-h-[calc(100dvh-8.5rem)] flex-col overflow-hidden rounded-[36px] border border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(249,248,246,0.96))] shadow-[0_34px_120px_-70px_rgba(0,0,0,0.5)]">
+      <div className="border-b border-border/60 bg-background/85 px-4 py-4 sm:px-6">
+        <NodeManagementInvitePanel
+          companyId={companyId}
+          companyName={currentCompanyQuery.data?.name ?? 'Empresa'}
+          targets={inviteTargets}
+        />
+      </div>
       <div className="relative flex-1 overflow-hidden bg-[radial-gradient(circle,#d4d4d4_1px,transparent_1px)] bg-[length:18px_18px]">
         <ReactFlow<OrganizationFlowNode, OrganizationCanvasEdge>
           nodes={nodes}

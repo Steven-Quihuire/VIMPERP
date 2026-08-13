@@ -357,4 +357,49 @@ describe('App auth flow', () => {
       ),
     ).toBeInTheDocument();
   });
+
+  it('renders the public invitation acceptance route', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = readUrl(input);
+
+        if (url.endsWith('/auth/me')) {
+          return Promise.resolve(
+            createJsonResponse(
+              { error: { code: 'UNAUTHORIZED', message: 'Invalid session' } },
+              401,
+            ),
+          );
+        }
+
+        if (url.endsWith('/node-management/invitations/token-public')) {
+          return Promise.resolve(
+            createJsonResponse({
+              id: 'inv-1',
+              companyId: 'company-1',
+              companyName: 'Vimcore Labs',
+              scopeNodeId: 'scope-node-1',
+              scopeType: 'local',
+              scopeId: 'local-1',
+              scopeName: 'Main Local',
+              inviteeEmail: 'manager@vimcore.test',
+              managedRoleKey: 'node-manager',
+              baseMembershipRole: 'company-user',
+              expiresAt: '2026-08-20T10:00:00.000Z',
+              status: 'pending',
+              userExists: true,
+            }),
+          );
+        }
+
+        throw new Error(`unexpected request: ${url}`);
+      }),
+    );
+
+    render(<App initialEntries={['/accept-invitation/token-public']} />);
+
+    expect(await screen.findByRole('heading', { name: 'Aceptar invitación' })).toBeInTheDocument();
+    expect(screen.getAllByText(/Vimcore Labs/).length).toBeGreaterThan(0);
+  });
 });

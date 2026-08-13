@@ -1,8 +1,11 @@
-import type { NodeManagementGateway, NodeResponsibility } from '../domain/node-management';
+import type {
+  NodeManagementGateway,
+  NodeResponsibilityRecord,
+} from '../domain/node-management';
 
 export type ListNodeResponsibilities = (input: {
   companyId: string;
-}) => Promise<NodeResponsibility[]>;
+}) => Promise<NodeResponsibilityRecord[]>;
 
 export const createListNodeResponsibilitiesUseCase = ({
   gateway,

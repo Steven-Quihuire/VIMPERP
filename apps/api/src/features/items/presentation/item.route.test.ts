@@ -547,8 +547,17 @@ const getSessionCookie = (headers: string | string[] | undefined): string => {
 
 const createAuthenticatedApp = async ({
   itemGateway = new InMemoryItemGateway(),
+  computeEffectivePermissions,
 }: {
   itemGateway?: InMemoryItemGateway;
+  computeEffectivePermissions?: (input: {
+    companyId: string;
+    userId: string;
+    currentContext: {
+      scopeType: 'company' | 'division' | 'local' | 'area' | 'warehouse' | 'point-of-sale';
+      scopeId: string;
+    };
+  }) => Promise<string[]>;
 } = {}) => {
   const authGateway = new InMemoryAuthGateway();
   const sessionTokenService = createSessionTokenService();
@@ -620,6 +629,7 @@ const createAuthenticatedApp = async ({
       nodeEnv: 'test',
       itemGateway,
       scopeResolver,
+      computeEffectivePermissions,
     } as never);
 
   const ownerLoginResponse = await request(app).post('/auth/login').send({
@@ -1353,6 +1363,49 @@ describe('item routes', () => {
 
     expect(response.status).toBe(400);
     expect((response.body as { error: { code: string } }).error.code).toBe('BAD_REQUEST');
+  });
+
+  it('honors scoped role permissions from the active scope in session resolution', async () => {
+    const { app, authGateway, ownerSessionCookie, itemGateway } = await createAuthenticatedApp({
+      computeEffectivePermissions: async ({ userId, currentContext }) => {
+        if (
+          userId === 'owner-user' &&
+          currentContext.scopeType === 'warehouse' &&
+          currentContext.scopeId === 'warehouse-1'
+        ) {
+          return ['catalog.delete'];
+        }
+
+        return [];
+      },
+    });
+    itemGateway.items.push({
+      id: 'delete-me',
+      companyId: 'company-a',
+      localId: null,
+      categoryId: null,
+      sku: 'D-1',
+      name: 'Delete Me',
+      type: 'product',
+      unit: 'unit',
+      unitPrice: 10,
+      tracksStock: true,
+      trackBatchMode: 'none',
+      deletedAt: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+    authGateway.setMemberships('owner-user', [
+      { companyId: 'company-a', role: 'company-user', divisionId: null, localId: null },
+    ]);
+    authGateway.seedActiveScopeNodeId('owner-user', 'warehouse:warehouse-1');
+
+    const response = await request(app)
+      .delete('/items/delete-me')
+      .set('Cookie', ownerSessionCookie);
+
+    expect(response.status).toBe(204);
+    expect(itemGateway.items[0]?.deletedAt).not.toBeNull();
   });
 
   it('lists only categories scoped to the active local', async () => {

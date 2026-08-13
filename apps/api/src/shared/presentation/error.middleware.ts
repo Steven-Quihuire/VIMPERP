@@ -20,6 +20,14 @@ import {
   UnauthorizedError,
 } from '../../features/identity/domain/auth';
 import {
+  NodeManagementInvitationAlreadyAcceptedError,
+  NodeManagementInvitationExpiredError,
+  NodeManagementInvitationNotFoundError,
+  NodeManagementInvitationPasswordRequiredError,
+  NodeResponsibilityConflictError,
+  NodeManagementScopeNotFoundError,
+} from '../../features/node-management/domain/node-management';
+import {
   AreaConflictError,
   AreaNameConflictError,
   AreaNotFoundError,
@@ -85,6 +93,36 @@ export const createErrorMiddleware = ({
 
     if (error instanceof DuplicateIdentityError) {
       response.status(409).json(toResponseBody('AUTH_CONFLICT', error.message));
+      return;
+    }
+
+    if (error instanceof NodeManagementInvitationPasswordRequiredError) {
+      response.status(400).json(toResponseBody(error.code, error.message));
+      return;
+    }
+
+    if (error instanceof NodeManagementScopeNotFoundError) {
+      response.status(404).json(toResponseBody(error.code, error.message));
+      return;
+    }
+
+    if (error instanceof NodeManagementInvitationNotFoundError) {
+      response.status(404).json(toResponseBody(error.code, error.message));
+      return;
+    }
+
+    if (error instanceof NodeManagementInvitationExpiredError) {
+      response.status(410).json(toResponseBody(error.code, error.message));
+      return;
+    }
+
+    if (error instanceof NodeManagementInvitationAlreadyAcceptedError) {
+      response.status(409).json(toResponseBody(error.code, error.message));
+      return;
+    }
+
+    if (error instanceof NodeResponsibilityConflictError) {
+      response.status(409).json(toResponseBody(error.code, error.message));
       return;
     }
 

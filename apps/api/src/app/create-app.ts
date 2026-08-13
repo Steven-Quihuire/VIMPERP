@@ -75,7 +75,16 @@ import { createListOrgTreeUseCase } from '../features/org-tree/application/list-
 import type { OrgTreeGateway } from '../features/org-tree/domain/org-tree';
 import { createDrizzleOrgTreeGateway } from '../features/org-tree/infrastructure/drizzle-org-tree.gateway';
 import { createOrgTreeRouter } from '../features/org-tree/presentation/org-tree.router';
+import { createAcceptNodeManagementInvitationUseCase } from '../features/node-management/application/accept-node-management-invitation';
+import { createCreateNodeManagementInvitationUseCase } from '../features/node-management/application/create-node-management-invitation';
+import { createGetNodeManagementInvitationUseCase } from '../features/node-management/application/get-node-management-invitation';
+import { createGetNodeResponsibilityStateUseCase } from '../features/node-management/application/get-node-responsibility-state';
+import { createListNodeManagementPendingInvitationsUseCase } from '../features/node-management/application/list-node-management-pending-invitations';
+import { createListNodeResponsibilitiesUseCase } from '../features/node-management/application/list-node-responsibilities';
+import type { NodeManagementGateway } from '../features/node-management/domain/node-management';
+import { createDrizzleNodeManagementGateway } from '../features/node-management/infrastructure/drizzle-node-management.gateway';
 import { createNodeManagementRouter } from '../features/node-management/presentation/node-management.router';
+import { createComputeEffectivePermissionsUseCase } from '../features/roles-management/application/compute-effective-permissions';
 import { createCreateAreaUseCase } from '../features/org-hierarchy/application/create-area';
 import { createCreateLocalUseCase } from '../features/org-hierarchy/application/create-local';
 import { createCreatePointOfSaleUseCase } from '../features/org-hierarchy/application/create-point-of-sale';
@@ -99,6 +108,8 @@ import { createUpdateWarehouseUseCase } from '../features/org-hierarchy/applicat
 import type { OrgHierarchyGateway } from '../features/org-hierarchy/domain/org-hierarchy';
 import { createDrizzleOrgHierarchyGateway } from '../features/org-hierarchy/infrastructure/drizzle-org-hierarchy.gateway';
 import { createOrgHierarchyRouter } from '../features/org-hierarchy/presentation/org-hierarchy.router';
+import { createDrizzleAssignmentsGateway } from '../features/roles-management/infrastructure/drizzle-assignments.gateway';
+import { createDrizzleRolesGateway } from '../features/roles-management/infrastructure/drizzle-roles.gateway';
 import { createGetHealth } from '../features/sample-health/application/get-health';
 import type { HealthGateway } from '../features/sample-health/domain/health';
 import { createDrizzleHealthGateway } from '../features/sample-health/infrastructure/drizzle-health.gateway';
@@ -117,6 +128,12 @@ import {
   createRequestMetrics,
 } from '../shared/presentation/observability';
 
+type ComputeEffectivePermissions = (input: {
+  companyId: string;
+  userId: string;
+  currentContext: ScopeRef;
+}) => Promise<string[]>;
+
 type CreateAppInput = {
   databaseUrl?: string;
   healthGateway?: HealthGateway;
@@ -129,7 +146,9 @@ type CreateAppInput = {
   itemGateway?: ItemCatalogGateway & CategoryGateway;
   orgTreeGateway?: OrgTreeGateway;
   orgHierarchyGateway?: OrgHierarchyGateway;
+  nodeManagementGateway?: NodeManagementGateway;
   scopeResolver?: ScopeResolver;
+  computeEffectivePermissions?: ComputeEffectivePermissions;
   nodeEnv?: 'development' | 'test' | 'production';
   seedAdminEnabled?: boolean;
   sessionCookieName?: string;
@@ -158,10 +177,24 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
   const adminGateway = input.adminGateway ?? createDrizzleAdminGateway(db);
   const itemGateway = input.itemGateway ?? createDrizzleItemGateway(db);
   const scopeResolver = input.scopeResolver ?? createDrizzleScopeResolver(db);
+  const roleAssignmentsGateway = createDrizzleAssignmentsGateway(db);
+  const rolesGateway = createDrizzleRolesGateway(db);
+  const computeEffectivePermissions =
+    input.computeEffectivePermissions ??
+    createComputeEffectivePermissionsUseCase({
+      rolesGateway,
+      assignmentsGateway: roleAssignmentsGateway,
+      scopeHierarchyGateway: {
+        assertScopeRefBelongsToCompany: async () => undefined,
+        getScopeLineage: scopeResolver.getLineage,
+      },
+    });
   const orgTreeGateway =
     input.orgTreeGateway ?? createDrizzleOrgTreeGateway({ scopeResolver });
   const orgHierarchyGateway =
     input.orgHierarchyGateway ?? createDrizzleOrgHierarchyGateway(db);
+  const nodeManagementGateway =
+    input.nodeManagementGateway ?? createDrizzleNodeManagementGateway(db);
   const nodeEnv = input.nodeEnv ?? 'development';
   const seedAdminEnabled = nodeEnv !== 'production' && (input.seedAdminEnabled ?? false);
   const sessionCookieName = input.sessionCookieName ?? 'vimcore_session';
@@ -170,6 +203,7 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
   const resolveAuthSession = createResolveAuthSession({
     authIdentityGateway,
     scopeResolver,
+    computeEffectivePermissions,
     seedAdminSessions,
     seedAdminEnabled,
   });
@@ -314,7 +348,6 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
   app.use(
     createOrgTreeRouter({
       requireAuth,
-      requireRole: createRequireRole,
       listOrgTree: createListOrgTreeUseCase({ gateway: orgTreeGateway }),
     }),
   );
@@ -352,7 +385,33 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       deletePointOfSale: createDeletePointOfSaleUseCase({ gateway: orgHierarchyGateway }),
     }),
   );
-  app.use(createNodeManagementRouter());
+  app.use(
+    createNodeManagementRouter({
+      requireAuth,
+      createInvitation: createCreateNodeManagementInvitationUseCase({
+        gateway: nodeManagementGateway,
+      }),
+      listResponsibilities: createListNodeResponsibilitiesUseCase({
+        gateway: nodeManagementGateway,
+      }),
+      listPendingInvitations: createListNodeManagementPendingInvitationsUseCase({
+        gateway: nodeManagementGateway,
+      }),
+      getResponsibilityState: createGetNodeResponsibilityStateUseCase({
+        gateway: nodeManagementGateway,
+      }),
+      getInvitation: createGetNodeManagementInvitationUseCase({
+        gateway: nodeManagementGateway,
+      }),
+      acceptInvitation: createAcceptNodeManagementInvitationUseCase({
+        gateway: nodeManagementGateway,
+        passwordHasher,
+        sessionTokenService,
+      }),
+      sessionCookieName,
+      secureCookies: nodeEnv === 'production',
+    }),
+  );
   app.use(createErrorMiddleware({ recorder: provisioningRecorder }));
 
   return {

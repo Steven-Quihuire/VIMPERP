@@ -1,33 +1,39 @@
 import { Router } from 'express';
 import { z } from 'zod';
 
-import { ForbiddenError, type AuthRole, type AuthSession } from '../../identity/domain/auth';
+import {
+  ForbiddenError,
+  hasAuthCapability,
+  type AuthSession,
+} from '../../identity/domain/auth';
 
 const companyIdParamsSchema = z.object({
   companyId: z.string().min(1),
 });
 
-const requireCompanyMembership = (
-  auth: AuthSession,
-  companyId: string,
-  roles: AuthRole[],
-) => {
-  const membership = auth.memberships.find(
-    (candidate) => candidate.companyId === companyId && roles.includes(candidate.role),
-  );
+const requireOrgTreeAccess = (auth: AuthSession, companyId: string) => {
+  if (auth.activeCompany?.companyId !== companyId) {
+    throw new ForbiddenError('Active company required');
+  }
 
-  if (!membership) {
+  if (auth.activeCompany.status !== 'active') {
+    throw new ForbiddenError('Company access unavailable');
+  }
+
+  if (auth.activeScope === null) {
+    throw new ForbiddenError('Active scope required');
+  }
+
+  if (!hasAuthCapability(auth.capabilities, 'catalog.read')) {
     throw new ForbiddenError();
   }
 };
 
 export const createOrgTreeRouter = ({
   requireAuth,
-  requireRole,
   listOrgTree,
 }: {
   requireAuth: import('express').RequestHandler;
-  requireRole: (...roles: AuthRole[]) => import('express').RequestHandler;
   listOrgTree: (input: { companyId: string; actorUserId: string }) => Promise<unknown>;
 }): Router => {
   const router = Router();
@@ -35,12 +41,11 @@ export const createOrgTreeRouter = ({
   router.get(
     '/companies/:companyId/org-tree',
     requireAuth,
-    requireRole('company-owner', 'company-user'),
     async (request, response, next) => {
       try {
         const params = companyIdParamsSchema.parse(request.params);
         const auth = (response.locals as { auth: AuthSession }).auth;
-        requireCompanyMembership(auth, params.companyId, ['company-owner', 'company-user']);
+        requireOrgTreeAccess(auth, params.companyId);
 
         const tree = await listOrgTree({
           companyId: params.companyId,

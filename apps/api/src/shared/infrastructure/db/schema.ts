@@ -348,6 +348,48 @@ export const nodeResponsibilitiesTable = pgTable(
   ],
 );
 
+export const nodeManagementInvitationsTable = pgTable(
+  'node_management_invitations',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: 'restrict' }),
+    scopeNodeId: text('scope_node_id')
+      .notNull()
+      .references(() => scopeNodesTable.id, { onDelete: 'restrict' }),
+    scopeType: scopeNodeTypeEnum('scope_type').notNull(),
+    scopeId: text('scope_id').notNull(),
+    inviteeEmail: text('invitee_email').notNull(),
+    tokenHash: text('token_hash').notNull(),
+    managedRoleKey: text('managed_role_key').notNull().default('node-manager'),
+    baseMembershipRole: authRoleEnum('base_membership_role')
+      .notNull()
+      .default('company-user'),
+    createdByUserId: text('created_by_user_id')
+      .notNull()
+      .references(() => usersTable.id, { onDelete: 'restrict' }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    acceptedByUserId: text('accepted_by_user_id').references(() => usersTable.id, {
+      onDelete: 'restrict',
+    }),
+  },
+  (table) => [
+    index('node_management_invitations_company_idx').on(table.companyId),
+    index('node_management_invitations_scope_node_idx').on(table.scopeNodeId),
+    uniqueIndex('node_management_invitations_token_hash_idx').on(table.tokenHash),
+    index('node_management_invitations_invitee_email_idx').on(table.inviteeEmail),
+    check(
+      'node_management_invitations_acceptance_chk',
+      sql`(${table.acceptedAt} IS NULL AND ${table.acceptedByUserId} IS NULL) OR (${table.acceptedAt} IS NOT NULL AND ${table.acceptedByUserId} IS NOT NULL)`,
+    ),
+  ],
+);
+
 export const companyProfilesTable = pgTable('company_profiles', {
   companyId: text('company_id').primaryKey(),
   legalIdentifier: text('legal_identifier').notNull(),

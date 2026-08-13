@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createResolveAuthSession } from './resolve-auth-session';
+import { createComputeEffectivePermissionsUseCase } from '../../roles-management/application/compute-effective-permissions';
 import type {
   AuthIdentityGateway,
   AuthMembership,
@@ -9,6 +10,8 @@ import type {
   CompanyLifecycle,
 } from '../domain/auth';
 import { createInMemoryScopeResolver, type ResolvedScopeNode, type ScopeAssignmentRecord } from '../../../shared/infrastructure/scope-hierarchy/scope-hierarchy.port';
+import type { RoleAssignmentsGateway } from '../../roles-management/domain/assignments';
+import type { RolesGateway } from '../../roles-management/domain/roles';
 
 const scopeNodes: ResolvedScopeNode[] = [
   {
@@ -33,6 +36,72 @@ const scopeNodes: ResolvedScopeNode[] = [
 
 const createScopeResolver = (assignments: ScopeAssignmentRecord[]) =>
   createInMemoryScopeResolver({ nodes: scopeNodes, assignments });
+
+const createComputeEffectivePermissions = (
+  assignments: Array<{
+    id: string;
+    companyId: string;
+    userId: string;
+    roleId: string;
+    mode: 'subtree_inclusive' | 'exact_node';
+    scopeType: 'company' | 'division' | 'local' | 'area' | 'warehouse' | 'point-of-sale';
+    scopeId: string;
+    createdAt: Date;
+  }>,
+  rolePermissionRows: Array<{ roleId: string; permissionKey: string }>,
+) => {
+  const assignmentsGateway: RoleAssignmentsGateway = {
+    createAssignment: async () => {
+      throw new Error('not implemented');
+    },
+    deleteAssignment: async () => {
+      throw new Error('not implemented');
+    },
+    findAssignmentById: async () => null,
+    listAssignmentsForUser: async ({ companyId, userId }) =>
+      assignments.filter(
+        (assignment) => assignment.companyId === companyId && assignment.userId === userId,
+      ),
+    countAssignmentsForRole: async () => 0,
+  };
+  const rolesGateway: RolesGateway = {
+    createRole: async () => {
+      throw new Error('not implemented');
+    },
+    updateRole: async () => {
+      throw new Error('not implemented');
+    },
+    deleteRole: async () => {
+      throw new Error('not implemented');
+    },
+    listRoles: async () => [],
+    findRoleById: async () => null,
+    findRoleWithPermissions: async () => null,
+    listRolePermissionRows: async (roleIds) =>
+      rolePermissionRows.filter((row) => roleIds.includes(row.roleId)),
+    replaceRolePermissions: async () => {
+      throw new Error('not implemented');
+    },
+    countAssignmentsForRole: async () => 0,
+  };
+  const scopeResolver = createScopeResolver(
+    assignments.map((assignment) => ({
+      companyId: assignment.companyId,
+      userId: assignment.userId,
+      scope: { scopeType: assignment.scopeType, scopeId: assignment.scopeId },
+      mode: assignment.mode,
+    })),
+  );
+
+  return createComputeEffectivePermissionsUseCase({
+    rolesGateway,
+    assignmentsGateway,
+    scopeHierarchyGateway: {
+      assertScopeRefBelongsToCompany: async () => undefined,
+      getScopeLineage: scopeResolver.getLineage,
+    },
+  });
+};
 
 const createGateway = ({
   membershipsByUserId = new Map<string, AuthMembership[]>(),
@@ -533,6 +602,153 @@ describe('createResolveAuthSession', () => {
 
     expect(session.activeScope).toBeNull();
     expect(session.activeLocalId).toBeNull();
+  });
+
+  it('merges scoped role permissions into capabilities for the active scope', async () => {
+    const memberships = new Map<string, AuthMembership[]>();
+    memberships.set('user-1', [
+      {
+        companyId: 'company-1',
+        role: 'company-user',
+        divisionId: null,
+        localId: null,
+      },
+    ]);
+    const activeCompany = new Map<string, string | null>();
+    activeCompany.set('user-1', 'company-1');
+    const activeScopeNodeId = new Map<string, string | null>();
+    activeScopeNodeId.set('user-1', 'warehouse:warehouse-1');
+    const companyStatus = new Map<string, CompanyLifecycle>();
+    companyStatus.set('company-1', 'active');
+    const sessions = new Map<string, AuthSessionRecord>();
+    sessions.set('token-1', {
+      token: 'token-1',
+      userId: 'user-1',
+      expiresAt: new Date(Date.now() + 60000),
+    });
+    const users = new Map<string, AuthUser>();
+    users.set('user-1', {
+      id: 'user-1',
+      email: 'member@vimcore.test',
+      username: 'member',
+      passwordHash: 'hashed',
+    });
+    const gateway = createGateway({
+      membershipsByUserId: memberships,
+      activeCompanyIdByUserId: activeCompany,
+      activeScopeNodeIdByUserId: activeScopeNodeId,
+      companyStatusByCompanyId: companyStatus,
+      sessions,
+      users,
+    });
+
+    const resolve = createResolveAuthSession({
+      authIdentityGateway: gateway,
+      scopeResolver: createScopeResolver([
+        {
+          companyId: 'company-1',
+          userId: 'user-1',
+          scope: { scopeType: 'warehouse', scopeId: 'warehouse-1' },
+          mode: 'exact_node',
+        },
+      ]),
+      computeEffectivePermissions: createComputeEffectivePermissions(
+        [
+          {
+            id: 'assignment-1',
+            companyId: 'company-1',
+            userId: 'user-1',
+            roleId: 'role-node-manager',
+            mode: 'exact_node',
+            scopeType: 'warehouse',
+            scopeId: 'warehouse-1',
+            createdAt: new Date('2026-08-13T12:00:00.000Z'),
+          },
+        ],
+        [{ roleId: 'role-node-manager', permissionKey: 'catalog.delete' }],
+      ),
+      seedAdminEnabled: false,
+    });
+
+    const session = await resolve('token-1');
+
+    expect(session.capabilities).toEqual([
+      'catalog.delete',
+      'catalog.read',
+      'catalog.write',
+    ]);
+  });
+
+  it('does not leak scoped role permissions outside the active scope', async () => {
+    const memberships = new Map<string, AuthMembership[]>();
+    memberships.set('user-1', [
+      {
+        companyId: 'company-1',
+        role: 'company-user',
+        divisionId: null,
+        localId: null,
+      },
+    ]);
+    const activeCompany = new Map<string, string | null>();
+    activeCompany.set('user-1', 'company-1');
+    const activeScopeNodeId = new Map<string, string | null>();
+    activeScopeNodeId.set('user-1', 'local:local-1');
+    const companyStatus = new Map<string, CompanyLifecycle>();
+    companyStatus.set('company-1', 'active');
+    const sessions = new Map<string, AuthSessionRecord>();
+    sessions.set('token-1', {
+      token: 'token-1',
+      userId: 'user-1',
+      expiresAt: new Date(Date.now() + 60000),
+    });
+    const users = new Map<string, AuthUser>();
+    users.set('user-1', {
+      id: 'user-1',
+      email: 'member@vimcore.test',
+      username: 'member',
+      passwordHash: 'hashed',
+    });
+    const gateway = createGateway({
+      membershipsByUserId: memberships,
+      activeCompanyIdByUserId: activeCompany,
+      activeScopeNodeIdByUserId: activeScopeNodeId,
+      companyStatusByCompanyId: companyStatus,
+      sessions,
+      users,
+    });
+
+    const resolve = createResolveAuthSession({
+      authIdentityGateway: gateway,
+      scopeResolver: createScopeResolver([
+        {
+          companyId: 'company-1',
+          userId: 'user-1',
+          scope: { scopeType: 'local', scopeId: 'local-1' },
+          mode: 'subtree_inclusive',
+        },
+      ]),
+      computeEffectivePermissions: createComputeEffectivePermissions(
+        [
+          {
+            id: 'assignment-1',
+            companyId: 'company-1',
+            userId: 'user-1',
+            roleId: 'role-node-manager',
+            mode: 'exact_node',
+            scopeType: 'warehouse',
+            scopeId: 'warehouse-1',
+            createdAt: new Date('2026-08-13T12:00:00.000Z'),
+          },
+        ],
+        [{ roleId: 'role-node-manager', permissionKey: 'catalog.delete' }],
+      ),
+      seedAdminEnabled: false,
+    });
+
+    const session = await resolve('token-1');
+
+    expect(session.activeScope).toEqual({ scopeType: 'local', scopeId: 'local-1' });
+    expect(session.capabilities).toEqual(['catalog.read', 'catalog.write']);
   });
 });
 

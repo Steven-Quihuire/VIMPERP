@@ -13,6 +13,7 @@ import { LoginPage } from '../features/auth/presentation/login-page';
 import { RegisterPage } from '../features/auth/presentation/register-page';
 import { AuthLayout } from '../features/auth/presentation/auth-layout';
 import { useAuth } from '../features/auth/presentation/use-auth';
+import { AcceptInvitationPage } from '../features/node-management/presentation/accept-invitation-page';
 import {
   hasBlockedActiveCompany,
   needsActiveCompanySelection,
@@ -445,6 +446,10 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
         <Route
           path="register"
           element={<RegisterRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="accept-invitation/:token"
+          element={<AcceptInvitationPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
         />
       </Route>
       <Route

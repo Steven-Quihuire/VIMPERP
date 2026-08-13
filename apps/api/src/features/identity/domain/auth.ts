@@ -148,6 +148,9 @@ export const hasAuthCapability = (
   capability: AuthCapability,
 ) => capabilities.includes(capability);
 
+const uniqueSortedCapabilities = (capabilities: Iterable<AuthCapability>) =>
+  [...new Set(capabilities)].sort() as AuthCapability[];
+
 export const deriveAuthCapabilities = (input: {
   memberships: AuthMembership[];
   activeCompany: ActiveCompany | null;
@@ -173,6 +176,12 @@ export const deriveAuthCapabilities = (input: {
     default:
       return [];
   }
+};
+
+export const mergeAuthCapabilities = (
+  ...capabilitySets: ReadonlyArray<readonly AuthCapability[]>
+): AuthCapability[] => {
+  return uniqueSortedCapabilities(capabilitySets.flatMap((capabilities) => capabilities));
 };
 
 export const requireTenantCapability = (

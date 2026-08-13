@@ -4,6 +4,8 @@ import {
   createSeedAdminUser,
   deriveAuthCapabilities,
   InvalidSessionError,
+  mergeAuthCapabilities,
+  type AuthCapability,
   type AuthIdentityGateway,
   type AuthSession,
   toPublicAuthUser,
@@ -13,9 +15,16 @@ import type {
   ScopeResolver,
 } from '../../../shared/infrastructure/scope-hierarchy/scope-hierarchy.port';
 
+type ComputeEffectivePermissions = (input: {
+  companyId: string;
+  userId: string;
+  currentContext: ScopeRef;
+}) => Promise<string[]>;
+
 type CreateResolveAuthSessionInput = {
   authIdentityGateway: AuthIdentityGateway;
   scopeResolver: ScopeResolver;
+  computeEffectivePermissions?: ComputeEffectivePermissions;
   seedAdminSessions?: Map<string, Date>;
   now?: () => Date;
   seedAdminEnabled: boolean;
@@ -37,6 +46,7 @@ const toScopeRef = (scopeNodeId: string): ScopeRef | null => {
 export const createResolveAuthSession = ({
   authIdentityGateway,
   scopeResolver,
+  computeEffectivePermissions,
   seedAdminSessions,
   now = () => new Date(),
   seedAdminEnabled,
@@ -140,6 +150,34 @@ export const createResolveAuthSession = ({
       : await resolveSingleAuthorizedScope();
   };
 
+  const resolveScopedCapabilities = async (input: {
+    userId: string;
+    activeCompany: AuthSession['activeCompany'];
+    activeScope: AuthSession['activeScope'];
+  }): Promise<AuthCapability[]> => {
+    if (
+      !input.activeCompany ||
+      !input.activeScope ||
+      !computeEffectivePermissions
+    ) {
+      return [];
+    }
+
+    const permissionKeys = await computeEffectivePermissions({
+      companyId: input.activeCompany.companyId,
+      userId: input.userId,
+      currentContext: input.activeScope,
+    });
+
+    return permissionKeys
+      .filter(
+        (permissionKey): permissionKey is AuthCapability =>
+          permissionKey === 'catalog.read' ||
+          permissionKey === 'catalog.write' ||
+          permissionKey === 'catalog.delete',
+      );
+  };
+
   return async (token: string | null | undefined): Promise<AuthSession> => {
     if (!token) {
       throw new InvalidSessionError();
@@ -178,6 +216,11 @@ export const createResolveAuthSession = ({
 
     const activeCompany = await resolveActiveCompany(user.id, memberships);
     const activeScope = await resolveActiveScope(user.id, activeCompany);
+    const scopedCapabilities = await resolveScopedCapabilities({
+      userId: user.id,
+      activeCompany,
+      activeScope,
+    });
 
     return {
       user: toPublicAuthUser(user),
@@ -186,7 +229,10 @@ export const createResolveAuthSession = ({
       activeScope,
       activeLocalId:
         activeScope?.scopeType === 'local' ? activeScope.scopeId : null,
-      capabilities: deriveAuthCapabilities({ memberships, activeCompany }),
+      capabilities: mergeAuthCapabilities(
+        deriveAuthCapabilities({ memberships, activeCompany }),
+        scopedCapabilities,
+      ),
     };
   };
 };
