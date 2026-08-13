@@ -132,7 +132,21 @@
       "idx": 18,
       "version": "7",
       "when": 1786632442806,
-      "tag": "0018_soft_dakota_north",
+      "tag": "0019_org_hierarchy_company_integrity",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1786632442807,
+      "tag": "0020_node_management_foundation",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1786632442808,
+      "tag": "0021_node_management_invitations",
       "breakpoints": true
     }
   ]

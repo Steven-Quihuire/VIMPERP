@@ -436,7 +436,7 @@ describe('auth routes', () => {
       },
       activeScope: null,
       activeLocalId: null,
-      capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
+      capabilities: ['catalog.delete', 'catalog.read', 'catalog.write'],
     });
   });
 
@@ -544,7 +544,7 @@ describe('auth routes', () => {
       },
       activeScope: null,
       activeLocalId: null,
-      capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'],
+      capabilities: ['catalog.delete', 'catalog.read', 'catalog.write'],
     });
   });
 

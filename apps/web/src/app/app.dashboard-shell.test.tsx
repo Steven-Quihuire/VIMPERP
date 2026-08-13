@@ -54,6 +54,7 @@ const setDesktopBrowser = (userAgent: string, coarsePointer: boolean) => {
 };
 
 afterEach(() => {
+  cleanup();
   vi.unstubAllGlobals();
   useAuthStore.getState().clearSession();
   document.documentElement.removeAttribute('data-palette');
@@ -388,7 +389,11 @@ describe('App dashboard shell', () => {
 
     render(<App initialEntries={['/dashboard/admin/provisioning-runs']} />);
 
-    expect(await screen.findByRole('heading', { name: 'Bienvenido a Northwind' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', {
+        name: 'Northwind Responsable de empresa · Activa',
+      }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Historial de creación de empresas' })).not.toBeInTheDocument();
     expect(
       fetchMock.mock.calls.some(([input]) => readUrl(input).includes('/admin/')),
@@ -455,6 +460,7 @@ describe('App dashboard shell', () => {
       ),
     ).toBeInTheDocument();
 
+    cleanup();
     render(<App initialEntries={['/dashboard/admin/application-errors']} />);
     expect(await screen.findByText('No hay errores registrados')).toBeInTheDocument();
     expect(
@@ -463,6 +469,7 @@ describe('App dashboard shell', () => {
       ),
     ).toBeInTheDocument();
 
+    cleanup();
     render(<App initialEntries={['/dashboard/admin/audit-events']} />);
     expect(await screen.findByText('No hay eventos de auditoría')).toBeInTheDocument();
     expect(
@@ -853,7 +860,7 @@ if (url.endsWith('/me/company')) {
     render(<App initialEntries={['/dashboard/items']} />);
 
     expect(
-      await screen.findByRole('heading', { name: 'Selecciona una empresa' }),
+      await screen.findByRole('button', { name: 'Seleccionar empresa' }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', { name: 'Items' }),

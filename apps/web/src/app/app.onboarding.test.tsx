@@ -1,10 +1,11 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './app';
 import { useAuthStore } from '../features/auth/infrastructure/auth-store';
 
 afterEach(() => {
+  cleanup();
   useAuthStore.getState().clearSession();
   vi.unstubAllGlobals();
 });
@@ -34,6 +35,25 @@ const readUrl = (input: RequestInfo | URL) =>
     : input instanceof URL
       ? input.toString()
       : input.url;
+
+const setDesktopBrowser = () => {
+  Object.defineProperty(window.navigator, 'userAgent', {
+    configurable: true,
+    value:
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0',
+  });
+
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: query === '(pointer: coarse)' ? false : false,
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+};
 
 const completeRequiredOnboardingFields = () => {
   fireEvent.change(screen.getByLabelText('Company name'), {
@@ -74,6 +94,7 @@ const completeRequiredOnboardingFields = () => {
 
 describe('App onboarding flow', () => {
   it('blocks step progression when required onboarding fields are missing', async () => {
+    setDesktopBrowser();
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = readUrl(input);
 
@@ -126,6 +147,7 @@ describe('App onboarding flow', () => {
   });
 
   it('prefills the company name from the registered username', async () => {
+    setDesktopBrowser();
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = readUrl(input);
 
@@ -164,6 +186,7 @@ describe('App onboarding flow', () => {
   });
 
   it('hides the service input at five services and restores it after removal', async () => {
+    setDesktopBrowser();
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = readUrl(input);
 
@@ -237,6 +260,7 @@ describe('App onboarding flow', () => {
   });
 
   it('restores the saved onboarding draft and step after the user logs back in', async () => {
+    setDesktopBrowser();
     globalThis.localStorage.setItem(
       'vimcore:onboarding:user-1',
       JSON.stringify({
@@ -293,6 +317,7 @@ describe('App onboarding flow', () => {
   });
 
   it('submits the authenticated onboarding flow and reaches the dashboard', async () => {
+    setDesktopBrowser();
     let authCalls = 0;
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = readUrl(input);
@@ -411,6 +436,7 @@ describe('App onboarding flow', () => {
   });
 
   it('disables company creation while submission is pending', async () => {
+    setDesktopBrowser();
     let resolveCreateCompany: ((response: Response) => void) | undefined;
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = readUrl(input);
@@ -469,6 +495,7 @@ describe('App onboarding flow', () => {
   });
 
   it('updates palette preferences from the theme settings page', async () => {
+    setDesktopBrowser();
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = readUrl(input);
 
@@ -520,6 +547,7 @@ describe('App onboarding flow', () => {
   });
 
   it('redirects authenticated users with memberships but no active company back to the dashboard selector', async () => {
+    setDesktopBrowser();
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = readUrl(input);
 
