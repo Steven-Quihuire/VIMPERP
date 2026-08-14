@@ -32,6 +32,9 @@
 - [x] 5.1 Author `web/src/features/hr-employees/domain/{employees,positions,assignments}.ts`.
 - [x] 5.2 Author `infrastructure/create-hr-employees-api.ts` + `xxxQueryKeys` + `useEmployees/usePositions/useAssignments`; tests.
 - [x] 5.3 Author `presentation/pages/{employees-list,employee-detail,employee-form,positions-list,position-form,assignment-timeline}.tsx` (RHF + Zod + shadcn); RTL tests.
+- [x] 6.1 Author `web/src/features/hr-erp-access/domain/erp-access.ts`.
+- [x] 6.2 Author `infrastructure/create-erp-access-api.ts` + `useInvitations/useAcceptInvitation`; tests.
+- [x] 6.3 Author `presentation/pages/{invitations-list,accept-invitation}.tsx` (RHF + Zod + shadcn) + RTL tests.
 
 ### Files Changed
 | File | Action | What Was Done |
@@ -105,6 +108,16 @@
 | `apps/web/src/features/hr-employees/presentation/pages/hr-employees-pages.test.tsx` | Created | Wrote RTL coverage for all PR-5 HR pages, including list selection, create flows, detail rendering, and assignment submission. |
 | `openspec/changes/rrhh-foundation/tasks.md` | Modified | Marked PR-5 Phase 5 tasks `5.1` through `5.3` complete for this stacked slice. |
 | `openspec/changes/rrhh-foundation/apply-progress.md` | Modified | Merged the previous PR-1 through PR-4 evidence with the successful PR-5 hr-employees web slice evidence. |
+| `apps/web/src/features/hr-erp-access/domain/erp-access.ts` | Created | Added ERP access invitation contracts plus pure helpers for invitation payload normalization, optional password activation payloads, and expiry ordering. |
+| `apps/web/src/features/hr-erp-access/domain/__tests__/erp-access.test.ts` | Created | Wrote strict-TDD domain coverage for invitation normalization, optional password activation input, and pending invitation sorting. |
+| `apps/web/src/features/hr-erp-access/infrastructure/create-erp-access-api.ts` | Created | Added the typed fetch adapter for listing invitations, creating invitations, revoking access, and accepting ERP access tokens. |
+| `apps/web/src/features/hr-erp-access/infrastructure/create-erp-access-api.test.ts` | Created | Wrote focused fetch-contract coverage for the PR-6 ERP access web adapter. |
+| `apps/web/src/features/hr-erp-access/application/hr-erp-access-queries.ts` | Created | Added TanStack Query reads and mutations for pending invitations, create/revoke actions, and auth-refresh invalidation after acceptance. |
+| `apps/web/src/features/hr-erp-access/application/hr-erp-access-queries.test.tsx` | Created | Wrote focused query/mutation coverage for invitation listing plus create/revoke/accept invalidations. |
+| `apps/web/src/features/hr-erp-access/presentation/pages/{invitations-list,accept-invitation}.tsx` | Created | Added the PR-6 invitation management page and token-driven ERP access activation page with RHF + Zod + shadcn. |
+| `apps/web/src/features/hr-erp-access/presentation/pages/hr-erp-access-pages.test.tsx` | Created | Wrote RTL coverage for the invitation list form, revoke action, and ERP access activation redirect flow. |
+| `openspec/changes/rrhh-foundation/tasks.md` | Modified | Marked PR-6 Phase 6 tasks `6.1` through `6.3` complete for this stacked slice. |
+| `openspec/changes/rrhh-foundation/apply-progress.md` | Modified | Merged the previous PR-1 through PR-5 evidence with the successful PR-6 hr-erp-access web slice evidence. |
 
 ### Work Unit Evidence
 | Evidence | Value |
@@ -125,6 +138,9 @@
 | `PR-5` Focused test command and exact result | `pnpm --filter web exec vitest run src/features/hr-employees/domain/__tests__/hr-employees-domain.test.ts src/features/hr-employees/infrastructure/create-hr-employees-api.test.ts src/features/hr-employees/application/hr-employees-queries.test.tsx src/features/hr-employees/presentation/pages/hr-employees-pages.test.tsx` → exit `0`; `4` files / `12` tests passed. |
 | `PR-5` Runtime harness command/scenario and exact result | `pnpm --filter web exec vitest run src/features/hr-employees/application/hr-employees-queries.test.tsx src/features/hr-employees/presentation/pages/hr-employees-pages.test.tsx` → exit `0`; `2` files / `8` tests passed. Scenario: composed web slice flow across TanStack Query hooks and RTL-rendered employee, position, and assignment pages inside the new PR-5 feature boundary. |
 | `PR-5` Rollback boundary | Revert only `apps/web/src/features/hr-employees/**` plus the PR-5 checkbox/apply-progress updates; no shared route registration or non-HR web feature files were touched in this slice. |
+| `PR-6` Focused test command and exact result | `pnpm --filter web exec vitest run src/features/hr-erp-access/domain/__tests__/erp-access.test.ts src/features/hr-erp-access/infrastructure/create-erp-access-api.test.ts src/features/hr-erp-access/application/hr-erp-access-queries.test.tsx src/features/hr-erp-access/presentation/pages/hr-erp-access-pages.test.tsx` → exit `0`; `4` files / `8` tests passed. |
+| `PR-6` Runtime harness command/scenario and exact result | `pnpm --filter web exec vitest run src/features/hr-erp-access/application/hr-erp-access-queries.test.tsx src/features/hr-erp-access/presentation/pages/hr-erp-access-pages.test.tsx` → exit `0`; `2` files / `5` tests passed. Scenario: composed web slice flow across TanStack Query invitation hooks and RTL-rendered invitation management + ERP access activation pages inside the new PR-6 feature boundary. |
+| `PR-6` Rollback boundary | Revert only `apps/web/src/features/hr-erp-access/**` plus the PR-6 checkbox/apply-progress updates; no shared route registration or non-HR web feature files were touched in this slice. |
 
 ### TDD Cycle Evidence
 | Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
@@ -157,6 +173,9 @@
 | 5.1 | `apps/web/src/features/hr-employees/domain/__tests__/hr-employees-domain.test.ts` | Unit | N/A (new) | ✅ Wrote failing web-domain assertions for employee sorting, position normalization, assignment normalization, and timeline shaping before the HR web domain files existed | ✅ Same file passed after adding the domain contracts and pure helpers | ✅ Employee, position, and assignment helpers now cover happy-path normalization plus ordering/timeline edge cases | ✅ Kept the new HR web domain framework-free and pure |
 | 5.2 | `apps/web/src/features/hr-employees/infrastructure/create-hr-employees-api.test.ts`, `apps/web/src/features/hr-employees/application/hr-employees-queries.test.tsx` | Integration (fetch + TanStack Query) | N/A (new) | ✅ Wrote failing adapter and query-hook suites before the HR web API/query modules existed | ✅ Both files passed after adding the typed fetch adapter, query keys, reads, and mutations | ✅ Triangulated list/detail reads, create employee/position mutations, and reporting-line invalidation after assignment creation | ✅ Kept the hooks thin and pushed normalization into pure domain helpers |
 | 5.3 | `apps/web/src/features/hr-employees/presentation/pages/hr-employees-pages.test.tsx` | Integration (RTL) | N/A (new) | ✅ Wrote failing page interaction coverage before the new HR pages existed | ✅ Same file passed after adding employee/position list pages, create pages, detail page, and assignment timeline page | ✅ Triangulated selection, create flows, detail rendering, and assignment submission across six page components | ✅ Pages remain session-driven and route-agnostic so PR-7 can wire routes without reshaping the slice |
+| 6.1 | `apps/web/src/features/hr-erp-access/domain/__tests__/erp-access.test.ts` | Unit | N/A (new) | ✅ Wrote failing invitation normalization and optional password activation assertions before the ERP access domain file existed | ✅ Same file passed after adding the ERP access invitation contracts and pure helpers | ✅ Triangulated create-invitation normalization, expiry ordering, and optional password activation paths | ✅ Kept the PR-6 domain pure and framework-free |
+| 6.2 | `apps/web/src/features/hr-erp-access/infrastructure/create-erp-access-api.test.ts`, `apps/web/src/features/hr-erp-access/application/hr-erp-access-queries.test.tsx` | Integration (fetch + TanStack Query) | N/A (new) | ✅ Wrote failing adapter and query-hook suites before the ERP access API/query modules existed | ✅ Both files passed after adding the typed fetch adapter plus invitation list/create/revoke/accept hooks | ✅ Triangulated invitation list reads, create/revoke invalidations, and auth refresh invalidation after acceptance | ✅ Kept mutations thin and isolated shared auth invalidation at the query boundary |
+| 6.3 | `apps/web/src/features/hr-erp-access/presentation/pages/hr-erp-access-pages.test.tsx` | Integration (RTL) | N/A (new) | ✅ Wrote failing invitation list and activation page coverage before the new PR-6 pages existed | ✅ Same file passed after adding the invitation management and token-driven activation pages | ✅ Triangulated invite submission, revoke action, successful activation redirect, and mismatched-password validation | ✅ Reused the existing auth-refresh navigation pattern while keeping the pages route-agnostic for PR-7 wiring |
 
 ### Test Summary
 - **Focused PR-1 evidence still green**: migration suite `1` file / `2` tests passed; API `328` + Web `129` bootstrap tests passed.
@@ -164,12 +183,13 @@
 - **Focused PR-3 evidence**: `6` files / `14` tests passed; runtime harness `1` file / `1` test passed.
 - **Focused PR-4 evidence**: `7` files / `26` tests passed; runtime harness `1` file / `2` tests passed.
 - **Focused PR-5 evidence**: `4` files / `12` tests passed; runtime harness `2` files / `8` tests passed.
+- **Focused PR-6 evidence**: `4` files / `8` tests passed; runtime harness `2` files / `5` tests passed.
 - **Layers used**: Unit, integration (real Postgres gateway + Supertest), and safety-net suites.
 - **Approval tests**: None — PR-4 added a new approval-policy slice and additive permission-scope behavior instead of refactoring legacy behavior under approval tests.
-- **Pure functions created**: 8 (`assertNoAmbiguousActiveErpAccessLink`, `resolveReportingLineScopeEmployeeIds`, `assertValidApprovalPolicyScope`, `sortEmployeesByCreatedAtDesc`, `sortPositionsByName`, `toCreatePositionInput`, `toCreateAssignmentInput`, `buildAssignmentTimelineEntries`).
+- **Pure functions created**: 11 (`assertNoAmbiguousActiveErpAccessLink`, `resolveReportingLineScopeEmployeeIds`, `assertValidApprovalPolicyScope`, `sortEmployeesByCreatedAtDesc`, `sortPositionsByName`, `toCreatePositionInput`, `toCreateAssignmentInput`, `buildAssignmentTimelineEntries`, `sortInvitationsByExpiresAt`, `toCreateErpAccessInvitationInput`, `createAcceptInvitationInput`).
 
 ### Deviations from Design
-- None — implementation matches the PR-1 through PR-5 design boundaries.
+- Minor PR-6 deviation: the backend exposes no public invitation-details read endpoint for ERP access, so the activation page reuses the node-management acceptance flow shape but stays token-driven and omits company/invite metadata.
 
 ### Issues Found
 - `pnpm --filter api typecheck` remains red in the repository baseline for pre-existing non-PR-2 issues, including existing org-hierarchy exact-optional-typing mismatches and legacy auth/item test-contract drift outside the `hr-employees` slice.
@@ -177,11 +197,9 @@
 - The unrelated baseline safety-net `pnpm --filter api exec vitest run src/features/hr-employees/presentation/hr-employees.router.test.ts` is still red in the current workspace (`500` instead of `201` on the first create-employee request) and was not modified in this batch.
 - Broader `pnpm --filter web test` is still red outside the PR-5 slice because pre-existing app-level auth/onboarding/dashboard-shell tests fail in the current baseline; the new HR web focused suites remain green.
 - Broader `pnpm --filter web build` is still red outside the PR-5 slice because pre-existing type errors remain in `src/app/app.auth.test.tsx` and `src/features/org-hierarchy/presentation/organization-page.tsx`; no PR-5 file contributes to those failures.
+- The PR-6 accept page cannot render invitation/company metadata yet because the backend currently exposes only list/create/revoke company routes plus token acceptance, not a public invitation-details endpoint.
 
 ### Remaining Tasks
-- [ ] 6.1 Author `web/src/features/hr-erp-access/domain/erp-access.ts`.
-- [ ] 6.2 Author `infrastructure/create-erp-access-api.ts` + `useInvitations/useAcceptInvitation`; tests.
-- [ ] 6.3 Author `presentation/pages/{invitations-list,accept-invitation}.tsx` (RHF + Zod + shadcn) + RTL tests.
 - [ ] 7.1 Author `web/src/features/approval-policy/domain/approval-policy.ts`.
 - [ ] 7.2 Author `infrastructure/create-approval-policy-api.ts` + hooks; tests.
 - [ ] 7.3 Author `presentation/pages/{policies-list,policy-form}.tsx` (RHF + Zod + shadcn) + tests.
@@ -191,9 +209,9 @@
 
 ### Workload / PR Boundary
 - Mode: stacked PR slice
-- Current work unit: PR-5 frontend hr-employees
-- Boundary: Fifth stacked slice only (Phase 5 / tasks 5.1-5.3)
-- Estimated review budget impact: additive web HR feature folder plus bounded tasks/apply-progress updates, kept under the approved 800-line review budget for PR-5
+- Current work unit: PR-6 frontend hr-erp-access
+- Boundary: Sixth stacked slice only (Phase 6 / tasks 6.1-6.3)
+- Estimated review budget impact: additive web ERP-access feature folder plus bounded tasks/apply-progress updates, kept under the approved 800-line review budget for PR-6
 
 ### Status
-28/33 tasks complete. This batch is ready for the next stacked slice (PR-6 web `hr-erp-access`), with the known follow-up risk that broader web auth/onboarding/dashboard-shell tests and baseline web typecheck drift still exist outside the PR-5 boundary.
+31/37 tasks complete. This batch is ready for the next stacked slice (PR-7 web `approval-policy` + route/e2e wiring), with the known follow-up risk that broader web auth/onboarding/dashboard-shell tests and baseline web typecheck drift still exist outside the PR-6 boundary.

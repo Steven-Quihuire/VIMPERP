@@ -66,9 +66,9 @@ Chain strategy: stacked-to-main
 
 ## Phase 6: Frontend — hr-erp-access (PR-6)
 
-- [ ] 6.1 Author `web/src/features/hr-erp-access/domain/erp-access.ts`.
-- [ ] 6.2 Author `infrastructure/create-erp-access-api.ts` + `useInvitations/useAcceptInvitation`; tests.
-- [ ] 6.3 Author `presentation/pages/{invitations-list,accept-invitation}.tsx` (RHF + Zod + shadcn) + RTL tests.
+- [x] 6.1 Author `web/src/features/hr-erp-access/domain/erp-access.ts`.
+- [x] 6.2 Author `infrastructure/create-erp-access-api.ts` + `useInvitations/useAcceptInvitation`; tests.
+- [x] 6.3 Author `presentation/pages/{invitations-list,accept-invitation}.tsx` (RHF + Zod + shadcn) + RTL tests.
 
 ## Phase 7: Frontend — approval-policy + integration (PR-7)
 
