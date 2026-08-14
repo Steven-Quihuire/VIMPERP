@@ -22,7 +22,7 @@ export const PositionsListPage = ({
   const positionsQuery = usePositions(companyId, apiBaseUrl);
 
   if (!companyId) {
-    return <p className="text-sm text-muted-foreground">Select an active company to review positions.</p>;
+    return <p className="text-sm text-muted-foreground">Seleccioná una compañía activa para consultar los puestos.</p>;
   }
 
   if (positionsQuery.isLoading) {
@@ -32,7 +32,7 @@ export const PositionsListPage = ({
   if (positionsQuery.isError) {
     return (
       <p role="alert" className="text-sm text-destructive">
-        {positionsQuery.error instanceof Error ? positionsQuery.error.message : 'Unable to load positions.'}
+          {positionsQuery.error instanceof Error ? positionsQuery.error.message : 'No se pudieron cargar los puestos.'}
       </p>
     );
   }
@@ -40,7 +40,7 @@ export const PositionsListPage = ({
   const positions = sortPositionsByName(positionsQuery.data ?? []);
 
   if (positions.length === 0) {
-    return <p className="text-sm text-muted-foreground">No positions have been created yet.</p>;
+    return <p className="text-sm text-muted-foreground">Todavía no se crearon puestos.</p>;
   }
 
   return (
@@ -48,12 +48,12 @@ export const PositionsListPage = ({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Position</TableHead>
-            <TableHead>Headcount</TableHead>
-            <TableHead>Occupied</TableHead>
-            <TableHead>Vacancies</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Action</TableHead>
+            <TableHead>Puesto</TableHead>
+            <TableHead>Dotación</TableHead>
+            <TableHead>Ocupadas</TableHead>
+            <TableHead>Vacantes</TableHead>
+            <TableHead>Estado</TableHead>
+            <TableHead className="text-right">Acción</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -68,12 +68,12 @@ export const PositionsListPage = ({
               <TableCell>{position.remainingVacancies}</TableCell>
               <TableCell>
                 <Badge variant={position.isActive ? 'secondary' : 'outline'}>
-                  {position.isActive ? 'Active' : 'Inactive'}
+                    {position.isActive ? 'Activo' : 'Inactivo'}
                 </Badge>
               </TableCell>
               <TableCell className="text-right">
                 <Button type="button" variant="ghost" onClick={() => onSelectPosition?.(position.id)}>
-                  Open
+                  Abrir
                 </Button>
               </TableCell>
             </TableRow>

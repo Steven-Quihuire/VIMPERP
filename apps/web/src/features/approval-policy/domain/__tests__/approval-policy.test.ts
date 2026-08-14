@@ -54,7 +54,7 @@ describe('approval-policy domain', () => {
         definitionJson: '{"steps":["ops"]}',
         isActive: true,
       }),
-    ).toThrow('Scope node is required for node-scoped approval policies.');
+    ).toThrow('El nodo de alcance es obligatorio para las políticas con alcance de nodo.');
   });
 
   it('sorts policies by most recently updated first', () => {

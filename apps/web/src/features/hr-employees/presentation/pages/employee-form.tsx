@@ -42,14 +42,14 @@ export const EmployeeFormPage = ({
   });
 
   if (!companyId) {
-    return <p className="text-sm text-muted-foreground">Select an active company before creating employees.</p>;
+    return <p className="text-sm text-muted-foreground">Seleccioná una compañía activa antes de crear empleados.</p>;
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create employee</CardTitle>
-        <CardDescription>Employee records are independent from ERP user access.</CardDescription>
+        <CardTitle>Crear empleado</CardTitle>
+        <CardDescription>Los registros de empleados son independientes del acceso de usuarios al ERP.</CardDescription>
       </CardHeader>
       <CardContent>
         <form
@@ -66,53 +66,53 @@ export const EmployeeFormPage = ({
         >
           <FieldGroup>
             <Field>
-              <FieldLabel htmlFor="employee-full-name">Full name</FieldLabel>
+              <FieldLabel htmlFor="employee-full-name">Nombre completo</FieldLabel>
               <FieldContent>
-                <Input id="employee-full-name" aria-label="Full name" {...form.register('fullName')} />
+                <Input id="employee-full-name" aria-label="Nombre completo" {...form.register('fullName')} />
                 <FieldError errors={[form.formState.errors.fullName]} />
               </FieldContent>
             </Field>
             <Field>
-              <FieldLabel htmlFor="employee-document-type">Document type</FieldLabel>
+              <FieldLabel htmlFor="employee-document-type">Tipo de documento</FieldLabel>
               <FieldContent>
-                <Input id="employee-document-type" aria-label="Document type" {...form.register('documentType')} />
+                <Input id="employee-document-type" aria-label="Tipo de documento" {...form.register('documentType')} />
                 <FieldError errors={[form.formState.errors.documentType]} />
               </FieldContent>
             </Field>
             <Field>
-              <FieldLabel htmlFor="employee-document-number">Document number</FieldLabel>
+              <FieldLabel htmlFor="employee-document-number">Número de documento</FieldLabel>
               <FieldContent>
-                <Input id="employee-document-number" aria-label="Document number" {...form.register('documentNumber')} />
+                <Input id="employee-document-number" aria-label="Número de documento" {...form.register('documentNumber')} />
                 <FieldError errors={[form.formState.errors.documentNumber]} />
               </FieldContent>
             </Field>
             <Field>
-              <FieldLabel htmlFor="employee-email">Email</FieldLabel>
+              <FieldLabel htmlFor="employee-email">Correo electrónico</FieldLabel>
               <FieldContent>
-                <Input id="employee-email" aria-label="Email" type="email" {...form.register('email')} />
+                <Input id="employee-email" aria-label="Correo electrónico" type="email" {...form.register('email')} />
                 <FieldError errors={[form.formState.errors.email]} />
               </FieldContent>
             </Field>
             <Field>
-              <FieldLabel htmlFor="employee-employment-status">Employment status</FieldLabel>
+              <FieldLabel htmlFor="employee-employment-status">Estado laboral</FieldLabel>
               <FieldContent>
                 <select
                   id="employee-employment-status"
-                  aria-label="Employment status"
+                  aria-label="Estado laboral"
                   className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2"
                   {...form.register('employmentStatus')}
                 >
-                  <option value="active">Active</option>
-                  <option value="suspended">Suspended</option>
-                  <option value="separated">Separated</option>
+                  <option value="active">Activo</option>
+                  <option value="suspended">Suspendido</option>
+                  <option value="separated">Desvinculado</option>
                 </select>
                 <FieldError errors={[form.formState.errors.employmentStatus]} />
               </FieldContent>
             </Field>
             <Field>
-              <FieldLabel htmlFor="employee-hired-at">Hire date</FieldLabel>
+              <FieldLabel htmlFor="employee-hired-at">Fecha de contratación</FieldLabel>
               <FieldContent>
-                <Input id="employee-hired-at" aria-label="Hire date" type="datetime-local" {...form.register('hiredAt')} />
+                <Input id="employee-hired-at" aria-label="Fecha de contratación" type="datetime-local" {...form.register('hiredAt')} />
                 <FieldError errors={[form.formState.errors.hiredAt]} />
               </FieldContent>
             </Field>
@@ -121,13 +121,13 @@ export const EmployeeFormPage = ({
             <p role="alert" className="mb-4 text-sm text-destructive">
               {createEmployeeMutation.error instanceof Error
                 ? createEmployeeMutation.error.message
-                : 'Unable to create the employee record.'}
+                : 'No se pudo crear el registro del empleado.'}
             </p>
           ) : null}
 
           <Button type="submit" disabled={createEmployeeMutation.isPending}>
             {createEmployeeMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
-            Create employee record
+            Crear registro de empleado
           </Button>
         </form>
       </CardContent>

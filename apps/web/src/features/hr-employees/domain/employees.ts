@@ -18,7 +18,7 @@ export type Employee = {
 
 export const employeeFormSchema = z
   .object({
-    fullName: z.string().trim().min(1, 'Full name is required.'),
+    fullName: z.string().trim().min(1, 'El nombre completo es obligatorio.'),
     documentType: z.string().trim().default(''),
     documentNumber: z.string().trim().default(''),
     email: z.string().trim().default(''),
@@ -30,7 +30,7 @@ export const employeeFormSchema = z
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['documentType'],
-        message: 'Document type and document number must be provided together.',
+        message: 'El tipo y el número de documento deben informarse juntos.',
       });
     }
 
@@ -38,7 +38,7 @@ export const employeeFormSchema = z
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['email'],
-        message: 'Email must be a valid email address.',
+        message: 'El correo electrónico debe tener un formato válido.',
       });
     }
   });

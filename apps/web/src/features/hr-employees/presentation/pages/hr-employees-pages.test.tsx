@@ -199,7 +199,7 @@ describe('hr-employees pages', () => {
     );
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Open employee employee-1' }),
+      screen.getByRole('button', { name: 'Abrir empleado employee-1' }),
     );
 
     expect(screen.getByText('employee-1')).toBeInTheDocument();
@@ -211,11 +211,11 @@ describe('hr-employees pages', () => {
 
     render(<EmployeeFormPage session={session} onCreated={onCreated} />);
 
-    fireEvent.change(screen.getByLabelText('Full name'), {
+    fireEvent.change(screen.getByLabelText('Nombre completo'), {
       target: { value: 'Employee Two' },
     });
     fireEvent.click(
-      screen.getByRole('button', { name: 'Create employee record' }),
+      screen.getByRole('button', { name: 'Crear registro de empleado' }),
     );
 
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith('employee-2'));
@@ -241,13 +241,13 @@ describe('hr-employees pages', () => {
 
     expect(screen.getByText('People Lead')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('Position name'), {
+      fireEvent.change(screen.getByLabelText('Nombre del puesto'), {
       target: { value: 'HR Analyst' },
     });
-    fireEvent.change(screen.getByLabelText('Headcount'), {
+      fireEvent.change(screen.getByLabelText('Dotación'), {
       target: { value: '2' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Create position' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Crear puesto' }));
 
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith('position-2'));
   });
@@ -259,16 +259,16 @@ describe('hr-employees pages', () => {
 
     expect(screen.getByText('People Lead')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('Scope node'), {
+      fireEvent.change(screen.getByLabelText('Nodo de alcance'), {
       target: { value: 'company:company-1' },
     });
-    fireEvent.change(screen.getByLabelText('Position'), {
+      fireEvent.change(screen.getByLabelText('Puesto'), {
       target: { value: 'position-1' },
     });
-    fireEvent.change(screen.getByLabelText('Start date'), {
+    fireEvent.change(screen.getByLabelText('Fecha de inicio'), {
       target: { value: '2026-08-13T12:30' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Create assignment' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Crear asignación' }));
 
     await waitFor(() => {
       expect(

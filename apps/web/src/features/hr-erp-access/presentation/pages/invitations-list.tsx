@@ -44,7 +44,7 @@ export const InvitationsListPage = ({
   });
 
   if (!companyId) {
-    return <p className="text-sm text-muted-foreground">Select an active company to manage ERP access.</p>;
+    return <p className="text-sm text-muted-foreground">Seleccioná una compañía activa para gestionar el acceso al ERP.</p>;
   }
 
   const invitations = sortInvitationsByExpiresAt(invitationsQuery.data ?? []);
@@ -53,9 +53,9 @@ export const InvitationsListPage = ({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Invite ERP access</CardTitle>
+          <CardTitle>Invitar al acceso ERP</CardTitle>
           <CardDescription>
-            Create an ERP activation invitation for an existing employee record.
+            Creá una invitación de activación del ERP para un registro de empleado existente.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -72,11 +72,11 @@ export const InvitationsListPage = ({
           >
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="erp-access-employee-id">Employee id</FieldLabel>
+                <FieldLabel htmlFor="erp-access-employee-id">ID del empleado</FieldLabel>
                 <FieldContent>
                   <Input
                     id="erp-access-employee-id"
-                    aria-label="Employee id"
+                    aria-label="ID del empleado"
                     placeholder="employee-1"
                     {...form.register('employeeId')}
                   />
@@ -85,11 +85,11 @@ export const InvitationsListPage = ({
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="erp-access-invitee-email">Invitee email</FieldLabel>
+                <FieldLabel htmlFor="erp-access-invitee-email">Correo de la persona invitada</FieldLabel>
                 <FieldContent>
                   <Input
                     id="erp-access-invitee-email"
-                    aria-label="Invitee email"
+                    aria-label="Correo de la persona invitada"
                     type="email"
                     placeholder="person@vimcore.test"
                     {...form.register('inviteeEmail')}
@@ -103,7 +103,7 @@ export const InvitationsListPage = ({
               <p role="alert" className="text-sm text-destructive">
                 {createInvitationMutation.error instanceof Error
                   ? createInvitationMutation.error.message
-                  : 'Unable to create the ERP access invitation.'}
+                  : 'No se pudo crear la invitación de acceso al ERP.'}
               </p>
             ) : null}
 
@@ -111,7 +111,7 @@ export const InvitationsListPage = ({
               {createInvitationMutation.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : null}
-              Invite ERP access
+              Invitar al acceso ERP
             </Button>
           </form>
         </CardContent>
@@ -119,8 +119,8 @@ export const InvitationsListPage = ({
 
       <Card>
         <CardHeader>
-          <CardTitle>Pending invitations</CardTitle>
-          <CardDescription>Review invitations that still need to be accepted.</CardDescription>
+          <CardTitle>Invitaciones pendientes</CardTitle>
+          <CardDescription>Consultá las invitaciones que todavía deben aceptarse.</CardDescription>
         </CardHeader>
         <CardContent>
           {invitationsQuery.isLoading ? <Skeleton className="h-32 w-full" /> : null}
@@ -129,12 +129,12 @@ export const InvitationsListPage = ({
             <p role="alert" className="text-sm text-destructive">
               {invitationsQuery.error instanceof Error
                 ? invitationsQuery.error.message
-                : 'Unable to load ERP access invitations.'}
+                : 'No se pudieron cargar las invitaciones de acceso al ERP.'}
             </p>
           ) : null}
 
           {!invitationsQuery.isLoading && !invitationsQuery.isError && invitations.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No pending ERP access invitations.</p>
+            <p className="text-sm text-muted-foreground">No hay invitaciones pendientes de acceso al ERP.</p>
           ) : null}
 
           {!invitationsQuery.isLoading && !invitationsQuery.isError && invitations.length > 0 ? (
@@ -142,10 +142,10 @@ export const InvitationsListPage = ({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Expires at</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
+                    <TableHead>Empleado</TableHead>
+                    <TableHead>Correo electrónico</TableHead>
+                    <TableHead>Vence el</TableHead>
+                    <TableHead className="text-right">Acción</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -153,12 +153,12 @@ export const InvitationsListPage = ({
                     <TableRow key={invitation.id}>
                       <TableCell className="font-medium">{invitation.employeeId}</TableCell>
                       <TableCell>{invitation.inviteeEmail}</TableCell>
-                      <TableCell>{new Date(invitation.expiresAt).toLocaleString('en-US')}</TableCell>
+                      <TableCell>{new Date(invitation.expiresAt).toLocaleString('es-AR')}</TableCell>
                       <TableCell className="text-right">
                         <Button
                           type="button"
                           variant="ghost"
-                          aria-label={`Revoke ERP access for ${invitation.employeeId}`}
+                          aria-label={`Revocar acceso ERP para ${invitation.employeeId}`}
                           disabled={revokeAccessMutation.isPending}
                           onClick={() => {
                             void revokeAccessMutation.mutateAsync({
@@ -167,7 +167,7 @@ export const InvitationsListPage = ({
                             });
                           }}
                         >
-                          Revoke access
+                          Revocar acceso
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -181,7 +181,7 @@ export const InvitationsListPage = ({
             <p role="alert" className="mt-4 text-sm text-destructive">
               {revokeAccessMutation.error instanceof Error
                 ? revokeAccessMutation.error.message
-                : 'Unable to revoke ERP access.'}
+                : 'No se pudo revocar el acceso al ERP.'}
             </p>
           ) : null}
         </CardContent>

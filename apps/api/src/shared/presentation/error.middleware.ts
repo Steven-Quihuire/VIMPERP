@@ -59,6 +59,16 @@ import {
   NodeManagementScopeNotFoundError,
 } from '../../features/node-management/domain/node-management';
 import {
+  HrResponsibleAlreadyAssignedError,
+  HrResponsibilityCompanyNotFoundError,
+  HrResponsibilityInvitationAlreadyAcceptedError,
+  HrResponsibilityInvitationDuplicateError,
+  HrResponsibilityInvitationExpiredError,
+  HrResponsibilityInvitationNotFoundError,
+  HrResponsibilityInvitationPasswordRequiredError,
+  HrResponsibleUserNotFoundError,
+} from '../../features/hr-responsibility/domain/hr-responsibility';
+import {
   AreaConflictError,
   AreaNameConflictError,
   AreaNotFoundError,
@@ -132,6 +142,11 @@ export const createErrorMiddleware = ({
       return;
     }
 
+    if (error instanceof HrResponsibilityInvitationPasswordRequiredError) {
+      response.status(400).json(toResponseBody(error.code, error.message));
+      return;
+    }
+
     if (error instanceof ErpAccessInvitationPasswordRequiredError) {
       response.status(400).json(toResponseBody(error.code, error.message));
       return;
@@ -158,6 +173,9 @@ export const createErrorMiddleware = ({
       error instanceof PositionHierarchyError ||
       error instanceof ErpAccessLinkConflictError ||
       error instanceof ErpAccessInvitationAlreadyAcceptedError
+      || error instanceof HrResponsibilityInvitationAlreadyAcceptedError
+      || error instanceof HrResponsibilityInvitationDuplicateError
+      || error instanceof HrResponsibleAlreadyAssignedError
     ) {
       response.status(409).json(toResponseBody(error.code, error.message));
       return;
@@ -176,6 +194,9 @@ export const createErrorMiddleware = ({
       error instanceof ApprovalPolicyScopeNotFoundError ||
       error instanceof ErpAccessInvitationNotFoundError ||
       error instanceof ErpAccessLinkNotFoundError
+      || error instanceof HrResponsibilityInvitationNotFoundError
+      || error instanceof HrResponsibilityCompanyNotFoundError
+      || error instanceof HrResponsibleUserNotFoundError
     ) {
       response.status(404).json(toResponseBody(error.code, error.message));
       return;
@@ -202,6 +223,11 @@ export const createErrorMiddleware = ({
     }
 
     if (error instanceof ErpAccessInvitationExpiredError) {
+      response.status(410).json(toResponseBody(error.code, error.message));
+      return;
+    }
+
+    if (error instanceof HrResponsibilityInvitationExpiredError) {
       response.status(410).json(toResponseBody(error.code, error.message));
       return;
     }

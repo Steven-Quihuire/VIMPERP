@@ -93,13 +93,13 @@ describe('hr-erp-access pages', () => {
 
     expect(screen.getByText('person@vimcore.test')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('Employee id'), {
+    fireEvent.change(screen.getByLabelText('ID del empleado'), {
       target: { value: ' employee-2 ' },
     });
-    fireEvent.change(screen.getByLabelText('Invitee email'), {
+    fireEvent.change(screen.getByLabelText('Correo de la persona invitada'), {
       target: { value: ' PERSON-2@VIMCORE.TEST ' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Invite ERP access' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Invitar al acceso ERP' }));
 
     await waitFor(() => {
       expect(
@@ -111,7 +111,7 @@ describe('hr-erp-access pages', () => {
       });
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Revoke ERP access for employee-1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Revocar acceso ERP para employee-1' }));
 
     await waitFor(() => {
       expect(
@@ -128,7 +128,7 @@ describe('hr-erp-access pages', () => {
       wrapper: createAcceptWrapper(['/hr-erp-access/accept/token-1']),
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Activate ERP access' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Activar acceso ERP' }));
 
     expect(await screen.findByText('Organization landing')).toBeInTheDocument();
   });
@@ -138,14 +138,14 @@ describe('hr-erp-access pages', () => {
       wrapper: createAcceptWrapper(['/hr-erp-access/accept/token-2']),
     });
 
-    fireEvent.change(screen.getByLabelText('Password'), {
+    fireEvent.change(screen.getByLabelText('Contraseña'), {
       target: { value: 'secret123' },
     });
-    fireEvent.change(screen.getByLabelText('Confirm password'), {
+    fireEvent.change(screen.getByLabelText('Confirmar contraseña'), {
       target: { value: 'secret999' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Activate ERP access' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Activar acceso ERP' }));
 
-    expect(await screen.findByText('Passwords must match.')).toBeInTheDocument();
+    expect(await screen.findByText('Las contraseñas deben coincidir.')).toBeInTheDocument();
   });
 });

@@ -34,7 +34,7 @@ export const PoliciesListPage = ({
   if (!companyId) {
     return (
       <p className="text-sm text-muted-foreground">
-        Select an active company to review approval policies.
+        Seleccioná una compañía activa para consultar las políticas de aprobación.
       </p>
     );
   }
@@ -48,7 +48,7 @@ export const PoliciesListPage = ({
       <p role="alert" className="text-sm text-destructive">
         {policiesQuery.error instanceof Error
           ? policiesQuery.error.message
-          : 'Unable to load approval policies.'}
+          : 'No se pudieron cargar las políticas de aprobación.'}
       </p>
     );
   }
@@ -58,7 +58,7 @@ export const PoliciesListPage = ({
   if (policies.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        No approval policies have been created yet.
+        Todavía no se crearon políticas de aprobación.
       </p>
     );
   }
@@ -69,10 +69,10 @@ export const PoliciesListPage = ({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Policy</TableHead>
-              <TableHead>Scope</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>Política</TableHead>
+              <TableHead>Alcance</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -88,7 +88,7 @@ export const PoliciesListPage = ({
                 <TableCell>{getApprovalPolicyScopeLabel(policy)}</TableCell>
                 <TableCell>
                   <Badge variant={policy.isActive ? 'secondary' : 'outline'}>
-                    {policy.isActive ? 'Active' : 'Inactive'}
+                    {policy.isActive ? 'Activa' : 'Inactiva'}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
@@ -96,15 +96,15 @@ export const PoliciesListPage = ({
                     <Button
                       type="button"
                       variant="ghost"
-                      aria-label={`Open policy ${policy.id}`}
+                       aria-label={`Abrir política ${policy.id}`}
                       onClick={() => onSelectPolicy?.(policy.id)}
                     >
-                      Open
+                      Abrir
                     </Button>
                     <Button
                       type="button"
                       variant="ghost"
-                      aria-label={`Deactivate policy ${policy.id}`}
+                       aria-label={`Desactivar política ${policy.id}`}
                       disabled={deactivatePolicyMutation.isPending || !policy.isActive}
                       onClick={() => {
                         void deactivatePolicyMutation.mutateAsync({
@@ -113,7 +113,7 @@ export const PoliciesListPage = ({
                         });
                       }}
                     >
-                      Deactivate
+                      Desactivar
                     </Button>
                   </div>
                 </TableCell>
@@ -127,7 +127,7 @@ export const PoliciesListPage = ({
         <p role="alert" className="text-sm text-destructive">
           {deactivatePolicyMutation.error instanceof Error
             ? deactivatePolicyMutation.error.message
-            : 'Unable to deactivate the approval policy.'}
+             : 'No se pudo desactivar la política de aprobación.'}
         </p>
       ) : null}
     </div>

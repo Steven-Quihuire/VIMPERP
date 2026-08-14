@@ -10,8 +10,8 @@ export type PendingErpAccessInvitation = {
 };
 
 export const invitationFormSchema = z.object({
-  employeeId: z.string().trim().min(1, 'Employee is required.'),
-  inviteeEmail: z.string().trim().toLowerCase().email('Invitee email must be valid.'),
+  employeeId: z.string().trim().min(1, 'El empleado es obligatorio.'),
+  inviteeEmail: z.string().trim().toLowerCase().email('El correo de la persona invitada debe ser válido.'),
 });
 
 export type InvitationFormValues = z.output<typeof invitationFormSchema>;
@@ -39,7 +39,7 @@ export const acceptInvitationFormSchema = z
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['password'],
-        message: 'Password must have at least 8 characters.',
+        message: 'La contraseña debe tener al menos 8 caracteres.',
       });
     }
 
@@ -47,7 +47,7 @@ export const acceptInvitationFormSchema = z
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['confirmPassword'],
-        message: 'Passwords must match.',
+        message: 'Las contraseñas deben coincidir.',
       });
     }
   });

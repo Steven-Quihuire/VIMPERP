@@ -1,26 +1,14 @@
 import express, { type Express, type RequestHandler } from 'express';
 
-import {
-  createGetApplicationErrorDetail,
-} from '../features/admin/application/get-application-error-detail';
-import {
-  createGetAuditEventDetail,
-} from '../features/admin/application/get-audit-event-detail';
-import {
-  createGetCompanySummary,
-} from '../features/admin/application/get-company-summary';
-import {
-  createGetProvisioningRunDetail,
-} from '../features/admin/application/get-provisioning-run-detail';
-import {
-  createListApplicationErrors,
-} from '../features/admin/application/list-application-errors';
+import { createGetApplicationErrorDetail } from '../features/admin/application/get-application-error-detail';
+import { createGetAuditEventDetail } from '../features/admin/application/get-audit-event-detail';
+import { createGetCompanySummary } from '../features/admin/application/get-company-summary';
+import { createGetProvisioningRunDetail } from '../features/admin/application/get-provisioning-run-detail';
+import { createListApplicationErrors } from '../features/admin/application/list-application-errors';
 import { createListAdminNotifications } from '../features/admin/application/list-admin-notifications';
 import { createListCompanyNotifications } from '../features/admin/application/list-company-notifications';
 import { createListAuditEvents } from '../features/admin/application/list-audit-events';
-import {
-  createListProvisioningRuns,
-} from '../features/admin/application/list-provisioning-runs';
+import { createListProvisioningRuns } from '../features/admin/application/list-provisioning-runs';
 import type { AdminGateway } from '../features/admin/domain/admin';
 import { createDrizzleAdminGateway } from '../features/admin/infrastructure/drizzle-admin.gateway';
 import { createAdminRouter } from '../features/admin/presentation/admin.router';
@@ -95,6 +83,14 @@ import { createRevokeErpAccessInvitationUseCase } from '../features/hr-erp-acces
 import type { ErpAccessGateway } from '../features/hr-erp-access/domain/erp-access-invitations';
 import { createDrizzleErpAccessGateway } from '../features/hr-erp-access/infrastructure/drizzle-erp-access.gateway';
 import { createHrErpAccessRouter } from '../features/hr-erp-access/presentation/hr-erp-access.router';
+import { createDrizzleHrResponsibilityGateway } from '../features/hr-responsibility/infrastructure/drizzle-hr-responsibility.gateway';
+import { createAssignHrResponsible } from '../features/hr-responsibility/application/assign-hr-responsible';
+import { createGetHrResponsibilityState } from '../features/hr-responsibility/application/get-hr-responsibility-state';
+import { createHrResponsibilityRouter } from '../features/hr-responsibility/presentation/hr-responsibility.router';
+import { createAcceptHrResponsibilityInvitation } from '../features/hr-responsibility/application/accept-hr-responsibility-invitation';
+import { createHrResponsibilityInvitation } from '../features/hr-responsibility/application/create-hr-responsibility-invitation';
+import { createGetHrResponsibilityInvitation } from '../features/hr-responsibility/application/get-hr-responsibility-invitation';
+import { createListHrResponsibilityInvitations } from '../features/hr-responsibility/application/list-hr-responsibility-invitations';
 import { createCreateApprovalPolicyUseCase } from '../features/approval-policy/application/create-approval-policy';
 import { createDeactivateApprovalPolicyUseCase } from '../features/approval-policy/application/deactivate-approval-policy';
 import { createGetApprovalPolicyUseCase } from '../features/approval-policy/application/get-approval-policy';
@@ -116,12 +112,14 @@ import {
   createResendNodeManagementInvitationEmailSender,
 } from '../features/node-management/infrastructure/resend-node-management-invitation-email-sender';
 import { createNodeManagementRouter } from '../features/node-management/presentation/node-management.router';
+import {
+  createNoopInvitationEmailSender,
+  createResendInvitationEmailSender,
+} from '../shared/infrastructure/resend-invitation-email-sender';
 import { createComputeEffectivePermissionsUseCase } from '../features/roles-management/application/compute-effective-permissions';
 import { createEvaluateReportingLineScopes } from '../features/roles-management/application/evaluate-reporting-line-scopes';
 import type { PermissionScope } from '../features/roles-management/domain/assignments';
-import {
-  createRequireHrCapability,
-} from '../features/roles-management/presentation/require-hr-capability';
+import { createRequireHrCapability } from '../features/roles-management/presentation/require-hr-capability';
 import { createCreateAreaUseCase } from '../features/org-hierarchy/application/create-area';
 import { createCreateLocalUseCase } from '../features/org-hierarchy/application/create-local';
 import { createCreatePointOfSaleUseCase } from '../features/org-hierarchy/application/create-point-of-sale';
@@ -157,7 +155,10 @@ import {
 } from '../shared/presentation/error.middleware';
 import { createDb } from '../shared/infrastructure/db/client';
 import { createDrizzleScopeResolver } from '../shared/infrastructure/scope-hierarchy/drizzle-scope-resolver';
-import type { ScopeRef, ScopeResolver } from '../shared/infrastructure/scope-hierarchy/scope-hierarchy.port';
+import type {
+  ScopeRef,
+  ScopeResolver,
+} from '../shared/infrastructure/scope-hierarchy/scope-hierarchy.port';
 import {
   createLogger,
   createMetricsRouter,
@@ -186,6 +187,7 @@ type CreateAppInput = {
   orgHierarchyGateway?: OrgHierarchyGateway;
   hrEmployeesGateway?: HrEmployeesGateway;
   hrErpAccessGateway?: ErpAccessGateway;
+  hrResponsibilityGateway?: import('../features/hr-responsibility/domain/hr-responsibility').HrResponsibilityGateway;
   approvalPolicyGateway?: ApprovalPolicyGateway;
   nodeManagementGateway?: NodeManagementGateway;
   scopeResolver?: ScopeResolver;
@@ -224,18 +226,22 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
   const roleAssignmentsGateway = createDrizzleAssignmentsGateway(db);
   const rolesGateway = createDrizzleRolesGateway(db);
   const nodeEnv = input.nodeEnv ?? 'development';
-  const seedAdminEnabled = nodeEnv !== 'production' && (input.seedAdminEnabled ?? false);
+  const seedAdminEnabled =
+    nodeEnv !== 'production' && (input.seedAdminEnabled ?? false);
   const sessionCookieName = input.sessionCookieName ?? 'vimcore_session';
   const requestMetrics = createRequestMetrics();
   const logger = createLogger(nodeEnv !== 'test');
   const orgTreeGateway =
     input.orgTreeGateway ?? createDrizzleOrgTreeGateway({ scopeResolver });
   const orgHierarchyGateway =
-    input.orgHierarchyGateway ?? createDrizzleOrgHierarchyGateway(db, { logger });
+    input.orgHierarchyGateway ??
+    createDrizzleOrgHierarchyGateway(db, { logger });
   const hrEmployeesGateway =
     input.hrEmployeesGateway ?? createDrizzleHrEmployeesGateway(db);
   const hrErpAccessGateway =
     input.hrErpAccessGateway ?? createDrizzleErpAccessGateway(db);
+  const hrResponsibilityGateway =
+    input.hrResponsibilityGateway ?? createDrizzleHrResponsibilityGateway(db);
   const approvalPolicyGateway =
     input.approvalPolicyGateway ?? createDrizzleApprovalPolicyGateway(db);
   const computeEffectivePermissions =
@@ -264,7 +270,11 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
   const invitationEmailMode =
     input.resendApiKey && input.resendFromEmail ? 'resend' : 'noop';
   const invitationEmailSender = {
-    sendInvitationEmail: async (emailInput: Parameters<typeof rawInvitationEmailSender.sendInvitationEmail>[0]) => {
+    sendInvitationEmail: async (
+      emailInput: Parameters<
+        typeof rawInvitationEmailSender.sendInvitationEmail
+      >[0],
+    ) => {
       logger.info(
         {
           invitationId: emailInput.invitationId,
@@ -276,7 +286,8 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       );
 
       try {
-        const delivery = await rawInvitationEmailSender.sendInvitationEmail(emailInput);
+        const delivery =
+          await rawInvitationEmailSender.sendInvitationEmail(emailInput);
 
         logger.info(
           {
@@ -303,6 +314,29 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
 
         throw error;
       }
+    },
+  };
+  const rawHrInvitationEmailSender =
+    input.resendApiKey && input.resendFromEmail
+      ? createResendInvitationEmailSender({
+          apiKey: input.resendApiKey,
+          fromEmail: input.resendFromEmail,
+        })
+      : createNoopInvitationEmailSender();
+  const hrInvitationEmailSender = {
+    sendInvitationEmail: async (
+      emailInput: Parameters<typeof rawHrInvitationEmailSender.sendInvitationEmail>[0],
+    ) => {
+      logger.info(
+        { invitationId: emailInput.invitationId, inviteeEmail: emailInput.inviteeEmail, mode: invitationEmailMode },
+        'HR responsibility invitation email delivery attempt started',
+      );
+      const delivery = await rawHrInvitationEmailSender.sendInvitationEmail(emailInput);
+      logger.info(
+        { invitationId: emailInput.invitationId, inviteeEmail: emailInput.inviteeEmail, mode: invitationEmailMode, status: delivery.status },
+        'HR responsibility invitation email delivery finished',
+      );
+      return delivery;
     },
   };
   logger.info(
@@ -333,10 +367,20 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       scopeType: 'company',
       scopeId: auth.activeCompany!.companyId,
     };
-  const assertScopeVisible = async (auth: AuthSession, companyId: string, scope: ScopeRef) => {
+  const assertScopeVisible = async (
+    auth: AuthSession,
+    companyId: string,
+    scope: ScopeRef,
+  ) => {
     const activeScope = getActiveScope(auth);
     const lineage = await scopeResolver.getLineage(companyId, scope);
-    if (!lineage.some((entry) => entry.scopeType === activeScope.scopeType && entry.scopeId === activeScope.scopeId)) {
+    if (
+      !lineage.some(
+        (entry) =>
+          entry.scopeType === activeScope.scopeType &&
+          entry.scopeId === activeScope.scopeId,
+      )
+    ) {
       throw new ForbiddenError();
     }
   };
@@ -368,10 +412,11 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       await assertScopeVisible(auth, companyId, requestedScope);
       return { kind: 'node+descendants', scope: requestedScope };
     }
-    const assignment = await hrEmployeesGateway.getActivePrimaryAssignmentByEmployeeId(
-      companyId,
-      employeeId,
-    );
+    const assignment =
+      await hrEmployeesGateway.getActivePrimaryAssignmentByEmployeeId(
+        companyId,
+        employeeId,
+      );
     if (!assignment) {
       if (auth.activeScope && auth.activeScope.scopeType !== 'company') {
         throw new ForbiddenError();
@@ -391,7 +436,9 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     };
     await assertScopeVisible(auth, companyId, employeeScope);
 
-    let activeLink: Awaited<ReturnType<ErpAccessGateway['getActiveLinkByUserId']>> = null;
+    let activeLink: Awaited<
+      ReturnType<ErpAccessGateway['getActiveLinkByUserId']>
+    > = null;
     try {
       activeLink = await hrErpAccessGateway.getActiveLinkByUserId(
         companyId,
@@ -404,15 +451,17 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       return { kind: 'self' };
     }
     if (activeLink) {
-      const actorAssignment = await hrEmployeesGateway.getActivePrimaryAssignmentByEmployeeId(
-        companyId,
-        activeLink.employeeId,
-      );
-      if (actorAssignment) {
-        const directReports = await hrEmployeesGateway.listDirectReportAssignments(
+      const actorAssignment =
+        await hrEmployeesGateway.getActivePrimaryAssignmentByEmployeeId(
           companyId,
-          actorAssignment.positionId,
+          activeLink.employeeId,
         );
+      if (actorAssignment) {
+        const directReports =
+          await hrEmployeesGateway.listDirectReportAssignments(
+            companyId,
+            actorAssignment.positionId,
+          );
         if (directReports.some((report) => report.employeeId === employeeId)) {
           return { kind: 'direct_reports' };
         }
@@ -433,12 +482,20 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       typeof request.body?.scopeNodeId === 'string'
         ? request.body.scopeNodeId
         : request.params.policyId
-          ? (await approvalPolicyGateway.getApprovalPolicyById(companyId, String(request.params.policyId)))?.scopeNodeId
+          ? (
+              await approvalPolicyGateway.getApprovalPolicyById(
+                companyId,
+                String(request.params.policyId),
+              )
+            )?.scopeNodeId
           : null;
     if (!scopeNodeId) {
       return undefined;
     }
-    const scopeNode = await approvalPolicyGateway.findScopeNode(companyId, scopeNodeId);
+    const scopeNode = await approvalPolicyGateway.findScopeNode(
+      companyId,
+      scopeNodeId,
+    );
     if (!scopeNode) {
       throw new ForbiddenError();
     }
@@ -449,55 +506,129 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     await assertScopeVisible(auth, companyId, scope);
     return { kind: 'node+descendants', scope };
   };
-  const listEmployees = createListEmployeesUseCase({ gateway: hrEmployeesGateway });
-  const listVisibleEmployees = async ({ companyId, auth }: { companyId: string; auth: AuthSession }) => {
+  const listEmployees = createListEmployeesUseCase({
+    gateway: hrEmployeesGateway,
+  });
+  const listVisibleEmployees = async ({
+    companyId,
+    auth,
+  }: {
+    companyId: string;
+    auth: AuthSession;
+  }) => {
     const employees = await listEmployees({ companyId });
     const activeScope = getActiveScope(auth);
-    return (await Promise.all(employees.map(async (employee) => {
-      const assignment = await hrEmployeesGateway.getActivePrimaryAssignmentByEmployeeId(companyId, employee.id);
-      if (!assignment) return activeScope.scopeType === 'company' ? employee : null;
-      const node = await hrEmployeesGateway.findScopeNode(companyId, assignment.scopeNodeId);
-      if (!node) return null;
-      const lineage = await scopeResolver.getLineage(companyId, { scopeType: node.nodeType, scopeId: node.sourceId });
-      return lineage.some((entry) => entry.scopeType === activeScope.scopeType && entry.scopeId === activeScope.scopeId)
-        ? employee
-        : null;
-    }))).filter((employee): employee is NonNullable<typeof employee> => employee !== null);
+    return (
+      await Promise.all(
+        employees.map(async (employee) => {
+          const assignment =
+            await hrEmployeesGateway.getActivePrimaryAssignmentByEmployeeId(
+              companyId,
+              employee.id,
+            );
+          if (!assignment)
+            return activeScope.scopeType === 'company' ? employee : null;
+          const node = await hrEmployeesGateway.findScopeNode(
+            companyId,
+            assignment.scopeNodeId,
+          );
+          if (!node) return null;
+          const lineage = await scopeResolver.getLineage(companyId, {
+            scopeType: node.nodeType,
+            scopeId: node.sourceId,
+          });
+          return lineage.some(
+            (entry) =>
+              entry.scopeType === activeScope.scopeType &&
+              entry.scopeId === activeScope.scopeId,
+          )
+            ? employee
+            : null;
+        }),
+      )
+    ).filter(
+      (employee): employee is NonNullable<typeof employee> => employee !== null,
+    );
   };
-  const listPositions = async ({ companyId, auth }: { companyId: string; auth: AuthSession }) => {
+  const listPositions = async ({
+    companyId,
+    auth,
+  }: {
+    companyId: string;
+    auth: AuthSession;
+  }) => {
     const positions = await hrEmployeesGateway.listPositions(companyId);
     const activeScope = getActiveScope(auth);
     if (activeScope.scopeType === 'company') {
       return positions;
     }
 
-    return (await Promise.all(positions.map(async (position) => {
-      const assignment = await hrEmployeesGateway.getActivePrimaryAssignmentByPositionId(
-        companyId,
-        position.id,
-      );
-      if (!assignment) return null;
-      const node = await hrEmployeesGateway.findScopeNode(companyId, assignment.scopeNodeId);
-      if (!node) return null;
-      const lineage = await scopeResolver.getLineage(companyId, { scopeType: node.nodeType, scopeId: node.sourceId });
-      return lineage.some((entry) => entry.scopeType === activeScope.scopeType && entry.scopeId === activeScope.scopeId)
-        ? position
-        : null;
-    }))).filter((position): position is NonNullable<typeof position> => position !== null);
+    return (
+      await Promise.all(
+        positions.map(async (position) => {
+          const assignment =
+            await hrEmployeesGateway.getActivePrimaryAssignmentByPositionId(
+              companyId,
+              position.id,
+            );
+          if (!assignment) return null;
+          const node = await hrEmployeesGateway.findScopeNode(
+            companyId,
+            assignment.scopeNodeId,
+          );
+          if (!node) return null;
+          const lineage = await scopeResolver.getLineage(companyId, {
+            scopeType: node.nodeType,
+            scopeId: node.sourceId,
+          });
+          return lineage.some(
+            (entry) =>
+              entry.scopeType === activeScope.scopeType &&
+              entry.scopeId === activeScope.scopeId,
+          )
+            ? position
+            : null;
+        }),
+      )
+    ).filter(
+      (position): position is NonNullable<typeof position> => position !== null,
+    );
   };
-  const listApprovalPolicies = createListApprovalPoliciesUseCase({ gateway: approvalPolicyGateway });
-  const listVisibleApprovalPolicies = async ({ companyId, auth }: { companyId: string; auth: AuthSession }) => {
+  const listApprovalPolicies = createListApprovalPoliciesUseCase({
+    gateway: approvalPolicyGateway,
+  });
+  const listVisibleApprovalPolicies = async ({
+    companyId,
+    auth,
+  }: {
+    companyId: string;
+    auth: AuthSession;
+  }) => {
     const policies = await listApprovalPolicies(companyId);
     const activeScope = getActiveScope(auth);
-    return (await Promise.all(policies.map(async (policy) => {
-      if (!policy.scopeNodeId) return policy;
-      const node = await approvalPolicyGateway.findScopeNode(companyId, policy.scopeNodeId);
-      if (!node) return null;
-      const lineage = await scopeResolver.getLineage(companyId, { scopeType: node.scopeType, scopeId: node.sourceId });
-      return lineage.some((entry) => entry.scopeType === activeScope.scopeType && entry.scopeId === activeScope.scopeId)
-        ? policy
-        : null;
-    }))).filter((policy): policy is NonNullable<typeof policy> => policy !== null);
+    return (
+      await Promise.all(
+        policies.map(async (policy) => {
+          if (!policy.scopeNodeId) return policy;
+          const node = await approvalPolicyGateway.findScopeNode(
+            companyId,
+            policy.scopeNodeId,
+          );
+          if (!node) return null;
+          const lineage = await scopeResolver.getLineage(companyId, {
+            scopeType: node.scopeType,
+            scopeId: node.sourceId,
+          });
+          return lineage.some(
+            (entry) =>
+              entry.scopeType === activeScope.scopeType &&
+              entry.scopeId === activeScope.scopeId,
+          )
+            ? policy
+            : null;
+        }),
+      )
+    ).filter((policy): policy is NonNullable<typeof policy> => policy !== null);
   };
   const requirePlatformAdmin = createRequireRole('platform-admin');
   const sweepStaleProvisioningRuns = createSweepStaleProvisioningRuns({
@@ -525,10 +656,11 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       return;
     }
 
-    const switchCount = await authIdentityGateway.countRecentActiveCompanySwitches(
-      input.userId,
-      new Date(Date.now() - ACTIVE_COMPANY_SWITCH_WINDOW_MS),
-    );
+    const switchCount =
+      await authIdentityGateway.countRecentActiveCompanySwitches(
+        input.userId,
+        new Date(Date.now() - ACTIVE_COMPANY_SWITCH_WINDOW_MS),
+      );
 
     if (switchCount >= ACTIVE_COMPANY_SWITCH_LIMIT) {
       throw new TooManyRequestsError();
@@ -614,10 +746,14 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       }),
       recordPrivacyPolicyAcceptance:
         companyOnboardingGateway.recordPrivacyPolicyAcceptance,
-      getCurrentCompanySummary: createGetCurrentCompanySummary(companyOnboardingGateway),
+      getCurrentCompanySummary: createGetCurrentCompanySummary(
+        companyOnboardingGateway,
+      ),
       getThemePreference: createGetThemePreference(companyOnboardingGateway),
       switchActiveCompany,
-      updateThemePreference: createUpdateThemePreference(companyOnboardingGateway),
+      updateThemePreference: createUpdateThemePreference(
+        companyOnboardingGateway,
+      ),
     }),
   );
   app.use(
@@ -646,34 +782,60 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     createOrgHierarchyRouter({
       requireAuth,
       requireRole: createRequireRole,
-      createDivision: createCreateDivisionUseCase({ gateway: orgHierarchyGateway }),
-      listDivisions: createListDivisionsUseCase({ gateway: orgHierarchyGateway }),
+      createDivision: createCreateDivisionUseCase({
+        gateway: orgHierarchyGateway,
+      }),
+      listDivisions: createListDivisionsUseCase({
+        gateway: orgHierarchyGateway,
+      }),
       findDivisionById: async (divisionId) =>
         await orgHierarchyGateway.findDivisionById(divisionId),
-      updateDivision: createUpdateDivisionUseCase({ gateway: orgHierarchyGateway }),
-      deleteDivision: createDeleteDivisionUseCase({ gateway: orgHierarchyGateway }),
+      updateDivision: createUpdateDivisionUseCase({
+        gateway: orgHierarchyGateway,
+      }),
+      deleteDivision: createDeleteDivisionUseCase({
+        gateway: orgHierarchyGateway,
+      }),
       createLocal: createCreateLocalUseCase({ gateway: orgHierarchyGateway }),
       listLocals: createListLocalsUseCase({ gateway: orgHierarchyGateway }),
-      findLocalById: async (localId) => await orgHierarchyGateway.findLocalById(localId),
+      findLocalById: async (localId) =>
+        await orgHierarchyGateway.findLocalById(localId),
       updateLocal: createUpdateLocalUseCase({ gateway: orgHierarchyGateway }),
       deleteLocal: createDeleteLocalUseCase({ gateway: orgHierarchyGateway }),
       createArea: createCreateAreaUseCase({ gateway: orgHierarchyGateway }),
       listAreas: createListAreasUseCase({ gateway: orgHierarchyGateway }),
-      findAreaById: async (areaId) => await orgHierarchyGateway.findAreaById(areaId),
+      findAreaById: async (areaId) =>
+        await orgHierarchyGateway.findAreaById(areaId),
       updateArea: createUpdateAreaUseCase({ gateway: orgHierarchyGateway }),
       deleteArea: createDeleteAreaUseCase({ gateway: orgHierarchyGateway }),
-      createWarehouse: createCreateWarehouseUseCase({ gateway: orgHierarchyGateway }),
-      listWarehouses: createListWarehousesUseCase({ gateway: orgHierarchyGateway }),
+      createWarehouse: createCreateWarehouseUseCase({
+        gateway: orgHierarchyGateway,
+      }),
+      listWarehouses: createListWarehousesUseCase({
+        gateway: orgHierarchyGateway,
+      }),
       findWarehouseById: async (warehouseId) =>
         await orgHierarchyGateway.findWarehouseById(warehouseId),
-      updateWarehouse: createUpdateWarehouseUseCase({ gateway: orgHierarchyGateway }),
-      deleteWarehouse: createDeleteWarehouseUseCase({ gateway: orgHierarchyGateway }),
-      createPointOfSale: createCreatePointOfSaleUseCase({ gateway: orgHierarchyGateway }),
-      listPointsOfSale: createListPointsOfSaleUseCase({ gateway: orgHierarchyGateway }),
+      updateWarehouse: createUpdateWarehouseUseCase({
+        gateway: orgHierarchyGateway,
+      }),
+      deleteWarehouse: createDeleteWarehouseUseCase({
+        gateway: orgHierarchyGateway,
+      }),
+      createPointOfSale: createCreatePointOfSaleUseCase({
+        gateway: orgHierarchyGateway,
+      }),
+      listPointsOfSale: createListPointsOfSaleUseCase({
+        gateway: orgHierarchyGateway,
+      }),
       findPointOfSaleById: async (pointOfSaleId) =>
         await orgHierarchyGateway.findPointOfSaleById(pointOfSaleId),
-      updatePointOfSale: createUpdatePointOfSaleUseCase({ gateway: orgHierarchyGateway }),
-      deletePointOfSale: createDeletePointOfSaleUseCase({ gateway: orgHierarchyGateway }),
+      updatePointOfSale: createUpdatePointOfSaleUseCase({
+        gateway: orgHierarchyGateway,
+      }),
+      deletePointOfSale: createDeletePointOfSaleUseCase({
+        gateway: orgHierarchyGateway,
+      }),
     }),
   );
   app.use(
@@ -700,7 +862,9 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     createHrEmployeesRouter({
       requireAuth,
       requireHrCapability,
-      createEmployee: createCreateEmployeeUseCase({ gateway: hrEmployeesGateway }),
+      createEmployee: createCreateEmployeeUseCase({
+        gateway: hrEmployeesGateway,
+      }),
       updateEmployee: (companyId, employeeId, input) =>
         createUpdateEmployeeUseCase({ gateway: hrEmployeesGateway })({
           companyId,
@@ -710,12 +874,22 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       listEmployees: listVisibleEmployees,
       resolvePermissionScope: resolveEmployeePermissionScope,
       getEmployee: createGetEmployeeUseCase({ gateway: hrEmployeesGateway }),
-      createPosition: createCreatePositionUseCase({ gateway: hrEmployeesGateway }),
+      createPosition: createCreatePositionUseCase({
+        gateway: hrEmployeesGateway,
+      }),
       listPositions,
-      createAssignment: createCreateAssignmentUseCase({ gateway: hrEmployeesGateway }),
-      listAssignmentHistory: createListAssignmentHistoryUseCase({ gateway: hrEmployeesGateway }),
-      resolveReportingLine: createResolveReportingLineUseCase({ gateway: hrEmployeesGateway }),
-      resolveDirectReports: createResolveDirectReportsUseCase({ gateway: hrEmployeesGateway }),
+      createAssignment: createCreateAssignmentUseCase({
+        gateway: hrEmployeesGateway,
+      }),
+      listAssignmentHistory: createListAssignmentHistoryUseCase({
+        gateway: hrEmployeesGateway,
+      }),
+      resolveReportingLine: createResolveReportingLineUseCase({
+        gateway: hrEmployeesGateway,
+      }),
+      resolveDirectReports: createResolveDirectReportsUseCase({
+        gateway: hrEmployeesGateway,
+      }),
     }),
   );
   app.use(
@@ -741,13 +915,39 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     }),
   );
   app.use(
+    createHrResponsibilityRouter({
+      requireAuth,
+      getState: createGetHrResponsibilityState(hrResponsibilityGateway),
+      assign: createAssignHrResponsible(hrResponsibilityGateway),
+      listPendingInvitations: createListHrResponsibilityInvitations({ gateway: hrResponsibilityGateway }),
+      createInvitation: createHrResponsibilityInvitation({
+        gateway: hrResponsibilityGateway,
+        emailSender: hrInvitationEmailSender,
+        buildInvitationLink: (token) => `${appBaseUrl}/hr-responsibility/accept/${token}`,
+      }),
+      getInvitation: createGetHrResponsibilityInvitation({ gateway: hrResponsibilityGateway }),
+      acceptInvitation: createAcceptHrResponsibilityInvitation({
+        gateway: hrResponsibilityGateway,
+        passwordHasher,
+        sessionTokenService,
+      }),
+      sessionCookieName,
+      secureCookies: nodeEnv === 'production',
+    }),
+  );
+  app.use(
     createNodeManagementRouter({
       requireAuth,
       createInvitation: createCreateNodeManagementInvitationUseCase({
         gateway: nodeManagementGateway,
         emailSender: invitationEmailSender,
-        buildInvitationLink: (token) => `${appBaseUrl}/accept-invitation/${token}`,
-        onEmailDeliveryFailure: ({ invitationId, inviteeEmail, errorMessage }) => {
+        buildInvitationLink: (token) =>
+          `${appBaseUrl}/accept-invitation/${token}`,
+        onEmailDeliveryFailure: ({
+          invitationId,
+          inviteeEmail,
+          errorMessage,
+        }) => {
           logger.error(
             { invitationId, inviteeEmail, err: errorMessage },
             'Node management invitation email delivery failed',
@@ -757,9 +957,11 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       listResponsibilities: createListNodeResponsibilitiesUseCase({
         gateway: nodeManagementGateway,
       }),
-      listPendingInvitations: createListNodeManagementPendingInvitationsUseCase({
-        gateway: nodeManagementGateway,
-      }),
+      listPendingInvitations: createListNodeManagementPendingInvitationsUseCase(
+        {
+          gateway: nodeManagementGateway,
+        },
+      ),
       getResponsibilityState: createGetNodeResponsibilityStateUseCase({
         gateway: nodeManagementGateway,
       }),

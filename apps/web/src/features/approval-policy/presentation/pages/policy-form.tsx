@@ -50,7 +50,7 @@ export const PolicyFormPage = ({
   if (!companyId) {
     return (
       <p className="text-sm text-muted-foreground">
-        Select an active company before managing approval policies.
+        Seleccioná una compañía activa antes de gestionar las políticas de aprobación.
       </p>
     );
   }
@@ -58,9 +58,9 @@ export const PolicyFormPage = ({
   return (
     <Card key={policy?.id ?? 'new-policy'}>
       <CardHeader>
-        <CardTitle>{isEditing ? 'Update policy' : 'Create policy'}</CardTitle>
+        <CardTitle>{isEditing ? 'Actualizar política' : 'Crear política'}</CardTitle>
         <CardDescription>
-          Configure approval-policy groundwork without enabling workflow execution yet.
+          Configurá las bases de la política de aprobación sin habilitar todavía la ejecución del flujo.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -82,11 +82,11 @@ export const PolicyFormPage = ({
         >
           <FieldGroup>
             <Field>
-              <FieldLabel htmlFor="approval-policy-name">Policy name</FieldLabel>
+              <FieldLabel htmlFor="approval-policy-name">Nombre de la política</FieldLabel>
               <FieldContent>
                 <Input
                   id="approval-policy-name"
-                  aria-label="Policy name"
+                  aria-label="Nombre de la política"
                   {...form.register('name')}
                 />
                 <FieldError errors={[form.formState.errors.name]} />
@@ -94,11 +94,11 @@ export const PolicyFormPage = ({
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="approval-policy-scope-type">Scope type</FieldLabel>
+              <FieldLabel htmlFor="approval-policy-scope-type">Tipo de alcance</FieldLabel>
               <FieldContent>
                 <select
                   id="approval-policy-scope-type"
-                  aria-label="Scope type"
+                  aria-label="Tipo de alcance"
                   className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-2 text-sm"
                   value={scopeType}
                   onChange={(event) => {
@@ -119,39 +119,39 @@ export const PolicyFormPage = ({
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="approval-policy-scope-node-id">Scope node id</FieldLabel>
+              <FieldLabel htmlFor="approval-policy-scope-node-id">ID del nodo de alcance</FieldLabel>
               <FieldContent>
                 <Input
                   id="approval-policy-scope-node-id"
-                  aria-label="Scope node id"
+                  aria-label="ID del nodo de alcance"
                   placeholder={orgTreeQuery.data?.[0]?.ref.scopeId ?? 'area:area-1'}
                   disabled={scopeType === 'company'}
                   {...form.register('scopeNodeId')}
                 />
                 <FieldDescription>
-                  Use the canonical scope-node id for non-company policies.
+                   Usá el ID canónico del nodo de alcance para las políticas que no sean de compañía.
                 </FieldDescription>
                 <FieldError errors={[form.formState.errors.scopeNodeId]} />
               </FieldContent>
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="approval-policy-definition-json">Definition JSON</FieldLabel>
+              <FieldLabel htmlFor="approval-policy-definition-json">JSON de definición</FieldLabel>
               <FieldContent>
                 <Input
                   id="approval-policy-definition-json"
-                  aria-label="Definition JSON"
+                  aria-label="JSON de definición"
                   {...form.register('definitionJson')}
                 />
                 <FieldDescription>
-                  Store the raw approval-policy configuration JSON.
+                   Guardá el JSON sin modificar de la configuración de la política de aprobación.
                 </FieldDescription>
                 <FieldError errors={[form.formState.errors.definitionJson]} />
               </FieldContent>
             </Field>
 
             <Field orientation="horizontal">
-              <FieldLabel htmlFor="approval-policy-is-active">Active</FieldLabel>
+              <FieldLabel htmlFor="approval-policy-is-active">Activa</FieldLabel>
               <FieldContent>
                 <Switch
                   id="approval-policy-is-active"
@@ -168,13 +168,13 @@ export const PolicyFormPage = ({
             <p role="alert" className="text-sm text-destructive">
               {mutation.error instanceof Error
                 ? mutation.error.message
-                : 'Unable to save the approval policy.'}
+                 : 'No se pudo guardar la política de aprobación.'}
             </p>
           ) : null}
 
           <Button type="submit" disabled={mutation.isPending}>
             {mutation.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
-            {isEditing ? 'Update policy' : 'Create policy'}
+            {isEditing ? 'Actualizar política' : 'Crear política'}
           </Button>
         </form>
       </CardContent>

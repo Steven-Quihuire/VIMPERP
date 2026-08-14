@@ -98,10 +98,10 @@ describe('approval-policy pages', () => {
 
     expect(screen.getByText('Company approvals')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open policy policy-1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir política policy-1' }));
     expect(onSelectPolicy).toHaveBeenCalledWith('policy-1');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Deactivate policy policy-1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Desactivar política policy-1' }));
 
     await waitFor(() => {
       expect(
@@ -118,13 +118,13 @@ describe('approval-policy pages', () => {
 
     render(<PolicyFormPage session={session} onSaved={onSaved} />);
 
-    fireEvent.change(screen.getByLabelText('Policy name'), {
+    fireEvent.change(screen.getByLabelText('Nombre de la política'), {
       target: { value: 'Company approvals' },
     });
-    fireEvent.change(screen.getByLabelText('Definition JSON'), {
+    fireEvent.change(screen.getByLabelText('JSON de definición'), {
       target: { value: '{"steps":["manager"]}' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Create policy' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Crear política' }));
 
     await waitFor(() => {
       expect(
@@ -163,16 +163,16 @@ describe('approval-policy pages', () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText('Policy name'), {
+    fireEvent.change(screen.getByLabelText('Nombre de la política'), {
       target: { value: 'Updated area approvals' },
     });
-    fireEvent.change(screen.getByLabelText('Scope node id'), {
+    fireEvent.change(screen.getByLabelText('ID del nodo de alcance'), {
       target: { value: 'area:area-1' },
     });
-    fireEvent.change(screen.getByLabelText('Definition JSON'), {
+    fireEvent.change(screen.getByLabelText('JSON de definición'), {
       target: { value: '{"steps":["vp"]}' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Update policy' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Actualizar política' }));
 
     await waitFor(() => {
       expect(

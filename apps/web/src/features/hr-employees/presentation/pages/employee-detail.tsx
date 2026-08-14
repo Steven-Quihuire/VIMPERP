@@ -70,7 +70,7 @@ export const EmployeeDetailPage = ({
   if (!companyId) {
     return (
       <p className="text-sm text-muted-foreground">
-        Select an active company to review employee details.
+        Seleccioná una compañía activa para consultar los detalles del empleado.
       </p>
     );
   }
@@ -78,7 +78,7 @@ export const EmployeeDetailPage = ({
   if (!employeeId) {
     return (
       <p className="text-sm text-muted-foreground">
-        Choose an employee from the list to inspect details.
+        Elegí un empleado de la lista para consultar sus detalles.
       </p>
     );
   }
@@ -98,7 +98,7 @@ export const EmployeeDetailPage = ({
       <p role="alert" className="text-sm text-destructive">
         {employeeQuery.error instanceof Error
           ? employeeQuery.error.message
-          : 'Unable to load employee details.'}
+          : 'No se pudieron cargar los detalles del empleado.'}
       </p>
     );
   }
@@ -108,7 +108,7 @@ export const EmployeeDetailPage = ({
   if (!employee) {
     return (
       <p className="text-sm text-muted-foreground">
-        The selected employee no longer exists.
+        El empleado seleccionado ya no existe.
       </p>
     );
   }
@@ -127,36 +127,40 @@ export const EmployeeDetailPage = ({
       <CardHeader>
         <CardTitle>{employee.fullName || employee.id}</CardTitle>
         <CardDescription>
-          Created {new Date(employee.createdAt).toLocaleString('en-US')}
+          Creado el {new Date(employee.createdAt).toLocaleString('es-AR')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-2 text-sm sm:grid-cols-2">
           <p>
-            <span className="font-medium">Employee id:</span> {employee.id}
+            <span className="font-medium">ID del empleado:</span> {employee.id}
           </p>
           <p>
-            <span className="font-medium">Email:</span>{' '}
-            {employee.email ?? 'Not provided'}
+            <span className="font-medium">Correo electrónico:</span>{' '}
+            {employee.email ?? 'No informado'}
           </p>
           <p>
-            <span className="font-medium">Document:</span>{' '}
-            {employee.documentNumber ?? 'Not provided'}
+            <span className="font-medium">Documento:</span>{' '}
+            {employee.documentNumber ?? 'No informado'}
           </p>
           <p>
-            <span className="font-medium">Hire date:</span>{' '}
+            <span className="font-medium">Fecha de contratación:</span>{' '}
             {employee.hiredAt
-              ? new Date(employee.hiredAt).toLocaleDateString('en-US')
-              : 'Not provided'}
+              ? new Date(employee.hiredAt).toLocaleDateString('es-AR')
+              : 'No informada'}
           </p>
           <p className="flex items-center gap-2">
-            <span className="font-medium">Status:</span>{' '}
+            <span className="font-medium">Estado:</span>{' '}
             <Badge
               variant={
                 employee.employmentStatus === 'active' ? 'secondary' : 'outline'
               }
             >
-              {employee.employmentStatus}
+              {employee.employmentStatus === 'active'
+                ? 'Activo'
+                : employee.employmentStatus === 'suspended'
+                  ? 'Suspendido'
+                  : 'Desvinculado'}
             </Badge>
           </p>
         </div>
@@ -171,16 +175,16 @@ export const EmployeeDetailPage = ({
             })(event);
           }}
         >
-          <h3 className="font-medium">Edit employee</h3>
+          <h3 className="font-medium">Editar empleado</h3>
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="edit-employee-full-name">
-                Full name
+                Nombre completo
               </FieldLabel>
               <FieldContent>
                 <Input
                   id="edit-employee-full-name"
-                  aria-label="Edit full name"
+                  aria-label="Editar nombre completo"
                   {...form.register('fullName')}
                 />
                 <FieldError errors={[form.formState.errors.fullName]} />
@@ -188,12 +192,12 @@ export const EmployeeDetailPage = ({
             </Field>
             <Field>
               <FieldLabel htmlFor="edit-employee-document-type">
-                Document type
+                Tipo de documento
               </FieldLabel>
               <FieldContent>
                 <Input
                   id="edit-employee-document-type"
-                  aria-label="Edit document type"
+                  aria-label="Editar tipo de documento"
                   {...form.register('documentType')}
                 />
                 <FieldError errors={[form.formState.errors.documentType]} />
@@ -201,23 +205,23 @@ export const EmployeeDetailPage = ({
             </Field>
             <Field>
               <FieldLabel htmlFor="edit-employee-document-number">
-                Document number
+                Número de documento
               </FieldLabel>
               <FieldContent>
                 <Input
                   id="edit-employee-document-number"
-                  aria-label="Edit document number"
+                  aria-label="Editar número de documento"
                   {...form.register('documentNumber')}
                 />
                 <FieldError errors={[form.formState.errors.documentNumber]} />
               </FieldContent>
             </Field>
             <Field>
-              <FieldLabel htmlFor="edit-employee-email">Email</FieldLabel>
+                <FieldLabel htmlFor="edit-employee-email">Correo electrónico</FieldLabel>
               <FieldContent>
                 <Input
                   id="edit-employee-email"
-                  aria-label="Edit email"
+                  aria-label="Editar correo electrónico"
                   type="email"
                   {...form.register('email')}
                 />
@@ -226,29 +230,29 @@ export const EmployeeDetailPage = ({
             </Field>
             <Field>
               <FieldLabel htmlFor="edit-employee-employment-status">
-                Employment status
+                Estado laboral
               </FieldLabel>
               <FieldContent>
                 <select
                   id="edit-employee-employment-status"
-                  aria-label="Edit employment status"
+                  aria-label="Editar estado laboral"
                   className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2"
                   {...form.register('employmentStatus')}
                 >
-                  <option value="active">Active</option>
-                  <option value="suspended">Suspended</option>
-                  <option value="separated">Separated</option>
+                  <option value="active">Activo</option>
+                  <option value="suspended">Suspendido</option>
+                  <option value="separated">Desvinculado</option>
                 </select>
               </FieldContent>
             </Field>
             <Field>
               <FieldLabel htmlFor="edit-employee-hired-at">
-                Hire date
+                Fecha de contratación
               </FieldLabel>
               <FieldContent>
                 <Input
                   id="edit-employee-hired-at"
-                  aria-label="Edit hire date"
+                  aria-label="Editar fecha de contratación"
                   type="datetime-local"
                   {...form.register('hiredAt')}
                 />
@@ -260,16 +264,16 @@ export const EmployeeDetailPage = ({
             <p role="alert" className="text-sm text-destructive">
               {updateEmployeeMutation.error instanceof Error
                 ? updateEmployeeMutation.error.message
-                : 'Unable to update employee.'}
+                : 'No se pudo actualizar el empleado.'}
             </p>
           ) : null}
           <Button type="submit" disabled={updateEmployeeMutation.isPending}>
-            Save employee changes
+            Guardar cambios del empleado
           </Button>
         </form>
 
         <div className="border-t pt-4">
-          <p className="text-sm font-medium">Direct manager</p>
+          <p className="text-sm font-medium">Jefe directo</p>
           <p className="text-xs text-muted-foreground">
             Reporting line laboral; no es el responsable del nodo
             organizacional.
@@ -277,15 +281,15 @@ export const EmployeeDetailPage = ({
           <p className="text-sm text-muted-foreground">
             {manager
               ? `${employeesById.get(manager.employeeId)?.fullName ?? manager.employeeId} · ${positionsById.get(manager.positionId)?.name ?? manager.positionId}`
-              : 'No direct manager is assigned.'}
+              : 'No hay un jefe directo asignado.'}
           </p>
         </div>
 
         <div>
-          <p className="text-sm font-medium">Direct reports</p>
+          <p className="text-sm font-medium">Reportes directos</p>
           {directReports.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No direct reports for this employee.
+              No hay reportes directos para este empleado.
             </p>
           ) : (
             <ul className="space-y-1 text-sm text-muted-foreground">

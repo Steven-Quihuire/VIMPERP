@@ -1,13 +1,23 @@
 import {
+  BriefcaseBusiness,
   Building2,
+  ChevronRight,
   FileWarning,
+  KeyRound,
   LayoutDashboard,
   Network,
   Package,
+  ShieldCheck,
   Tags,
+  Users,
 } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '../../../shared/ui/collapsible';
 import {
   Sidebar,
   SidebarContent,
@@ -19,23 +29,48 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
 } from '../../../shared/ui/sidebar';
 import type { AuthSession } from '../../auth/domain/auth';
 import { getCompanyMemberships } from '../../auth/domain/auth';
 import { TeamSwitcher } from '../../auth/presentation/components/team-switcher';
 import { useSwitchActiveCompany } from '../../auth/presentation/use-auth';
+import { useHrResponsibility } from '../../hr-responsibility/application/hr-responsibility-queries';
 import { ActiveScopeSwitcher } from '../../org-tree/presentation/active-scope-switcher';
 import { canViewAdminSignals } from '../domain/dashboard';
 
 const workspaceItems = [
   { label: 'Inicio', href: '/dashboard', icon: LayoutDashboard, end: true },
-  { label: 'Items', href: '/dashboard/items', icon: Package },
+  { label: 'Artículos', href: '/dashboard/items', icon: Package },
   { label: 'Categorías', href: '/dashboard/categories', icon: Tags },
+];
+
+const hrItems = [
+  { label: 'Empleados', href: '/dashboard/hr/employees', icon: Users },
+  {
+    label: 'Puestos',
+    href: '/dashboard/hr/positions',
+    icon: BriefcaseBusiness,
+  },
+  { label: 'Acceso ERP', href: '/dashboard/hr/erp-access', icon: KeyRound },
+  {
+    label: 'Políticas de aprobación',
+    href: '/dashboard/hr/approval-policies',
+    icon: ShieldCheck,
+  },
 ];
 
 const sidebarItemClass =
   'hover:bg-black hover:text-white hover:pl-4 hover:rounded-2xl data-[active=true]:bg-black data-[active=true]:text-white data-[active=true]:pl-4 data-[active=true]:rounded-2xl transition-[width,height,padding,color,background-color] transition-all duration-400 ease-in-out';
+
+const sidebarParentItemClass =
+  'hover:bg-muted hover:text-foreground data-[active=true]:bg-muted data-[active=true]:text-foreground data-[active=true]:font-medium transition-colors duration-200';
+
+export const isHrNavigationActive = (pathname: string) =>
+  pathname.startsWith('/dashboard/hr/') || pathname === '/hr/responsibility';
 
 const getRoleLabel = (role: AuthSession['memberships'][number]['role']) => {
   switch (role) {
@@ -59,6 +94,7 @@ export const DashboardAppSidebar = ({
   companyDetail: string;
   apiBaseUrl?: string;
 }) => {
+  const { pathname } = useLocation();
   const isPlatformAdmin = canViewAdminSignals(session);
   const activeRole = session.activeCompany
     ? (session.memberships.find(
@@ -66,6 +102,13 @@ export const DashboardAppSidebar = ({
       )?.role ?? null)
     : null;
   const isCompanyOwner = activeRole === 'company-owner';
+  const canConfigureHr = isCompanyOwner || isPlatformAdmin;
+  const { stateQuery: hrResponsibilityQuery } = useHrResponsibility(
+    session.activeCompany?.status === 'active'
+      ? session.activeCompany.companyId
+      : undefined,
+    apiBaseUrl,
+  );
   const switchActiveCompany = useSwitchActiveCompany(apiBaseUrl);
   const companyMemberships = getCompanyMemberships(session);
   const companyOptions = companyMemberships.map((membership, index) => ({
@@ -138,6 +181,80 @@ export const DashboardAppSidebar = ({
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {session.activeCompany ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>Recursos Humanos</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <Collapsible
+                  asChild
+                  defaultOpen={
+                    canConfigureHr ||
+                    Boolean(hrResponsibilityQuery.data?.hasResponsibles)
+                  }
+                  className="group/collapsible"
+                >
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton
+                        className={sidebarParentItemClass}
+                        tooltip="Recursos Humanos"
+                        isActive={isHrNavigationActive(pathname)}
+                      >
+                        <Users />
+                        <span className="cursor-pointer">Recursos Humanos</span>
+                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        {hrResponsibilityQuery.data?.hasResponsibles
+                          ? hrItems.map((item) => (
+                              <SidebarMenuSubItem key={item.href}>
+                                <NavLink to={item.href} end>
+                                  {({ isActive }) => (
+                                    <SidebarMenuSubButton
+                                      asChild
+                                      isActive={isActive}
+                                      className={sidebarItemClass}
+                                    >
+                                      <span>
+                                        <item.icon />
+                                        <span>{item.label}</span>
+                                      </span>
+                                    </SidebarMenuSubButton>
+                                  )}
+                                </NavLink>
+                              </SidebarMenuSubItem>
+                            ))
+                          : null}
+                        {canConfigureHr ? (
+                          <SidebarMenuSubItem>
+                            <NavLink to="/dashboard/hr/responsibility" end>
+                              {({ isActive }) => (
+                                <SidebarMenuSubButton
+                                  asChild
+                                  isActive={isActive}
+                                  className={sidebarItemClass}
+                                >
+                                  <span>
+                                    <ShieldCheck />
+                                    <span>Configurar responsables</span>
+                                  </span>
+                                </SidebarMenuSubButton>
+                              )}
+                            </NavLink>
+                          </SidebarMenuSubItem>
+                        ) : null}
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
+
         {isCompanyOwner ? (
           <SidebarGroup>
             <SidebarGroupLabel>Organización</SidebarGroupLabel>
@@ -149,12 +266,12 @@ export const DashboardAppSidebar = ({
                       <SidebarMenuButton
                         className={sidebarItemClass}
                         asChild
-                        tooltip="Organización"
+                        tooltip="Organigrama"
                         isActive={isActive}
                       >
                         <span>
                           <Network />
-                          <span>Organización</span>
+                          <span>Organigrama</span>
                         </span>
                       </SidebarMenuButton>
                     )}

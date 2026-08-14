@@ -399,6 +399,47 @@ export const nodeManagementInvitationsTable = pgTable(
   ],
 );
 
+export const hrResponsibilityInvitationsTable = pgTable(
+  'hr_responsibility_invitations',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: 'restrict' }),
+    inviteeEmail: text('invitee_email').notNull(),
+    tokenHash: text('token_hash').notNull(),
+    purpose: text('purpose').notNull().default('hr-responsible'),
+    roleKey: text('role_key').notNull().default('hr-responsible'),
+    createdByUserId: text('created_by_user_id')
+      .notNull()
+      .references(() => usersTable.id, { onDelete: 'restrict' }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    acceptedByUserId: text('accepted_by_user_id').references(
+      () => usersTable.id,
+      { onDelete: 'restrict' },
+    ),
+  },
+  (table) => [
+    index('hr_responsibility_invitations_company_idx').on(table.companyId),
+    index('hr_responsibility_invitations_email_idx').on(table.inviteeEmail),
+    uniqueIndex('hr_responsibility_invitations_token_hash_idx').on(
+      table.tokenHash,
+    ),
+    check(
+      'hr_responsibility_invitations_purpose_chk',
+      sql`${table.purpose} = 'hr-responsible' AND ${table.roleKey} = 'hr-responsible'`,
+    ),
+    check(
+      'hr_responsibility_invitations_acceptance_chk',
+      sql`(${table.acceptedAt} IS NULL AND ${table.acceptedByUserId} IS NULL) OR (${table.acceptedAt} IS NOT NULL AND ${table.acceptedByUserId} IS NOT NULL)`,
+    ),
+  ],
+);
+
 export const companyProfilesTable = pgTable('company_profiles', {
   companyId: text('company_id').primaryKey(),
   legalIdentifier: text('legal_identifier').notNull(),

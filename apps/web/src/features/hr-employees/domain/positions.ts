@@ -13,7 +13,7 @@ export type Position = {
 };
 
 export const positionFormSchema = z.object({
-  name: z.string().trim().min(1, 'Position name is required.'),
+  name: z.string().trim().min(1, 'El nombre del puesto es obligatorio.'),
   reportsToPositionId: z.string().trim().default(''),
   headcount: z.coerce.number().int().nonnegative(),
   isActive: z.boolean(),

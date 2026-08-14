@@ -21,9 +21,9 @@ export type ReportingLineRecord = {
 };
 
 export const assignmentFormSchema = z.object({
-  scopeNodeId: z.string().trim().min(1, 'Scope node is required.'),
-  positionId: z.string().trim().min(1, 'Position is required.'),
-  startedAt: z.string().trim().min(1, 'Start date is required.'),
+  scopeNodeId: z.string().trim().min(1, 'El nodo de alcance es obligatorio.'),
+  positionId: z.string().trim().min(1, 'El puesto es obligatorio.'),
+  startedAt: z.string().trim().min(1, 'La fecha de inicio es obligatoria.'),
 });
 
 export type AssignmentFormValues = z.output<typeof assignmentFormSchema>;
@@ -63,11 +63,11 @@ export const buildAssignmentTimelineEntries = ({
     .sort((left, right) => new Date(right.startedAt).getTime() - new Date(left.startedAt).getTime())
     .map((assignment) => ({
       id: assignment.id,
-      title: assignment.positionName ?? `Position ${assignment.positionId}`,
+       title: assignment.positionName ?? `Puesto ${assignment.positionId}`,
       description: [
         assignment.scopeNodeName ?? assignment.scopeNodeId,
-        `${new Date(assignment.startedAt).toLocaleDateString('en-US')} - ${assignment.endedAt ? new Date(assignment.endedAt).toLocaleDateString('en-US') : 'Present'}`,
-        assignment.isPrimary ? 'Primary' : 'Secondary',
+        `${new Date(assignment.startedAt).toLocaleDateString('es-AR')} - ${assignment.endedAt ? new Date(assignment.endedAt).toLocaleDateString('es-AR') : 'Actual'}`,
+        assignment.isPrimary ? 'Principal' : 'Secundaria',
       ].join(' · '),
     }));
 };

@@ -39,14 +39,14 @@ export const PositionFormPage = ({
   });
 
   if (!companyId) {
-    return <p className="text-sm text-muted-foreground">Select an active company before creating positions.</p>;
+    return <p className="text-sm text-muted-foreground">Seleccioná una compañía activa antes de crear puestos.</p>;
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create position</CardTitle>
-        <CardDescription>Positions define the reporting hierarchy and staffing capacity.</CardDescription>
+        <CardTitle>Crear puesto</CardTitle>
+        <CardDescription>Los puestos definen la jerarquía de reportes y la capacidad de personal.</CardDescription>
       </CardHeader>
       <CardContent>
         <form
@@ -63,19 +63,19 @@ export const PositionFormPage = ({
         >
           <FieldGroup>
             <Field>
-              <FieldLabel htmlFor="position-name">Position name</FieldLabel>
+              <FieldLabel htmlFor="position-name">Nombre del puesto</FieldLabel>
               <FieldContent>
-                <Input id="position-name" aria-label="Position name" {...form.register('name')} />
+                <Input id="position-name" aria-label="Nombre del puesto" {...form.register('name')} />
                 <FieldError errors={[form.formState.errors.name]} />
               </FieldContent>
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="reports-to-position-id">Reports to position</FieldLabel>
+              <FieldLabel htmlFor="reports-to-position-id">Reporta al puesto</FieldLabel>
               <FieldContent>
                 <Input
                   id="reports-to-position-id"
-                  aria-label="Reports to position"
+                  aria-label="Reporta al puesto"
                   placeholder="position-1"
                   {...form.register('reportsToPositionId')}
                 />
@@ -83,11 +83,11 @@ export const PositionFormPage = ({
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="position-headcount">Headcount</FieldLabel>
+              <FieldLabel htmlFor="position-headcount">Dotación</FieldLabel>
               <FieldContent>
                 <Input
                   id="position-headcount"
-                  aria-label="Headcount"
+                  aria-label="Dotación"
                   type="number"
                   min={0}
                   {...form.register('headcount', { valueAsNumber: true })}
@@ -97,7 +97,7 @@ export const PositionFormPage = ({
             </Field>
 
             <Field orientation="horizontal">
-              <FieldLabel htmlFor="position-is-active">Active</FieldLabel>
+              <FieldLabel htmlFor="position-is-active">Activo</FieldLabel>
               <FieldContent>
                 <Switch
                   id="position-is-active"
@@ -112,13 +112,13 @@ export const PositionFormPage = ({
             <p role="alert" className="text-sm text-destructive">
               {createPositionMutation.error instanceof Error
                 ? createPositionMutation.error.message
-                : 'Unable to create the position.'}
+                : 'No se pudo crear el puesto.'}
             </p>
           ) : null}
 
           <Button type="submit" disabled={createPositionMutation.isPending}>
             {createPositionMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
-            Create position
+            Crear puesto
           </Button>
         </form>
       </CardContent>

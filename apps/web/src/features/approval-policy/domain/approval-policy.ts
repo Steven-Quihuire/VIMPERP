@@ -27,8 +27,8 @@ export const approvalPolicyFormSchema = z
   .object({
     scopeType: z.enum(approvalPolicyScopeTypes),
     scopeNodeId: z.string().trim().default(''),
-    name: z.string().trim().min(1, 'Policy name is required.'),
-    definitionJson: z.string().trim().min(1, 'Definition JSON is required.'),
+    name: z.string().trim().min(1, 'El nombre de la política es obligatorio.'),
+    definitionJson: z.string().trim().min(1, 'El JSON de definición es obligatorio.'),
     isActive: z.boolean(),
   })
   .superRefine((values, context) => {
@@ -36,7 +36,7 @@ export const approvalPolicyFormSchema = z
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['scopeNodeId'],
-        message: 'Scope node is required for node-scoped approval policies.',
+        message: 'El nodo de alcance es obligatorio para las políticas con alcance de nodo.',
       });
     }
 
@@ -46,7 +46,7 @@ export const approvalPolicyFormSchema = z
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['definitionJson'],
-        message: 'Definition JSON must be valid JSON.',
+        message: 'El JSON de definición debe tener un formato válido.',
       });
     }
   });
@@ -116,5 +116,5 @@ export const toPolicyFormValues = (
 
 export const getApprovalPolicyScopeLabel = (policy: ApprovalPolicy) =>
   policy.scopeType === 'company'
-    ? 'Company'
+    ? 'Compañía'
     : `${policy.scopeType} · ${policy.scopeNodeId ?? 'unassigned'}`;

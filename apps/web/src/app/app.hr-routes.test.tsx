@@ -75,6 +75,21 @@ describe('App HR routes', () => {
           return Promise.resolve(createJsonResponse([], 200));
         }
 
+        if (url.endsWith('/companies/company-1/hr-responsibility')) {
+          return Promise.resolve(
+            createJsonResponse(
+              {
+                companyId: 'company-1',
+                hasResponsibles: false,
+                responsibles: [],
+                availableUsers: [],
+                pendingInvitations: [],
+              },
+              200,
+            ),
+          );
+        }
+
         if (url.endsWith('/companies/company-1/org-tree')) {
           return Promise.resolve(
             createJsonResponse(
@@ -96,18 +111,26 @@ describe('App HR routes', () => {
     );
 
     render(<App initialEntries={['/dashboard/hr/employees']} />);
-    expect(await screen.findByRole('heading', { name: 'HR employees' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Empleados de Recursos Humanos' })).toBeInTheDocument();
 
     cleanup();
     render(<App initialEntries={['/dashboard/hr/positions']} />);
-    expect(await screen.findByRole('heading', { name: 'HR positions' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Puestos de Recursos Humanos' })).toBeInTheDocument();
 
     cleanup();
     render(<App initialEntries={['/dashboard/hr/erp-access']} />);
-    expect(await screen.findByRole('heading', { name: 'ERP access invitations' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Invitaciones de acceso al ERP' })).toBeInTheDocument();
 
     cleanup();
     render(<App initialEntries={['/dashboard/hr/approval-policies']} />);
-    expect(await screen.findByRole('heading', { name: 'Approval policies' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Políticas de aprobación' })).toBeInTheDocument();
+
+    cleanup();
+    render(<App initialEntries={['/dashboard/hr/responsibility']} />);
+    expect(await screen.findByRole('heading', { name: 'Responsables de RRHH' })).toBeInTheDocument();
+
+    cleanup();
+    render(<App initialEntries={['/hr/responsibility']} />);
+    expect(await screen.findByRole('heading', { name: 'Responsables de RRHH' })).toBeInTheDocument();
   });
 });

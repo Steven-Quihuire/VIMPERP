@@ -22,7 +22,7 @@ export const EmployeesListPage = ({
   const employeesQuery = useEmployees(companyId, apiBaseUrl);
 
   if (!companyId) {
-    return <p className="text-sm text-muted-foreground">Select an active company to review employees.</p>;
+    return <p className="text-sm text-muted-foreground">Seleccioná una compañía activa para consultar los empleados.</p>;
   }
 
   if (employeesQuery.isLoading) {
@@ -32,7 +32,7 @@ export const EmployeesListPage = ({
   if (employeesQuery.isError) {
     return (
       <p role="alert" className="text-sm text-destructive">
-        {employeesQuery.error instanceof Error ? employeesQuery.error.message : 'Unable to load employees.'}
+          {employeesQuery.error instanceof Error ? employeesQuery.error.message : 'No se pudieron cargar los empleados.'}
       </p>
     );
   }
@@ -40,7 +40,7 @@ export const EmployeesListPage = ({
   const employees = sortEmployeesByCreatedAtDesc(employeesQuery.data ?? []);
 
   if (employees.length === 0) {
-    return <p className="text-sm text-muted-foreground">No employees have been created yet.</p>;
+    return <p className="text-sm text-muted-foreground">Todavía no se crearon empleados.</p>;
   }
 
   return (
@@ -48,10 +48,10 @@ export const EmployeesListPage = ({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Employee</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Created at</TableHead>
-            <TableHead className="text-right">Action</TableHead>
+            <TableHead>Empleado</TableHead>
+            <TableHead>Estado</TableHead>
+            <TableHead>Fecha de creación</TableHead>
+            <TableHead className="text-right">Acción</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -63,13 +63,17 @@ export const EmployeesListPage = ({
               </TableCell>
               <TableCell>
                 <Badge variant={employee.employmentStatus === 'active' ? 'secondary' : 'outline'}>
-                  {employee.employmentStatus}
+                  {employee.employmentStatus === 'active'
+                    ? 'Activo'
+                    : employee.employmentStatus === 'suspended'
+                      ? 'Suspendido'
+                      : 'Desvinculado'}
                 </Badge>
               </TableCell>
-              <TableCell>{new Date(employee.createdAt).toLocaleString('en-US')}</TableCell>
+              <TableCell>{new Date(employee.createdAt).toLocaleString('es-AR')}</TableCell>
               <TableCell className="text-right">
-                <Button type="button" variant="ghost" onClick={() => onSelectEmployee?.(employee.id)} aria-label={`Open employee ${employee.id}`}>
-                  Open
+                <Button type="button" variant="ghost" onClick={() => onSelectEmployee?.(employee.id)} aria-label={`Abrir empleado ${employee.id}`}>
+                  Abrir
                 </Button>
               </TableCell>
             </TableRow>

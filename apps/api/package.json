@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "SEED_ADMIN_ENABLED=true tsx watch src/main.ts",
+    "db:migrate": "drizzle-kit migrate",
+    "dev": "pnpm db:migrate && SEED_ADMIN_ENABLED=true tsx watch src/main.ts",
     "lint": "eslint src --max-warnings=0",
     "start": "node dist/main.js",
     "test": "vitest run",

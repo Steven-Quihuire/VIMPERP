@@ -30,7 +30,7 @@ const getErrorMessage = (error: unknown) => {
     return error.message;
   }
 
-  return 'Unable to activate ERP access.';
+  return 'No se pudo activar el acceso al ERP.';
 };
 
 export const AcceptErpAccessInvitationPage = ({
@@ -54,9 +54,9 @@ export const AcceptErpAccessInvitationPage = ({
           <div className="flex size-12 items-center justify-center rounded-2xl bg-zinc-950 text-white">
             <ShieldCheck className="size-5" />
           </div>
-          <CardTitle>Activate ERP access</CardTitle>
+          <CardTitle>Activar acceso ERP</CardTitle>
           <CardDescription>
-            Accept the employee ERP invitation and create a password only when the invited account does not exist yet.
+            Aceptá la invitación de acceso ERP del empleado y creá una contraseña sólo si la cuenta invitada todavía no existe.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -65,7 +65,7 @@ export const AcceptErpAccessInvitationPage = ({
             onSubmit={(event) => {
               void form.handleSubmit(async (values) => {
                 if (!token) {
-                  form.setError('root', { message: 'Invitation token is missing.' });
+                  form.setError('root', { message: 'Falta el token de invitación.' });
                   return;
                 }
 
@@ -89,28 +89,28 @@ export const AcceptErpAccessInvitationPage = ({
           >
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="erp-access-password">Password</FieldLabel>
+                <FieldLabel htmlFor="erp-access-password">Contraseña</FieldLabel>
                 <FieldContent>
                   <Input
                     id="erp-access-password"
-                    aria-label="Password"
+                    aria-label="Contraseña"
                     type="password"
                     autoComplete="new-password"
                     {...form.register('password')}
                   />
                   <FieldDescription>
-                    Leave this blank when the invited email already has an account.
+                    Dejá este campo vacío si el correo invitado ya tiene una cuenta.
                   </FieldDescription>
                   <FieldError errors={[form.formState.errors.password]} />
                 </FieldContent>
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="erp-access-confirm-password">Confirm password</FieldLabel>
+                <FieldLabel htmlFor="erp-access-confirm-password">Confirmar contraseña</FieldLabel>
                 <FieldContent>
                   <Input
                     id="erp-access-confirm-password"
-                    aria-label="Confirm password"
+                    aria-label="Confirmar contraseña"
                     type="password"
                     autoComplete="new-password"
                     {...form.register('confirmPassword')}
@@ -130,7 +130,7 @@ export const AcceptErpAccessInvitationPage = ({
               {acceptInvitationMutation.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : null}
-              Activate ERP access
+              Activar acceso ERP
             </Button>
           </form>
         </CardContent>

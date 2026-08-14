@@ -48,6 +48,8 @@ import { PositionsListPage } from '../features/hr-employees/presentation/pages/p
 import { AssignmentTimelinePage } from '../features/hr-employees/presentation/pages/assignment-timeline';
 import { InvitationsListPage } from '../features/hr-erp-access/presentation/pages/invitations-list';
 import { AcceptErpAccessInvitationPage } from '../features/hr-erp-access/presentation/pages/accept-invitation';
+import { HrResponsibilityPage } from '../features/hr-responsibility/presentation/hr-responsibility-page';
+import { AcceptHrResponsibilityInvitationPage } from '../features/hr-responsibility/presentation/accept-invitation-page';
 import { useApprovalPolicies } from '../features/approval-policy/application/approval-policy-queries';
 import { DivisionsPage } from '../features/org-hierarchy/presentation/divisions-page';
 import { AreasPage } from '../features/org-hierarchy/presentation/areas-page';
@@ -83,7 +85,7 @@ const ProtectedDashboardShell = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
   if (auth.isLoading) {
-    return <p>Loading...</p>;
+    return <p>Cargando...</p>;
   }
 
   if (!auth.session) {
@@ -105,7 +107,7 @@ const ProtectedDashboardShell = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
 const ProtectedDashboard = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
-  if (auth.isLoading) return <p>Loading...</p>;
+  if (auth.isLoading) return <p>Cargando...</p>;
   if (!auth.session) return <Navigate to="/login" replace />;
   if (needsCompanyOnboarding(auth.session)) {
     return <Navigate to="/onboarding" replace />;
@@ -152,7 +154,7 @@ const renderCompanyScopedRoute = (
   state: ReturnType<typeof useCompanyScopedSession>['state'],
 ) => {
   if (state === 'loading') {
-    return <p>Loading...</p>;
+    return <p>Cargando...</p>;
   }
 
   if (state === 'redirect-login') {
@@ -181,14 +183,16 @@ const HrEmployeesWorkspace = ({
   session: AuthSession;
   apiBaseUrl?: string;
 }) => {
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(
+    null,
+  );
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">HR employees</h1>
+        <h1 className="text-2xl font-semibold">Empleados de Recursos Humanos</h1>
         <p className="text-sm text-muted-foreground">
-          Manage employee records, reporting lines, and assignment history.
+          Gestioná los registros de empleados, las líneas de reporte y el historial de asignaciones.
         </p>
       </div>
 
@@ -229,14 +233,16 @@ const HrPositionsWorkspace = ({
   session: AuthSession;
   apiBaseUrl?: string;
 }) => {
-  const [selectedPositionId, setSelectedPositionId] = useState<string | null>(null);
+  const [selectedPositionId, setSelectedPositionId] = useState<string | null>(
+    null,
+  );
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">HR positions</h1>
+        <h1 className="text-2xl font-semibold">Puestos de Recursos Humanos</h1>
         <p className="text-sm text-muted-foreground">
-          Define reporting positions and staffing capacity.
+          Definí los puestos de reporte y la capacidad de personal.
         </p>
       </div>
 
@@ -267,13 +273,16 @@ const HrErpAccessWorkspace = ({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">ERP access invitations</h1>
+        <h1 className="text-2xl font-semibold">Invitaciones de acceso al ERP</h1>
         <p className="text-sm text-muted-foreground">
-          Invite employees into ERP access without redefining employee identity.
+          Invitá empleados al acceso ERP sin redefinir su identidad.
         </p>
       </div>
 
-      <InvitationsListPage session={session} {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+      <InvitationsListPage
+        session={session}
+        {...(apiBaseUrl ? { apiBaseUrl } : {})}
+      />
     </div>
   );
 };
@@ -289,14 +298,15 @@ const ApprovalPoliciesWorkspace = ({
   const companyId = session.activeCompany?.companyId;
   const { policiesQuery } = useApprovalPolicies(companyId, apiBaseUrl);
   const selectedPolicy =
-    policiesQuery.data?.find((policy) => policy.id === selectedPolicyId) ?? null;
+    policiesQuery.data?.find((policy) => policy.id === selectedPolicyId) ??
+    null;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Approval policies</h1>
+        <h1 className="text-2xl font-semibold">Políticas de aprobación</h1>
         <p className="text-sm text-muted-foreground">
-          Configure company and node-level approval policy groundwork.
+          Configurá las bases de las políticas de aprobación de la compañía y sus nodos.
         </p>
       </div>
 
@@ -383,11 +393,25 @@ const ApprovalPoliciesRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   );
 };
 
+const HrResponsibilityRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+  const scoped = useCompanyScopedSession(apiBaseUrl);
+  const fallback = renderCompanyScopedRoute(scoped.state);
+
+  if (fallback) return fallback;
+
+  return (
+    <HrResponsibilityPage
+      session={scoped.auth.session!}
+      {...(apiBaseUrl ? { apiBaseUrl } : {})}
+    />
+  );
+};
+
 const ItemsRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
   if (auth.isLoading) {
-    return <p>Loading...</p>;
+    return <p>Cargando...</p>;
   }
 
   if (!auth.session) {
@@ -413,7 +437,7 @@ const CategoriesRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
   if (auth.isLoading) {
-    return <p>Loading...</p>;
+    return <p>Cargando...</p>;
   }
 
   if (!auth.session) {
@@ -435,7 +459,9 @@ const CategoriesRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   return <CategoriesPage session={auth.session} />;
 };
 
-const getActiveRole = (session: import('../features/auth/domain/auth').AuthSession) => {
+const getActiveRole = (
+  session: import('../features/auth/domain/auth').AuthSession,
+) => {
   if (!session.activeCompany) return null;
   return (
     session.memberships.find(
@@ -448,7 +474,7 @@ const DivisionsRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
   if (auth.isLoading) {
-    return <p>Loading...</p>;
+    return <p>Cargando...</p>;
   }
 
   if (!auth.session) {
@@ -478,7 +504,7 @@ const LocalsRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
   if (auth.isLoading) {
-    return <p>Loading...</p>;
+    return <p>Cargando...</p>;
   }
 
   if (!auth.session) {
@@ -508,7 +534,7 @@ const AreasRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
   if (auth.isLoading) {
-    return <p>Loading...</p>;
+    return <p>Cargando...</p>;
   }
 
   if (!auth.session) {
@@ -538,7 +564,7 @@ const WarehousesRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
   if (auth.isLoading) {
-    return <p>Loading...</p>;
+    return <p>Cargando...</p>;
   }
 
   if (!auth.session) {
@@ -568,7 +594,7 @@ const PointsOfSaleRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
   if (auth.isLoading) {
-    return <p>Loading...</p>;
+    return <p>Cargando...</p>;
   }
 
   if (!auth.session) {
@@ -598,7 +624,7 @@ const OrganizationRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
   if (auth.isLoading) {
-    return <p>Loading...</p>;
+    return <p>Cargando...</p>;
   }
 
   if (!auth.session) {
@@ -648,7 +674,7 @@ const ProtectedOnboarding = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
   if (auth.isLoading) {
-    return <p>Loading...</p>;
+    return <p>Cargando...</p>;
   }
 
   if (!auth.session) {
@@ -671,7 +697,7 @@ const ProtectedAdminDashboard = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
   if (auth.isLoading) {
-    return <p>Loading...</p>;
+    return <p>Cargando...</p>;
   }
 
   if (!auth.session) {
@@ -693,7 +719,7 @@ const BlockedCompanyRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
 
   if (auth.isLoading) {
-    return <p>Loading...</p>;
+    return <p>Cargando...</p>;
   }
 
   if (!auth.session) {
@@ -724,11 +750,29 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
         />
         <Route
           path="accept-invitation/:token"
-          element={<AcceptInvitationPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+          element={
+            <AcceptInvitationPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+          }
         />
         <Route
           path="hr-erp-access/accept/:token"
-          element={<AcceptErpAccessInvitationPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+          element={
+            <AcceptErpAccessInvitationPage
+              {...(apiBaseUrl ? { apiBaseUrl } : {})}
+            />
+          }
+        />
+        <Route
+          path="hr-responsibility/accept/:token"
+          element={
+            <AcceptHrResponsibilityInvitationPage
+              {...(apiBaseUrl ? { apiBaseUrl } : {})}
+            />
+          }
+        />
+        <Route
+          path="hr/responsibility"
+          element={<Navigate to="/dashboard/hr/responsibility" replace />}
         />
       </Route>
       <Route
@@ -771,7 +815,9 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
         />
         <Route
           path="organization"
-          element={<OrganizationRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+          element={
+            <OrganizationRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+          }
         />
         <Route
           path="hr/employees"
@@ -787,7 +833,15 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
         />
         <Route
           path="hr/approval-policies"
-          element={<ApprovalPoliciesRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+          element={
+            <ApprovalPoliciesRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+          }
+        />
+        <Route
+          path="hr/responsibility"
+          element={
+            <HrResponsibilityRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+          }
         />
         <Route
           path="warehouses"
@@ -817,15 +871,27 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
         />
         <Route
           path="notifications"
-          element={<DashboardNotificationsPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+          element={
+            <DashboardNotificationsPage
+              {...(apiBaseUrl ? { apiBaseUrl } : {})}
+            />
+          }
         />
         <Route
           path="notifications/all"
-          element={<DashboardNotificationsPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+          element={
+            <DashboardNotificationsPage
+              {...(apiBaseUrl ? { apiBaseUrl } : {})}
+            />
+          }
         />
         <Route
           path="notifications/unread"
-          element={<DashboardNotificationsPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+          element={
+            <DashboardNotificationsPage
+              {...(apiBaseUrl ? { apiBaseUrl } : {})}
+            />
+          }
         />
         <Route
           path="admin"
@@ -833,13 +899,12 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
             <ProtectedAdminDashboard {...(apiBaseUrl ? { apiBaseUrl } : {})} />
           }
         >
-          <Route
-            index
-            element={<Navigate to="companies" replace />}
-          />
+          <Route index element={<Navigate to="companies" replace />} />
           <Route
             path="companies"
-            element={<AdminCompaniesPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+            element={
+              <AdminCompaniesPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+            }
           />
           <Route
             path="provisioning-runs"
@@ -887,8 +952,14 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
           />
         </Route>
       </Route>
-      <Route path="/enterprise" element={<Navigate to="/dashboard/admin/companies" replace />} />
-      <Route path="/companies" element={<Navigate to="/dashboard/admin/companies" replace />} />
+      <Route
+        path="/enterprise"
+        element={<Navigate to="/dashboard/admin/companies" replace />}
+      />
+      <Route
+        path="/companies"
+        element={<Navigate to="/dashboard/admin/companies" replace />}
+      />
       <Route
         path="/onboarding"
         element={

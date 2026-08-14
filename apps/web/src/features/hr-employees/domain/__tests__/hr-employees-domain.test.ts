@@ -114,12 +114,12 @@ describe('hr-employees domain helpers', () => {
       {
         id: 'assignment-2',
         title: 'HR Analyst',
-        description: 'Vimcore · 8/13/2026 - Present · Primary',
+        description: 'Vimcore · 13/8/2026 - Actual · Principal',
       },
       {
         id: 'assignment-1',
         title: 'People Lead',
-        description: 'Vimcore · 8/13/2026 - 8/13/2026 · Primary',
+        description: 'Vimcore · 13/8/2026 - 13/8/2026 · Principal',
       },
     ]);
   });
