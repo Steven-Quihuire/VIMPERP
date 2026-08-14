@@ -60,9 +60,9 @@ Chain strategy: stacked-to-main
 
 ## Phase 5: Frontend — hr-employees (PR-5)
 
-- [ ] 5.1 Author `web/src/features/hr-employees/domain/{employees,positions,assignments}.ts`.
-- [ ] 5.2 Author `infrastructure/create-hr-employees-api.ts` + `xxxQueryKeys` + `useEmployees/usePositions/useAssignments`; tests.
-- [ ] 5.3 Author `presentation/pages/{employees-list,employee-detail,employee-form,positions-list,position-form,assignment-timeline}.tsx` (RHF + Zod + shadcn); RTL tests.
+- [x] 5.1 Author `web/src/features/hr-employees/domain/{employees,positions,assignments}.ts`.
+- [x] 5.2 Author `infrastructure/create-hr-employees-api.ts` + `xxxQueryKeys` + `useEmployees/usePositions/useAssignments`; tests.
+- [x] 5.3 Author `presentation/pages/{employees-list,employee-detail,employee-form,positions-list,position-form,assignment-timeline}.tsx` (RHF + Zod + shadcn); RTL tests.
 
 ## Phase 6: Frontend — hr-erp-access (PR-6)
 

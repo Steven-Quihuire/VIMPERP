@@ -29,6 +29,9 @@
 - [x] 4.6 RED `approval-policy/domain/__tests__/approval-policy.test.ts`: CHECK rejects mismatched scope.
 - [x] 4.7 Author `approval-policy/{domain,application,infrastructure,presentation}/` (CRUD only).
 - [x] 4.8 Wire routers + `requireHrCapability` in `app/create-app.ts`; Supertest 403 test.
+- [x] 5.1 Author `web/src/features/hr-employees/domain/{employees,positions,assignments}.ts`.
+- [x] 5.2 Author `infrastructure/create-hr-employees-api.ts` + `xxxQueryKeys` + `useEmployees/usePositions/useAssignments`; tests.
+- [x] 5.3 Author `presentation/pages/{employees-list,employee-detail,employee-form,positions-list,position-form,assignment-timeline}.tsx` (RHF + Zod + shadcn); RTL tests.
 
 ### Files Changed
 | File | Action | What Was Done |
@@ -92,6 +95,16 @@
 | `openspec/changes/rrhh-foundation/tasks.md` | Modified | Marked PR-4 Phase 4 tasks `4.1` through `4.8` complete for this stacked slice. |
 | `openspec/changes/rrhh-foundation/apply-progress.md` | Modified | Merged the previous PR-1/PR-2 evidence with the successful PR-3 HR ERP access slice evidence. |
 | `openspec/changes/rrhh-foundation/apply-progress.md` | Modified | Merged the previous PR-1/PR-3 evidence with the successful PR-4 approval-policy and HR capability slice evidence. |
+| `apps/web/src/features/hr-employees/domain/{employees,positions,assignments}.ts` | Created | Added the web HR employee, position, and assignment contracts plus the form/pure helpers the PR-5 pages consume. |
+| `apps/web/src/features/hr-employees/domain/__tests__/hr-employees-domain.test.ts` | Created | Wrote strict-TDD domain coverage for employee sorting, position payload normalization, assignment payload normalization, and reporting-line timeline shaping. |
+| `apps/web/src/features/hr-employees/infrastructure/create-hr-employees-api.ts` | Created | Added the typed fetch adapter for employee, position, assignment, manager, and direct-report endpoints. |
+| `apps/web/src/features/hr-employees/infrastructure/create-hr-employees-api.test.ts` | Created | Wrote focused fetch-contract coverage for the new HR employees web adapter. |
+| `apps/web/src/features/hr-employees/application/hr-employees-queries.ts` | Created | Added TanStack Query keys, reads, and mutations for employees, positions, and reporting-line assignment flows. |
+| `apps/web/src/features/hr-employees/application/hr-employees-queries.test.tsx` | Created | Wrote focused query/mutation coverage for employee and position invalidation plus reporting-line assignment refreshes. |
+| `apps/web/src/features/hr-employees/presentation/pages/{employees-list,employee-detail,employee-form,positions-list,position-form,assignment-timeline}.tsx` | Created | Added the PR-5 web pages for listing employees/positions, creating employees/positions, viewing employee reporting data, and creating assignments with RHF + Zod. |
+| `apps/web/src/features/hr-employees/presentation/pages/hr-employees-pages.test.tsx` | Created | Wrote RTL coverage for all PR-5 HR pages, including list selection, create flows, detail rendering, and assignment submission. |
+| `openspec/changes/rrhh-foundation/tasks.md` | Modified | Marked PR-5 Phase 5 tasks `5.1` through `5.3` complete for this stacked slice. |
+| `openspec/changes/rrhh-foundation/apply-progress.md` | Modified | Merged the previous PR-1 through PR-4 evidence with the successful PR-5 hr-employees web slice evidence. |
 
 ### Work Unit Evidence
 | Evidence | Value |
@@ -109,6 +122,9 @@
 | `PR-4` Focused test command and exact result | `pnpm --filter api exec vitest run src/features/roles-management/domain/__tests__/assignments-permission-scope.test.ts src/features/roles-management/application/compute-effective-permissions.test.ts src/features/roles-management/presentation/require-hr-capability.test.ts src/features/identity/application/resolve-auth-session.test.ts src/features/approval-policy/domain/__tests__/approval-policy.test.ts src/features/approval-policy/infrastructure/drizzle-approval-policy.gateway.test.ts src/features/approval-policy/presentation/approval-policy.router.test.ts` → exit `0`; `7` files / `26` tests passed. |
 | `PR-4` Runtime harness command/scenario and exact result | `pnpm --filter api exec vitest run src/features/approval-policy/presentation/approval-policy.router.test.ts` → exit `0`; `1` file / `2` tests passed. Scenario: `createApp`-backed Supertest CRUD flow for approval policies plus a `403` denial when `hr.approval_policy.*` permissions are absent. |
 | `PR-4` Rollback boundary | Revert only `apps/api/src/features/approval-policy/**`, `apps/api/src/features/roles-management/domain/assignments.ts`, `apps/api/src/features/roles-management/domain/permissions.ts`, `apps/api/src/features/roles-management/application/compute-effective-permissions.ts`, `apps/api/src/features/roles-management/presentation/require-hr-capability.ts`, `apps/api/src/features/identity/application/resolve-auth-session.ts`, `apps/api/src/app/create-app.ts`, `apps/api/src/shared/presentation/error.middleware.ts`, and the PR-4 checkbox/apply-progress updates. |
+| `PR-5` Focused test command and exact result | `pnpm --filter web exec vitest run src/features/hr-employees/domain/__tests__/hr-employees-domain.test.ts src/features/hr-employees/infrastructure/create-hr-employees-api.test.ts src/features/hr-employees/application/hr-employees-queries.test.tsx src/features/hr-employees/presentation/pages/hr-employees-pages.test.tsx` → exit `0`; `4` files / `12` tests passed. |
+| `PR-5` Runtime harness command/scenario and exact result | `pnpm --filter web exec vitest run src/features/hr-employees/application/hr-employees-queries.test.tsx src/features/hr-employees/presentation/pages/hr-employees-pages.test.tsx` → exit `0`; `2` files / `8` tests passed. Scenario: composed web slice flow across TanStack Query hooks and RTL-rendered employee, position, and assignment pages inside the new PR-5 feature boundary. |
+| `PR-5` Rollback boundary | Revert only `apps/web/src/features/hr-employees/**` plus the PR-5 checkbox/apply-progress updates; no shared route registration or non-HR web feature files were touched in this slice. |
 
 ### TDD Cycle Evidence
 | Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
@@ -138,28 +154,31 @@
 | 4.6 | `apps/api/src/features/approval-policy/domain/__tests__/approval-policy.test.ts` | Unit | N/A (new) | ✅ Wrote the DB-check-aligned scope mismatch assertions before the domain existed | ✅ Same file passed after authoring approval-policy validation rules | ✅ Company/node valid paths plus both mismatch cases | ➖ None needed |
 | 4.7 | `apps/api/src/features/approval-policy/infrastructure/drizzle-approval-policy.gateway.test.ts`, `apps/api/src/features/approval-policy/presentation/approval-policy.router.test.ts` | Integration (real Postgres + Supertest) | N/A (new) | ✅ Wrote failing gateway CRUD and `createApp` router scenarios before the slice existed | ✅ Both files passed after adding the approval-policy domain, use cases, gateway, and router | ✅ Gateway CRUD/deactivation plus router CRUD/403 denial cover different persistence and HTTP paths | ✅ Kept validation in the application layer and row mapping in the gateway |
 | 4.8 | `apps/api/src/features/approval-policy/presentation/approval-policy.router.test.ts` | Integration (Supertest) | ⚠️ Shared `create-app.ts` safety net confirmed the unrelated pre-existing `hr-employees.router.test.ts` failure (`500` vs `201`) before wiring the new router | ✅ Added the failing `createApp` approval-policy CRUD/403 flow before composition wiring existed | ✅ Same file passed after wiring the router and shared HR guard in `create-app.ts` | ✅ CRUD happy path plus forbidden path through the composed app | ✅ Composition stayed additive: new gateway/use cases/router without changing the existing unrelated red suite |
+| 5.1 | `apps/web/src/features/hr-employees/domain/__tests__/hr-employees-domain.test.ts` | Unit | N/A (new) | ✅ Wrote failing web-domain assertions for employee sorting, position normalization, assignment normalization, and timeline shaping before the HR web domain files existed | ✅ Same file passed after adding the domain contracts and pure helpers | ✅ Employee, position, and assignment helpers now cover happy-path normalization plus ordering/timeline edge cases | ✅ Kept the new HR web domain framework-free and pure |
+| 5.2 | `apps/web/src/features/hr-employees/infrastructure/create-hr-employees-api.test.ts`, `apps/web/src/features/hr-employees/application/hr-employees-queries.test.tsx` | Integration (fetch + TanStack Query) | N/A (new) | ✅ Wrote failing adapter and query-hook suites before the HR web API/query modules existed | ✅ Both files passed after adding the typed fetch adapter, query keys, reads, and mutations | ✅ Triangulated list/detail reads, create employee/position mutations, and reporting-line invalidation after assignment creation | ✅ Kept the hooks thin and pushed normalization into pure domain helpers |
+| 5.3 | `apps/web/src/features/hr-employees/presentation/pages/hr-employees-pages.test.tsx` | Integration (RTL) | N/A (new) | ✅ Wrote failing page interaction coverage before the new HR pages existed | ✅ Same file passed after adding employee/position list pages, create pages, detail page, and assignment timeline page | ✅ Triangulated selection, create flows, detail rendering, and assignment submission across six page components | ✅ Pages remain session-driven and route-agnostic so PR-7 can wire routes without reshaping the slice |
 
 ### Test Summary
 - **Focused PR-1 evidence still green**: migration suite `1` file / `2` tests passed; API `328` + Web `129` bootstrap tests passed.
 - **Focused PR-2 evidence still green**: `8` files / `80` tests passed; API runtime harness `60` files / `335` tests passed.
 - **Focused PR-3 evidence**: `6` files / `14` tests passed; runtime harness `1` file / `1` test passed.
 - **Focused PR-4 evidence**: `7` files / `26` tests passed; runtime harness `1` file / `2` tests passed.
+- **Focused PR-5 evidence**: `4` files / `12` tests passed; runtime harness `2` files / `8` tests passed.
 - **Layers used**: Unit, integration (real Postgres gateway + Supertest), and safety-net suites.
 - **Approval tests**: None — PR-4 added a new approval-policy slice and additive permission-scope behavior instead of refactoring legacy behavior under approval tests.
-- **Pure functions created**: 3 (`assertNoAmbiguousActiveErpAccessLink`, `resolveReportingLineScopeEmployeeIds`, `assertValidApprovalPolicyScope`).
+- **Pure functions created**: 8 (`assertNoAmbiguousActiveErpAccessLink`, `resolveReportingLineScopeEmployeeIds`, `assertValidApprovalPolicyScope`, `sortEmployeesByCreatedAtDesc`, `sortPositionsByName`, `toCreatePositionInput`, `toCreateAssignmentInput`, `buildAssignmentTimelineEntries`).
 
 ### Deviations from Design
-- None — implementation matches the PR-1 through PR-4 design boundaries.
+- None — implementation matches the PR-1 through PR-5 design boundaries.
 
 ### Issues Found
 - `pnpm --filter api typecheck` remains red in the repository baseline for pre-existing non-PR-2 issues, including existing org-hierarchy exact-optional-typing mismatches and legacy auth/item test-contract drift outside the `hr-employees` slice.
 - Host integration tests required the Docker CLI `default` context because the current CLI default points at an unavailable Docker Desktop socket; `docker --context default compose up -d postgres` restored the real Postgres harness for PR-3.
 - The unrelated baseline safety-net `pnpm --filter api exec vitest run src/features/hr-employees/presentation/hr-employees.router.test.ts` is still red in the current workspace (`500` instead of `201` on the first create-employee request) and was not modified in this batch.
+- Broader `pnpm --filter web test` is still red outside the PR-5 slice because pre-existing app-level auth/onboarding/dashboard-shell tests fail in the current baseline; the new HR web focused suites remain green.
+- Broader `pnpm --filter web build` is still red outside the PR-5 slice because pre-existing type errors remain in `src/app/app.auth.test.tsx` and `src/features/org-hierarchy/presentation/organization-page.tsx`; no PR-5 file contributes to those failures.
 
 ### Remaining Tasks
-- [ ] 5.1 Author `web/src/features/hr-employees/domain/{employees,positions,assignments}.ts`.
-- [ ] 5.2 Author `infrastructure/create-hr-employees-api.ts` + `xxxQueryKeys` + `useEmployees/usePositions/useAssignments`; tests.
-- [ ] 5.3 Author `presentation/pages/{employees-list,employee-detail,employee-form,positions-list,position-form,assignment-timeline}.tsx` (RHF + Zod + shadcn); RTL tests.
 - [ ] 6.1 Author `web/src/features/hr-erp-access/domain/erp-access.ts`.
 - [ ] 6.2 Author `infrastructure/create-erp-access-api.ts` + `useInvitations/useAcceptInvitation`; tests.
 - [ ] 6.3 Author `presentation/pages/{invitations-list,accept-invitation}.tsx` (RHF + Zod + shadcn) + RTL tests.
@@ -172,9 +191,9 @@
 
 ### Workload / PR Boundary
 - Mode: stacked PR slice
-- Current work unit: PR-4 approval-policy backend
-- Boundary: Fourth stacked slice only (Phase 4 / tasks 4.1-4.8)
-- Estimated review budget impact: tracked diff is ~243 lines on existing files plus additive approval-policy slice files, bounded under the approved 800-line review budget for PR-4
+- Current work unit: PR-5 frontend hr-employees
+- Boundary: Fifth stacked slice only (Phase 5 / tasks 5.1-5.3)
+- Estimated review budget impact: additive web HR feature folder plus bounded tasks/apply-progress updates, kept under the approved 800-line review budget for PR-5
 
 ### Status
-25/33 tasks complete. This batch is ready for the next stacked slice (PR-5 web `hr-employees`), with the known follow-up risk that the unrelated baseline `hr-employees.router.test.ts` and repository typecheck drift still exist outside the PR-4 boundary.
+28/33 tasks complete. This batch is ready for the next stacked slice (PR-6 web `hr-erp-access`), with the known follow-up risk that broader web auth/onboarding/dashboard-shell tests and baseline web typecheck drift still exist outside the PR-5 boundary.
