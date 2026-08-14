@@ -163,6 +163,16 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
     return created;
   }
 
+  async listAssignmentHistory(companyId: string, employeeId: string) {
+    return this.assignments
+      .filter((assignment) => assignment.companyId === companyId && assignment.employeeId === employeeId)
+      .map((assignment) => ({
+        ...assignment,
+        positionName: this.positions.find((position) => position.id === assignment.positionId)?.name ?? '',
+        scopeNodeName: this.scopeNodes.find((node) => node.id === assignment.scopeNodeId)?.name ?? '',
+      }));
+  }
+
   async getActivePrimaryAssignmentByEmployeeId(companyId: string, employeeId: string) {
     return (
       this.assignments.find(
@@ -265,5 +275,37 @@ describe('createCreateAssignmentUseCase', () => {
         startedAt: new Date('2026-08-13T11:00:00.000Z'),
       }),
     ).rejects.toBeInstanceOf(PositionHeadcountExceededError);
+  });
+
+  it('rejects an assignment that starts before the current assignment', async () => {
+    const gateway = new InMemoryHrEmployeesGateway();
+    const createAssignment = createCreateAssignmentUseCase({ gateway });
+
+    await expect(
+      createAssignment({
+        companyId: 'company-1',
+        employeeId: 'employee-1',
+        scopeNodeId: 'company:company-1',
+        positionId: 'position-2',
+        startedAt: new Date('2026-08-13T09:00:00.000Z'),
+      }),
+    ).rejects.toThrow('must start after');
+  });
+
+  it.each([
+    ['missing employee', { employeeId: 'employee-missing', positionId: 'position-2', scopeNodeId: 'company:company-1' }],
+    ['missing position', { employeeId: 'employee-2', positionId: 'position-missing', scopeNodeId: 'company:company-1' }],
+    ['missing scope node', { employeeId: 'employee-2', positionId: 'position-2', scopeNodeId: 'scope-missing' }],
+  ])('rejects a %s', async (_label, values) => {
+    const gateway = new InMemoryHrEmployeesGateway();
+    const createAssignment = createCreateAssignmentUseCase({ gateway });
+
+    await expect(
+      createAssignment({
+        companyId: 'company-1',
+        ...values,
+        startedAt: new Date('2026-08-13T12:00:00.000Z'),
+      }),
+    ).rejects.toBeInstanceOf(Error);
   });
 });

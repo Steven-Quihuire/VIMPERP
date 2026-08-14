@@ -10,6 +10,8 @@ export type EmployeeAssignment = {
   endedAt: string | null;
   isPrimary: boolean;
   createdAt: string;
+  positionName?: string;
+  scopeNodeName?: string;
 };
 
 export type ReportingLineRecord = {
@@ -53,29 +55,19 @@ export const toCreateAssignmentInput = (
 };
 
 export const buildAssignmentTimelineEntries = ({
-  manager,
-  directReports,
+  assignments,
 }: {
-  manager: ReportingLineRecord | null;
-  directReports: ReportingLineRecord[];
+  assignments: EmployeeAssignment[];
 }) => {
-  const entries: Array<{ id: string; title: string; description: string }> = [];
-
-  if (manager) {
-    entries.push({
-      id: `manager-${manager.assignmentId}`,
-      title: `Manager · ${manager.employeeId}`,
-      description: `Position ${manager.positionId}`,
-    });
-  }
-
-  for (const directReport of directReports) {
-    entries.push({
-      id: `direct-report-${directReport.assignmentId}`,
-      title: `Direct report · ${directReport.employeeId}`,
-      description: `Position ${directReport.positionId}`,
-    });
-  }
-
-  return entries;
+  return [...assignments]
+    .sort((left, right) => new Date(right.startedAt).getTime() - new Date(left.startedAt).getTime())
+    .map((assignment) => ({
+      id: assignment.id,
+      title: assignment.positionName ?? `Position ${assignment.positionId}`,
+      description: [
+        assignment.scopeNodeName ?? assignment.scopeNodeId,
+        `${new Date(assignment.startedAt).toLocaleDateString('en-US')} - ${assignment.endedAt ? new Date(assignment.endedAt).toLocaleDateString('en-US') : 'Present'}`,
+        assignment.isPrimary ? 'Primary' : 'Secondary',
+      ].join(' · '),
+    }));
 };

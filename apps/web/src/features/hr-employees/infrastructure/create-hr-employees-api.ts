@@ -17,6 +17,7 @@ export type HrEmployeesApi = {
   listPositions: (companyId: string) => Promise<Position[]>;
   createPosition: (input: CreatePositionInput) => Promise<Position>;
   createAssignment: (input: CreateAssignmentInput) => Promise<EmployeeAssignment>;
+  listAssignmentHistory: (companyId: string, employeeId: string) => Promise<EmployeeAssignment[]>;
   getManager: (companyId: string, employeeId: string) => Promise<ReportingLineRecord | null>;
   listDirectReports: (companyId: string, employeeId: string) => Promise<ReportingLineRecord[]>;
 };
@@ -77,6 +78,10 @@ export const createHrEmployeesApi = (
       );
       return (await response.json()) as EmployeeAssignment;
     },
+    listAssignmentHistory: (companyId, employeeId) =>
+      httpClient.get<EmployeeAssignment[]>(
+        `/companies/${companyId}/hr-employees/${employeeId}/assignments`,
+      ),
     getManager: (companyId, employeeId) =>
       httpClient.get<ReportingLineRecord | null>(
         `/companies/${companyId}/hr-employees/${employeeId}/reports/manager`,

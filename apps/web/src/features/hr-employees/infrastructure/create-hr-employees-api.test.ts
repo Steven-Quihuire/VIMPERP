@@ -60,6 +60,14 @@ describe('createHrEmployeesApi', () => {
       }
 
       if (
+        url ===
+          'https://api.vimcore.test/companies/company-1/hr-employees/employee-1/assignments' &&
+        init?.method === undefined
+      ) {
+        return Promise.resolve(createJsonResponse([{ id: 'assignment-1', isPrimary: true }]));
+      }
+
+      if (
         url === 'https://api.vimcore.test/companies/company-1/hr-employees' &&
         init?.method === 'POST'
       ) {
@@ -99,6 +107,9 @@ describe('createHrEmployeesApi', () => {
     });
     await expect(api.listDirectReports('company-1', 'employee-1')).resolves.toEqual([
       { employeeId: 'employee-2' },
+    ]);
+    await expect(api.listAssignmentHistory('company-1', 'employee-1')).resolves.toEqual([
+      { id: 'assignment-1', isPrimary: true },
     ]);
     await expect(api.createEmployee({
       companyId: 'company-1',

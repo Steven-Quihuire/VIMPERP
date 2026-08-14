@@ -17,6 +17,8 @@ export const hrEmployeesQueryKeys = {
     ['hr-employees', 'manager', companyId, employeeId] as const,
   directReports: (companyId: string, employeeId: string) =>
     ['hr-employees', 'direct-reports', companyId, employeeId] as const,
+  assignmentHistory: (companyId: string, employeeId: string) =>
+    ['hr-employees', 'assignment-history', companyId, employeeId] as const,
 };
 
 export const useEmployees = (companyId: string | undefined, apiBaseUrl?: string) => {
@@ -130,6 +132,12 @@ export const useAssignments = (
     enabled: Boolean(companyId) && Boolean(employeeId),
   });
 
+  const assignmentHistoryQuery = useQuery({
+    queryKey: hrEmployeesQueryKeys.assignmentHistory(companyId ?? '', employeeId ?? ''),
+    queryFn: () => api.listAssignmentHistory(companyId as string, employeeId as string),
+    enabled: Boolean(companyId) && Boolean(employeeId),
+  });
+
   const createAssignmentMutation = useMutation({
     mutationFn: (input: Omit<AssignmentFormValues, never>) =>
       api.createAssignment({
@@ -141,6 +149,9 @@ export const useAssignments = (
       }),
     onSuccess: async () => {
       await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: hrEmployeesQueryKeys.assignmentHistory(companyId ?? '', employeeId ?? ''),
+        }),
         queryClient.invalidateQueries({
           queryKey: hrEmployeesQueryKeys.manager(companyId ?? '', employeeId ?? ''),
         }),
@@ -154,6 +165,7 @@ export const useAssignments = (
   return {
     managerQuery,
     directReportsQuery,
+    assignmentHistoryQuery,
     createAssignmentMutation,
   };
 };

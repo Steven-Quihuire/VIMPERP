@@ -3,7 +3,10 @@ import {
   HrEmployeesScopeNotFoundError,
   type HrEmployeesGateway,
 } from '../domain/employees';
-import { EmployeeAssignmentConflictError } from '../domain/employee-assignments';
+import {
+  EmployeeAssignmentConflictError,
+  EmployeeAssignmentValidationError,
+} from '../domain/employee-assignments';
 import {
   PositionHeadcountExceededError,
   PositionNotFoundError,
@@ -52,6 +55,12 @@ export const createCreateAssignmentUseCase = ({
       currentAssignment.startedAt.getTime() === input.startedAt.getTime()
     ) {
       throw new EmployeeAssignmentConflictError();
+    }
+
+    if (currentAssignment && input.startedAt.getTime() <= currentAssignment.startedAt.getTime()) {
+      throw new EmployeeAssignmentValidationError(
+        'An assignment must start after the current primary assignment.',
+      );
     }
 
     const activePrimaryAssignments = await gateway.countActivePrimaryAssignmentsForPosition(

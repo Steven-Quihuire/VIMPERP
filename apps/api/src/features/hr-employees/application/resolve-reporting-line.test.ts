@@ -75,6 +75,7 @@ const createGateway = (): HrEmployeesGateway => ({
     isPrimary: true,
     createdAt: new Date('2026-08-13T10:00:00.000Z'),
   }),
+  listAssignmentHistory: async () => [],
   getActivePrimaryAssignmentByEmployeeId: async (_companyId, employeeId) => {
     if (employeeId === 'employee-1') {
       return {

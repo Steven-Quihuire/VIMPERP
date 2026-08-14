@@ -76,7 +76,7 @@ describe('hr-employees domain helpers', () => {
     ).toEqual(['position-1', 'position-2']);
   });
 
-  it('builds assignment payloads and timeline entries from manager/direct reports', () => {
+  it('builds assignment payloads and the complete assignment timeline', () => {
     const parsed = assignmentFormSchema.parse({
       scopeNodeId: 'company:company-1',
       positionId: 'position-1',
@@ -93,29 +93,33 @@ describe('hr-employees domain helpers', () => {
 
     expect(
       buildAssignmentTimelineEntries({
-        manager: {
-          employeeId: 'employee-1',
-          positionId: 'position-1',
-          assignmentId: 'assignment-1',
-        },
-        directReports: [
+        assignments: [
           {
-            employeeId: 'employee-3',
-            positionId: 'position-2',
-            assignmentId: 'assignment-2',
+            id: 'assignment-1', companyId: 'company-1', employeeId: 'employee-2',
+            scopeNodeId: 'company:company-1', positionId: 'position-1',
+            startedAt: '2026-08-13T10:00:00.000Z', endedAt: '2026-08-13T12:00:00.000Z',
+            isPrimary: true, createdAt: '2026-08-13T10:00:00.000Z',
+            positionName: 'People Lead', scopeNodeName: 'Vimcore',
+          },
+          {
+            id: 'assignment-2', companyId: 'company-1', employeeId: 'employee-2',
+            scopeNodeId: 'company:company-1', positionId: 'position-2',
+            startedAt: '2026-08-13T12:00:00.000Z', endedAt: null,
+            isPrimary: true, createdAt: '2026-08-13T12:00:00.000Z',
+            positionName: 'HR Analyst', scopeNodeName: 'Vimcore',
           },
         ],
       }),
     ).toEqual([
       {
-        id: 'manager-assignment-1',
-        title: 'Manager · employee-1',
-        description: 'Position position-1',
+        id: 'assignment-2',
+        title: 'HR Analyst',
+        description: 'Vimcore · 8/13/2026 - Present · Primary',
       },
       {
-        id: 'direct-report-assignment-2',
-        title: 'Direct report · employee-3',
-        description: 'Position position-2',
+        id: 'assignment-1',
+        title: 'People Lead',
+        description: 'Vimcore · 8/13/2026 - 8/13/2026 · Primary',
       },
     ]);
   });

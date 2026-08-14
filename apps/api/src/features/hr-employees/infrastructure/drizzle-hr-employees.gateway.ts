@@ -325,6 +325,42 @@ export const createDrizzleHrEmployeesGateway = (
       return toEmployeeAssignment(row!);
     });
   },
+  listAssignmentHistory: async (companyId, employeeId) => {
+    const rows = await db
+      .select({
+        assignment: employeeAssignmentsTable,
+        positionName: positionsTable.name,
+        scopeNodeName: scopeNodesTable.name,
+      })
+      .from(employeeAssignmentsTable)
+      .innerJoin(
+        positionsTable,
+        and(
+          eq(positionsTable.id, employeeAssignmentsTable.positionId),
+          eq(positionsTable.companyId, employeeAssignmentsTable.companyId),
+        ),
+      )
+      .innerJoin(
+        scopeNodesTable,
+        and(
+          eq(scopeNodesTable.id, employeeAssignmentsTable.scopeNodeId),
+          eq(scopeNodesTable.companyId, employeeAssignmentsTable.companyId),
+        ),
+      )
+      .where(
+        and(
+          eq(employeeAssignmentsTable.companyId, companyId),
+          eq(employeeAssignmentsTable.employeeId, employeeId),
+        ),
+      )
+      .orderBy(employeeAssignmentsTable.startedAt);
+
+    return rows.map(({ assignment, positionName, scopeNodeName }) => ({
+      ...toEmployeeAssignment(assignment),
+      positionName,
+      scopeNodeName,
+    }));
+  },
   getActivePrimaryAssignmentByEmployeeId: async (companyId, employeeId) => {
     const [row] = await db
       .select()

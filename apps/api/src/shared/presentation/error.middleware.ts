@@ -21,6 +21,7 @@ import {
 } from '../../features/identity/domain/auth';
 import {
   EmployeeAssignmentConflictError,
+  EmployeeAssignmentValidationError,
 } from '../../features/hr-employees/domain/employee-assignments';
 import {
   EmployeeDocumentConflictError,
@@ -142,6 +143,11 @@ export const createErrorMiddleware = ({
     }
 
     if (error instanceof EmployeeValidationError) {
+      response.status(400).json(toResponseBody(error.code, error.message));
+      return;
+    }
+
+    if (error instanceof EmployeeAssignmentValidationError) {
       response.status(400).json(toResponseBody(error.code, error.message));
       return;
     }

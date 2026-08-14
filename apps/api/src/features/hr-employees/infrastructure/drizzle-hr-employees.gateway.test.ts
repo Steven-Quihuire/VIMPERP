@@ -177,6 +177,34 @@ describe('createDrizzleHrEmployeesGateway', () => {
       expect.objectContaining({ employeeId: directReport.id, positionId: analystPosition.id }),
     ]);
 
+    const replacementAssignment = await gateway.createAssignment({
+      companyId: 'company-1',
+      employeeId: directReport.id,
+      scopeNodeId: 'area:area-1',
+      positionId: leadPosition.id,
+      startedAt: new Date('2026-08-13T13:00:00.000Z'),
+      isPrimary: true,
+      createdAt: now,
+    });
+    await expect(gateway.listAssignmentHistory('company-1', directReport.id)).resolves.toEqual([
+      expect.objectContaining({
+        id: employeeAssignment.id,
+        positionName: 'HR Analyst',
+        scopeNodeName: 'Operations',
+        startedAt: new Date('2026-08-13T12:30:00.000Z'),
+        endedAt: new Date('2026-08-13T13:00:00.000Z'),
+        isPrimary: true,
+      }),
+      expect.objectContaining({
+        id: replacementAssignment.id,
+        positionName: 'People Lead',
+        scopeNodeName: 'Operations',
+        startedAt: new Date('2026-08-13T13:00:00.000Z'),
+        endedAt: null,
+        isPrimary: true,
+      }),
+    ]);
+
     const positions = await db.select().from(positionsTable);
     expect(positions).toHaveLength(2);
   });

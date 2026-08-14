@@ -80,6 +80,7 @@ import { createCreateEmployeeUseCase } from '../features/hr-employees/applicatio
 import { createCreatePositionUseCase } from '../features/hr-employees/application/create-position';
 import { createGetEmployeeUseCase } from '../features/hr-employees/application/get-employee';
 import { createListEmployeesUseCase } from '../features/hr-employees/application/list-employees';
+import { createListAssignmentHistoryUseCase } from '../features/hr-employees/application/list-assignment-history';
 import { createUpdateEmployeeUseCase } from '../features/hr-employees/application/update-employee';
 import { createResolveDirectReportsUseCase } from '../features/hr-employees/application/resolve-direct-reports';
 import { createResolveReportingLineUseCase } from '../features/hr-employees/application/resolve-reporting-line';
@@ -541,6 +542,7 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       listPositions: async ({ companyId }) =>
         await hrEmployeesGateway.listPositions(companyId),
       createAssignment: createCreateAssignmentUseCase({ gateway: hrEmployeesGateway }),
+      listAssignmentHistory: createListAssignmentHistoryUseCase({ gateway: hrEmployeesGateway }),
       resolveReportingLine: createResolveReportingLineUseCase({ gateway: hrEmployeesGateway }),
       resolveDirectReports: createResolveDirectReportsUseCase({ gateway: hrEmployeesGateway }),
     }),

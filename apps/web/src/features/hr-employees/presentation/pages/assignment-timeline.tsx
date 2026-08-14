@@ -52,9 +52,13 @@ export const AssignmentTimelinePage = ({
     return <p className="text-sm text-muted-foreground">Choose an employee before creating assignments.</p>;
   }
 
-  const manager = assignments.managerQuery.data ?? null;
-  const directReports = assignments.directReportsQuery.data ?? [];
-  const timelineEntries = buildAssignmentTimelineEntries({ manager, directReports });
+  if (assignments.assignmentHistoryQuery.isLoading) {
+    return <p className="text-sm text-muted-foreground">Loading assignment history...</p>;
+  }
+
+  const timelineEntries = buildAssignmentTimelineEntries({
+    assignments: assignments.assignmentHistoryQuery.data ?? [],
+  });
 
   return (
     <Card>
@@ -138,7 +142,7 @@ export const AssignmentTimelinePage = ({
 
         <div className="space-y-3">
           {timelineEntries.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No reporting-line entries are available yet.</p>
+            <p className="text-sm text-muted-foreground">No assignments are available yet.</p>
           ) : (
             timelineEntries.map((entry) => (
               <div key={entry.id} className="rounded-lg border px-4 py-3">

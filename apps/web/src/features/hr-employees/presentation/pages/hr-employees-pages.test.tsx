@@ -103,6 +103,19 @@ describe('hr-employees pages', () => {
         isError: false,
         error: null,
       },
+      assignmentHistoryQuery: {
+        data: [
+          {
+            id: 'assignment-3', companyId: 'company-1', employeeId: 'employee-1',
+            scopeNodeId: 'company:company-1', positionId: 'position-1',
+            startedAt: '2026-08-13T12:00:00.000Z', endedAt: null, isPrimary: true,
+            createdAt: '2026-08-13T12:00:00.000Z', positionName: 'People Lead', scopeNodeName: 'Vimcore',
+          },
+        ],
+        isLoading: false,
+        isError: false,
+        error: null,
+      },
       createAssignmentMutation: {
         mutateAsync: vi.fn().mockResolvedValue({ id: 'assignment-3' }),
         isPending: false,
@@ -188,8 +201,7 @@ describe('hr-employees pages', () => {
   it('creates assignments and renders the reporting-line timeline', async () => {
     render(<AssignmentTimelinePage session={session} employeeId="employee-1" />);
 
-    expect(screen.getByText('Manager · employee-9')).toBeInTheDocument();
-    expect(screen.getByText('Direct report · employee-3')).toBeInTheDocument();
+    expect(screen.getByText('People Lead')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Scope node'), {
       target: { value: 'company:company-1' },

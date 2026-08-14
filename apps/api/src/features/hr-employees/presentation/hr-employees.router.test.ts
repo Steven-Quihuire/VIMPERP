@@ -223,6 +223,16 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
     this.assignments.push(assignment);
     return assignment;
   }
+
+  async listAssignmentHistory(companyId: string, employeeId: string) {
+    return this.assignments
+      .filter((assignment) => assignment.companyId === companyId && assignment.employeeId === employeeId)
+      .map((assignment) => ({
+        ...assignment,
+        positionName: this.positions.find((position) => position.id === assignment.positionId)?.name ?? '',
+        scopeNodeName: this.scopeNodes.find((node) => node.id === assignment.scopeNodeId)?.name ?? '',
+      }));
+  }
   async getActivePrimaryAssignmentByEmployeeId(companyId: string, employeeId: string) {
     return (
       this.assignments.find(
@@ -462,6 +472,20 @@ describe('hr employees routes', () => {
         positionId: createAnalystPositionResponse.body.id,
         assignmentId: reportAssignmentResponse.body.id,
       },
+    ]);
+
+    const assignmentHistoryResponse = await request(app)
+      .get(`/companies/company-1/hr-employees/${createReportResponse.body.id}/assignments`)
+      .set('Cookie', sessionCookie);
+    expect(assignmentHistoryResponse.status).toBe(200);
+    expect(assignmentHistoryResponse.body).toEqual([
+      expect.objectContaining({
+        employeeId: createReportResponse.body.id,
+        positionName: 'HR Analyst',
+        scopeNodeName: 'Vimcore',
+        isPrimary: true,
+        endedAt: null,
+      }),
     ]);
 
     const updateResponse = await request(app)

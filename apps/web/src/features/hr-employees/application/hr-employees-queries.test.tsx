@@ -122,6 +122,13 @@ describe('hr-employees query hooks', () => {
         return Promise.resolve(createJsonResponse([{ employeeId: 'employee-2' }]));
       }
 
+      if (
+        url.endsWith('/companies/company-1/hr-employees/employee-1/assignments') &&
+        init?.method === undefined
+      ) {
+        return Promise.resolve(createJsonResponse([{ id: 'assignment-1' }]));
+      }
+
       if (url.endsWith('/companies/company-1/hr-employees') && init?.method === 'POST') {
         return Promise.resolve(createJsonResponse({ id: 'employee-3', companyId: 'company-1' }, 201));
       }
@@ -152,6 +159,7 @@ describe('hr-employees query hooks', () => {
 
     await waitFor(() => expect(assignmentsHook.result.current.managerQuery.isSuccess).toBe(true));
     await waitFor(() => expect(assignmentsHook.result.current.directReportsQuery.isSuccess).toBe(true));
+    await waitFor(() => expect(assignmentsHook.result.current.assignmentHistoryQuery.isSuccess).toBe(true));
 
     await expect(createEmployeeHook.result.current.mutateAsync({
       companyId: 'company-1',

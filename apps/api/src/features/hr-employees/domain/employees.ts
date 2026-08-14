@@ -82,6 +82,10 @@ export type HrEmployeesGateway = {
     createdAt: Date;
     id?: string;
   }) => Promise<import('./employee-assignments').EmployeeAssignment>;
+  listAssignmentHistory: (
+    companyId: string,
+    employeeId: string,
+  ) => Promise<import('./employee-assignments').EmployeeAssignmentHistory[]>;
   getActivePrimaryAssignmentByEmployeeId: (
     companyId: string,
     employeeId: string,

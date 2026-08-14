@@ -39,6 +39,7 @@ const createHrEmployeesGateway = (): HrEmployeesGateway => ({
     isPrimary: true,
     createdAt: new Date('2026-08-13T10:00:00.000Z'),
   }),
+  listAssignmentHistory: async () => [],
   getActivePrimaryAssignmentByEmployeeId: async (_companyId, employeeId) =>
     employeeId === 'employee-1'
       ? {
