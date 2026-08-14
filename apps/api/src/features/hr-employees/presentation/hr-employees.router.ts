@@ -9,6 +9,7 @@ import {
   employmentStatusValues,
   type EmployeeIdentityInput,
 } from '../domain/employees';
+import type { PermissionScope } from '../../roles-management/domain/assignments';
 
 const companyParamsSchema = z.object({ companyId: z.string().min(1) });
 const employeeParamsSchema = z.object({ companyId: z.string().min(1), employeeId: z.string().min(1) });
@@ -49,9 +50,16 @@ const ensureCompanyAccess = (auth: AuthSession, companyId: string) => {
   }
 };
 
+type ResolvePermissionScope = (input: {
+  request: Parameters<RequestHandler>[0];
+  response: Parameters<RequestHandler>[1];
+  auth: AuthSession;
+}) => PermissionScope | undefined | Promise<PermissionScope | undefined>;
+
 export const createHrEmployeesRouter = ({
   requireAuth,
   requireHrCapability,
+  resolvePermissionScope,
   createEmployee,
   updateEmployee,
   listEmployees,
@@ -64,14 +72,22 @@ export const createHrEmployeesRouter = ({
   resolveDirectReports,
 }: {
   requireAuth: RequestHandler;
-  requireHrCapability: (permissionKey: string) => RequestHandler;
+  requireHrCapability: (
+    permissionKey: string,
+    resolvePermissionScope?: ResolvePermissionScope,
+  ) => RequestHandler;
+  resolvePermissionScope?: (input: {
+    request: Parameters<RequestHandler>[0];
+    response: Parameters<RequestHandler>[1];
+    auth: AuthSession;
+  }) => PermissionScope | undefined | Promise<PermissionScope | undefined>;
   createEmployee: (input: { companyId: string } & EmployeeIdentityInput) => Promise<unknown>;
   updateEmployee: (
     companyId: string,
     employeeId: string,
     input: Partial<EmployeeIdentityInput>,
   ) => Promise<unknown>;
-  listEmployees: (input: { companyId: string }) => Promise<unknown>;
+  listEmployees: (input: { companyId: string; auth: AuthSession }) => Promise<unknown>;
   getEmployee: (input: { companyId: string; employeeId: string }) => Promise<unknown>;
   createPosition: (input: {
     companyId: string;
@@ -80,7 +96,7 @@ export const createHrEmployeesRouter = ({
     headcount: number;
     isActive: boolean;
   }) => Promise<unknown>;
-  listPositions: (input: { companyId: string }) => Promise<unknown>;
+  listPositions: (input: { companyId: string; auth: AuthSession }) => Promise<unknown>;
   createAssignment: (input: {
     companyId: string;
     employeeId: string;
@@ -102,8 +118,10 @@ export const createHrEmployeesRouter = ({
   }) => Promise<unknown>;
 }): Router => {
   const router = Router();
+  const requireEmployeeCapability = (permissionKey: string) =>
+    requireHrCapability(permissionKey, resolvePermissionScope);
 
-  router.post('/companies/:companyId/hr-employees', requireAuth, requireHrCapability('hr.employees.write'), async (request, response, next) => {
+  router.post('/companies/:companyId/hr-employees', requireAuth, requireEmployeeCapability('hr.employees.write'), async (request, response, next) => {
     try {
       const params = companyParamsSchema.parse(request.params);
       const body = createEmployeeBodySchema.parse(request.body);
@@ -115,17 +133,17 @@ export const createHrEmployeesRouter = ({
     }
   });
 
-  router.get('/companies/:companyId/hr-employees', requireAuth, requireHrCapability('hr.employees.read'), async (request, response, next) => {
+  router.get('/companies/:companyId/hr-employees', requireAuth, requireEmployeeCapability('hr.employees.read'), async (request, response, next) => {
     try {
       const params = companyParamsSchema.parse(request.params);
       ensureCompanyAccess(getAuth(response), params.companyId);
-      response.status(200).json(await listEmployees({ companyId: params.companyId }));
+      response.status(200).json(await listEmployees({ companyId: params.companyId, auth: getAuth(response) }));
     } catch (error) {
       next(error);
     }
   });
 
-  router.patch('/companies/:companyId/hr-employees/:employeeId', requireAuth, requireHrCapability('hr.employees.write'), async (request, response, next) => {
+  router.patch('/companies/:companyId/hr-employees/:employeeId', requireAuth, requireEmployeeCapability('hr.employees.write'), async (request, response, next) => {
     try {
       const params = employeeParamsSchema.parse(request.params);
       const body = updateEmployeeBodySchema.parse(request.body);
@@ -140,7 +158,7 @@ export const createHrEmployeesRouter = ({
     }
   });
 
-  router.post('/companies/:companyId/hr-employees/positions', requireAuth, requireHrCapability('hr.positions.write'), async (request, response, next) => {
+  router.post('/companies/:companyId/hr-employees/positions', requireAuth, requireEmployeeCapability('hr.positions.write'), async (request, response, next) => {
     try {
       const params = companyParamsSchema.parse(request.params);
       const body = createPositionBodySchema.parse(request.body);
@@ -151,17 +169,17 @@ export const createHrEmployeesRouter = ({
     }
   });
 
-  router.get('/companies/:companyId/hr-employees/positions', requireAuth, requireHrCapability('hr.positions.read'), async (request, response, next) => {
+  router.get('/companies/:companyId/hr-employees/positions', requireAuth, requireEmployeeCapability('hr.positions.read'), async (request, response, next) => {
     try {
       const params = companyParamsSchema.parse(request.params);
       ensureCompanyAccess(getAuth(response), params.companyId);
-      response.status(200).json(await listPositions({ companyId: params.companyId }));
+      response.status(200).json(await listPositions({ companyId: params.companyId, auth: getAuth(response) }));
     } catch (error) {
       next(error);
     }
   });
 
-  router.get('/companies/:companyId/hr-employees/:employeeId', requireAuth, requireHrCapability('hr.employees.read'), async (request, response, next) => {
+  router.get('/companies/:companyId/hr-employees/:employeeId', requireAuth, requireEmployeeCapability('hr.employees.read'), async (request, response, next) => {
     try {
       const params = employeeParamsSchema.parse(request.params);
       ensureCompanyAccess(getAuth(response), params.companyId);
@@ -171,7 +189,7 @@ export const createHrEmployeesRouter = ({
     }
   });
 
-  router.post('/companies/:companyId/hr-employees/:employeeId/assignments', requireAuth, requireHrCapability('hr.employees.assign'), async (request, response, next) => {
+  router.post('/companies/:companyId/hr-employees/:employeeId/assignments', requireAuth, requireEmployeeCapability('hr.employees.assign'), async (request, response, next) => {
     try {
       const params = employeeParamsSchema.parse(request.params);
       const body = createAssignmentBodySchema.parse(request.body);
@@ -182,7 +200,7 @@ export const createHrEmployeesRouter = ({
     }
   });
 
-  router.get('/companies/:companyId/hr-employees/:employeeId/assignments', requireAuth, requireHrCapability('hr.employees.read'), async (request, response, next) => {
+  router.get('/companies/:companyId/hr-employees/:employeeId/assignments', requireAuth, requireEmployeeCapability('hr.employees.read'), async (request, response, next) => {
     try {
       const params = employeeParamsSchema.parse(request.params);
       ensureCompanyAccess(getAuth(response), params.companyId);
@@ -192,7 +210,7 @@ export const createHrEmployeesRouter = ({
     }
   });
 
-  router.get('/companies/:companyId/hr-employees/:employeeId/reports/manager', requireAuth, requireHrCapability('hr.employees.read'), async (request, response, next) => {
+  router.get('/companies/:companyId/hr-employees/:employeeId/reports/manager', requireAuth, requireEmployeeCapability('hr.employees.read'), async (request, response, next) => {
     try {
       const params = employeeParamsSchema.parse(request.params);
       ensureCompanyAccess(getAuth(response), params.companyId);
@@ -202,7 +220,7 @@ export const createHrEmployeesRouter = ({
     }
   });
 
-  router.get('/companies/:companyId/hr-employees/:employeeId/reports/direct', requireAuth, requireHrCapability('hr.employees.read'), async (request, response, next) => {
+  router.get('/companies/:companyId/hr-employees/:employeeId/reports/direct', requireAuth, requireEmployeeCapability('hr.employees.read'), async (request, response, next) => {
     try {
       const params = employeeParamsSchema.parse(request.params);
       ensureCompanyAccess(getAuth(response), params.companyId);

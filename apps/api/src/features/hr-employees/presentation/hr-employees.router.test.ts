@@ -498,6 +498,11 @@ describe('hr employees routes', () => {
       fullName: 'HR Analyst Updated',
       employmentStatus: 'suspended',
     });
+
+    const crossCompanyResponse = await request(app)
+      .get('/companies/company-2/hr-employees')
+      .set('Cookie', sessionCookie);
+    expect(crossCompanyResponse.status).toBe(403);
   });
 
   it('returns 403 when the session lacks HR employee permissions', async () => {

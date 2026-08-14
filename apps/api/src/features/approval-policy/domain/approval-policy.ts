@@ -15,6 +15,8 @@ export type ApprovalPolicy = {
 export type ApprovalPolicyScopeNode = {
   id: string;
   companyId: string;
+  scopeType: ScopeType;
+  sourceId: string;
 };
 
 export type ApprovalPolicyGateway = {

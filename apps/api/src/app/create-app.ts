@@ -1,4 +1,4 @@
-import express, { type Express } from 'express';
+import express, { type Express, type RequestHandler } from 'express';
 
 import {
   createGetApplicationErrorDetail,
@@ -46,6 +46,7 @@ import {
 } from '../features/identity/domain/auth';
 import type {
   AuthIdentityGateway,
+  AuthSession,
   PasswordHasher,
   SessionTokenService,
 } from '../features/identity/domain/auth';
@@ -327,6 +328,177 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
   const requireHrCapability = createRequireHrCapability({
     computeEffectivePermissions,
   });
+  const getActiveScope = (auth: AuthSession): ScopeRef =>
+    auth.activeScope ?? {
+      scopeType: 'company',
+      scopeId: auth.activeCompany!.companyId,
+    };
+  const assertScopeVisible = async (auth: AuthSession, companyId: string, scope: ScopeRef) => {
+    const activeScope = getActiveScope(auth);
+    const lineage = await scopeResolver.getLineage(companyId, scope);
+    if (!lineage.some((entry) => entry.scopeType === activeScope.scopeType && entry.scopeId === activeScope.scopeId)) {
+      throw new ForbiddenError();
+    }
+  };
+  const parseEmployeeParams = (request: Parameters<RequestHandler>[0]) => ({
+    companyId: String(request.params.companyId),
+    employeeId: String(request.params.employeeId),
+  });
+  const resolveEmployeePermissionScope = async ({
+    request,
+    auth,
+  }: {
+    request: Parameters<RequestHandler>[0];
+    response: Parameters<RequestHandler>[1];
+    auth: AuthSession;
+  }): Promise<PermissionScope | undefined> => {
+    const { companyId, employeeId } = parseEmployeeParams(request);
+    if (typeof request.body?.scopeNodeId === 'string') {
+      const requestedNode = await hrEmployeesGateway.findScopeNode(
+        companyId,
+        request.body.scopeNodeId,
+      );
+      if (!requestedNode) {
+        throw new ForbiddenError();
+      }
+      const requestedScope: ScopeRef = {
+        scopeType: requestedNode.nodeType,
+        scopeId: requestedNode.sourceId,
+      };
+      await assertScopeVisible(auth, companyId, requestedScope);
+      return { kind: 'node+descendants', scope: requestedScope };
+    }
+    const assignment = await hrEmployeesGateway.getActivePrimaryAssignmentByEmployeeId(
+      companyId,
+      employeeId,
+    );
+    if (!assignment) {
+      if (auth.activeScope && auth.activeScope.scopeType !== 'company') {
+        throw new ForbiddenError();
+      }
+      return undefined;
+    }
+    const scopeNode = await hrEmployeesGateway.findScopeNode(
+      companyId,
+      assignment.scopeNodeId,
+    );
+    if (!scopeNode) {
+      throw new ForbiddenError();
+    }
+    const employeeScope: ScopeRef = {
+      scopeType: scopeNode.nodeType,
+      scopeId: scopeNode.sourceId,
+    };
+    await assertScopeVisible(auth, companyId, employeeScope);
+
+    let activeLink: Awaited<ReturnType<ErpAccessGateway['getActiveLinkByUserId']>> = null;
+    try {
+      activeLink = await hrErpAccessGateway.getActiveLinkByUserId(
+        companyId,
+        auth.user.id,
+      );
+    } catch {
+      // A custom HR gateway can be used without provisioning ERP storage.
+    }
+    if (activeLink?.employeeId === employeeId) {
+      return { kind: 'self' };
+    }
+    if (activeLink) {
+      const actorAssignment = await hrEmployeesGateway.getActivePrimaryAssignmentByEmployeeId(
+        companyId,
+        activeLink.employeeId,
+      );
+      if (actorAssignment) {
+        const directReports = await hrEmployeesGateway.listDirectReportAssignments(
+          companyId,
+          actorAssignment.positionId,
+        );
+        if (directReports.some((report) => report.employeeId === employeeId)) {
+          return { kind: 'direct_reports' };
+        }
+      }
+    }
+    return { kind: 'node+descendants', scope: employeeScope };
+  };
+  const resolveApprovalPolicyPermissionScope = async ({
+    request,
+    auth,
+  }: {
+    request: Parameters<RequestHandler>[0];
+    response: Parameters<RequestHandler>[1];
+    auth: AuthSession;
+  }): Promise<PermissionScope | undefined> => {
+    const companyId = String(request.params.companyId);
+    const scopeNodeId =
+      typeof request.body?.scopeNodeId === 'string'
+        ? request.body.scopeNodeId
+        : request.params.policyId
+          ? (await approvalPolicyGateway.getApprovalPolicyById(companyId, String(request.params.policyId)))?.scopeNodeId
+          : null;
+    if (!scopeNodeId) {
+      return undefined;
+    }
+    const scopeNode = await approvalPolicyGateway.findScopeNode(companyId, scopeNodeId);
+    if (!scopeNode) {
+      throw new ForbiddenError();
+    }
+    const scope: ScopeRef = {
+      scopeType: scopeNode.scopeType,
+      scopeId: scopeNode.sourceId,
+    };
+    await assertScopeVisible(auth, companyId, scope);
+    return { kind: 'node+descendants', scope };
+  };
+  const listEmployees = createListEmployeesUseCase({ gateway: hrEmployeesGateway });
+  const listVisibleEmployees = async ({ companyId, auth }: { companyId: string; auth: AuthSession }) => {
+    const employees = await listEmployees({ companyId });
+    const activeScope = getActiveScope(auth);
+    return (await Promise.all(employees.map(async (employee) => {
+      const assignment = await hrEmployeesGateway.getActivePrimaryAssignmentByEmployeeId(companyId, employee.id);
+      if (!assignment) return activeScope.scopeType === 'company' ? employee : null;
+      const node = await hrEmployeesGateway.findScopeNode(companyId, assignment.scopeNodeId);
+      if (!node) return null;
+      const lineage = await scopeResolver.getLineage(companyId, { scopeType: node.nodeType, scopeId: node.sourceId });
+      return lineage.some((entry) => entry.scopeType === activeScope.scopeType && entry.scopeId === activeScope.scopeId)
+        ? employee
+        : null;
+    }))).filter((employee): employee is NonNullable<typeof employee> => employee !== null);
+  };
+  const listPositions = async ({ companyId, auth }: { companyId: string; auth: AuthSession }) => {
+    const positions = await hrEmployeesGateway.listPositions(companyId);
+    const activeScope = getActiveScope(auth);
+    if (activeScope.scopeType === 'company') {
+      return positions;
+    }
+
+    return (await Promise.all(positions.map(async (position) => {
+      const assignment = await hrEmployeesGateway.getActivePrimaryAssignmentByPositionId(
+        companyId,
+        position.id,
+      );
+      if (!assignment) return null;
+      const node = await hrEmployeesGateway.findScopeNode(companyId, assignment.scopeNodeId);
+      if (!node) return null;
+      const lineage = await scopeResolver.getLineage(companyId, { scopeType: node.nodeType, scopeId: node.sourceId });
+      return lineage.some((entry) => entry.scopeType === activeScope.scopeType && entry.scopeId === activeScope.scopeId)
+        ? position
+        : null;
+    }))).filter((position): position is NonNullable<typeof position> => position !== null);
+  };
+  const listApprovalPolicies = createListApprovalPoliciesUseCase({ gateway: approvalPolicyGateway });
+  const listVisibleApprovalPolicies = async ({ companyId, auth }: { companyId: string; auth: AuthSession }) => {
+    const policies = await listApprovalPolicies(companyId);
+    const activeScope = getActiveScope(auth);
+    return (await Promise.all(policies.map(async (policy) => {
+      if (!policy.scopeNodeId) return policy;
+      const node = await approvalPolicyGateway.findScopeNode(companyId, policy.scopeNodeId);
+      if (!node) return null;
+      const lineage = await scopeResolver.getLineage(companyId, { scopeType: node.scopeType, scopeId: node.sourceId });
+      return lineage.some((entry) => entry.scopeType === activeScope.scopeType && entry.scopeId === activeScope.scopeId)
+        ? policy
+        : null;
+    }))).filter((policy): policy is NonNullable<typeof policy> => policy !== null);
+  };
   const requirePlatformAdmin = createRequireRole('platform-admin');
   const sweepStaleProvisioningRuns = createSweepStaleProvisioningRuns({
     recorder: provisioningRecorder,
@@ -511,9 +683,8 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       createApprovalPolicy: createCreateApprovalPolicyUseCase({
         gateway: approvalPolicyGateway,
       }),
-      listApprovalPolicies: createListApprovalPoliciesUseCase({
-        gateway: approvalPolicyGateway,
-      }),
+      listApprovalPolicies: listVisibleApprovalPolicies,
+      resolvePermissionScope: resolveApprovalPolicyPermissionScope,
       getApprovalPolicy: createGetApprovalPolicyUseCase({
         gateway: approvalPolicyGateway,
       }),
@@ -536,11 +707,11 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
           employeeId,
           ...input,
         }),
-      listEmployees: createListEmployeesUseCase({ gateway: hrEmployeesGateway }),
+      listEmployees: listVisibleEmployees,
+      resolvePermissionScope: resolveEmployeePermissionScope,
       getEmployee: createGetEmployeeUseCase({ gateway: hrEmployeesGateway }),
       createPosition: createCreatePositionUseCase({ gateway: hrEmployeesGateway }),
-      listPositions: async ({ companyId }) =>
-        await hrEmployeesGateway.listPositions(companyId),
+      listPositions,
       createAssignment: createCreateAssignmentUseCase({ gateway: hrEmployeesGateway }),
       listAssignmentHistory: createListAssignmentHistoryUseCase({ gateway: hrEmployeesGateway }),
       resolveReportingLine: createResolveReportingLineUseCase({ gateway: hrEmployeesGateway }),

@@ -77,6 +77,12 @@ const scopeResolver = createInMemoryScopeResolver({
       name: 'North Division',
     },
     {
+      ref: { scopeType: 'division', scopeId: 'division-2' },
+      parentRef: { scopeType: 'company', scopeId: 'company-a' },
+      companyId: 'company-a',
+      name: 'South Division',
+    },
+    {
       ref: { scopeType: 'local', scopeId: 'local-1' },
       parentRef: { scopeType: 'division', scopeId: 'division-1' },
       companyId: 'company-a',
@@ -141,6 +147,41 @@ describe('createComputeEffectivePermissionsUseCase', () => {
         },
       }),
     ).resolves.toEqual(['catalog.read']);
+  });
+
+  it('evaluates node+descendants permissions at the requested node without escaping the active scope', async () => {
+    const computeEffectivePermissions = createComputeEffectivePermissionsUseCase({
+      rolesGateway,
+      assignmentsGateway,
+      scopeHierarchyGateway: {
+        assertScopeRefBelongsToCompany: async () => undefined,
+        getScopeLineage: scopeResolver.getLineage,
+      },
+    });
+
+    await expect(
+      computeEffectivePermissions({
+        companyId: 'company-a',
+        userId: 'user-1',
+        currentContext: { scopeType: 'division', scopeId: 'division-1' },
+        permissionScope: {
+          kind: 'node+descendants',
+          scope: { scopeType: 'warehouse', scopeId: 'warehouse-1' },
+        },
+      }),
+    ).resolves.toEqual(['catalog.read', 'catalog.write']);
+
+    await expect(
+      computeEffectivePermissions({
+        companyId: 'company-a',
+        userId: 'user-1',
+        currentContext: { scopeType: 'warehouse', scopeId: 'warehouse-1' },
+        permissionScope: {
+          kind: 'node+descendants',
+          scope: { scopeType: 'division', scopeId: 'division-2' },
+        },
+      }),
+    ).resolves.toEqual([]);
   });
 
   it('unions reporting-line permission keys for the direct_reports permission scope', async () => {

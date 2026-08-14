@@ -107,8 +107,8 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
 class InMemoryApprovalPolicyGateway implements ApprovalPolicyGateway {
   policies: ApprovalPolicy[] = [];
   scopeNodes: ApprovalPolicyScopeNode[] = [
-    { id: 'company:company-a', companyId: 'company-a' },
-    { id: 'area:area-1', companyId: 'company-a' },
+    { id: 'company:company-a', companyId: 'company-a', scopeType: 'company', sourceId: 'company-a' },
+    { id: 'area:area-1', companyId: 'company-a', scopeType: 'area', sourceId: 'area-1' },
   ];
 
   async createApprovalPolicy(input: {
@@ -282,6 +282,12 @@ const createAuthenticatedApp = async ({
           companyId: 'company-a',
           name: 'Vimcore',
         },
+        {
+          ref: { scopeType: 'area', scopeId: 'area-1' },
+          parentRef: { scopeType: 'company', scopeId: 'company-a' },
+          companyId: 'company-a',
+          name: 'Area 1',
+        },
       ],
       assignments: scopeAssignments,
     }),
@@ -370,6 +376,16 @@ describe('approval policy router', () => {
 
     const response = await request(app)
       .get('/companies/company-a/approval-policies')
+      .set('Cookie', ownerSessionCookie);
+
+    expect(response.status).toBe(403);
+  });
+
+  it('rejects approval-policy access outside the active company', async () => {
+    const { app, ownerSessionCookie } = await createAuthenticatedApp();
+
+    const response = await request(app)
+      .get('/companies/company-b/approval-policies')
       .set('Cookie', ownerSessionCookie);
 
     expect(response.status).toBe(403);

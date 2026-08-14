@@ -38,7 +38,7 @@ afterEach(async () => {
 const createDb = async () => {
   const database = await createMigrationTestDatabase();
   cleanups.push(database.cleanup);
-  await applyMigrationsThrough(database.pool, '0018_role_assignment_mode.sql');
+  await applyMigrationsThrough(database.pool, '0022_rrhh_foundation.sql');
 
   const pool: Pool = database.pool;
   const db = drizzle(pool, {
@@ -206,30 +206,35 @@ describe('drizzle scope resolver', () => {
         parentRef: { scopeType: 'company', scopeId: 'company-a' },
         companyId: 'company-a',
         name: 'North',
+        employeeCount: 0,
       },
       {
         ref: { scopeType: 'local', scopeId: 'local-1' },
         parentRef: { scopeType: 'division', scopeId: 'division-1' },
         companyId: 'company-a',
         name: 'HQ',
+        employeeCount: 0,
       },
       {
         ref: { scopeType: 'area', scopeId: 'area-1' },
         parentRef: { scopeType: 'division', scopeId: 'division-1' },
         companyId: 'company-a',
         name: 'Storage',
+        employeeCount: 0,
       },
       {
         ref: { scopeType: 'warehouse', scopeId: 'warehouse-1' },
         parentRef: { scopeType: 'area', scopeId: 'area-1' },
         companyId: 'company-a',
         name: 'Main Warehouse',
+        employeeCount: 0,
       },
       {
         ref: { scopeType: 'point-of-sale', scopeId: 'pos-1' },
         parentRef: { scopeType: 'area', scopeId: 'area-1' },
         companyId: 'company-a',
         name: 'Checkout',
+        employeeCount: 0,
       },
     ]);
 

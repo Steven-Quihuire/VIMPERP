@@ -27,13 +27,32 @@ export const createComputeEffectivePermissionsUseCase = ({
     currentContext: ScopeRef;
     permissionScope?: PermissionScope;
   }) => {
-    const [lineage, assignments] = await Promise.all([
+    const [activeLineage, assignments] = await Promise.all([
       scopeHierarchyGateway.getScopeLineage(input.companyId, input.currentContext),
       assignmentsGateway.listAssignmentsForUser({
         companyId: input.companyId,
         userId: input.userId,
       }),
     ]);
+
+    const requestedScope =
+      input.permissionScope?.kind === 'node+descendants'
+        ? input.permissionScope.scope
+        : input.currentContext;
+    const lineage =
+      requestedScope === input.currentContext
+        ? activeLineage
+        : await scopeHierarchyGateway.getScopeLineage(
+            input.companyId,
+            requestedScope,
+          );
+
+    if (
+      input.permissionScope?.kind === 'node+descendants' &&
+      !scopeLineageContains(lineage, input.currentContext)
+    ) {
+      return [];
+    }
 
     const inScopeAssignments = assignments.filter((assignment) => {
       if (assignment.companyId !== input.companyId) {
@@ -46,7 +65,7 @@ export const createComputeEffectivePermissionsUseCase = ({
       };
 
       return assignment.mode === 'exact_node'
-        ? isSameScopeRef(assignmentScope, input.currentContext)
+        ? isSameScopeRef(assignmentScope, requestedScope)
         : scopeLineageContains(lineage, assignmentScope);
     });
 

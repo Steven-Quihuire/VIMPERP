@@ -32,6 +32,8 @@ const toScopeNode = (
 ): ApprovalPolicyScopeNode => ({
   id: row.id,
   companyId: row.companyId,
+  scopeType: row.nodeType,
+  sourceId: row.sourceId,
 });
 
 export const createDrizzleApprovalPolicyGateway = (

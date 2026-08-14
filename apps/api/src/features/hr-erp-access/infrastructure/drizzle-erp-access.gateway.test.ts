@@ -28,7 +28,7 @@ afterEach(async () => {
 const createDb = async () => {
   const database = await createMigrationTestDatabase();
   cleanups.push(database.cleanup);
-  await applyMigrationsThrough(database.pool, '0022_rrhh_foundation.sql');
+  await applyMigrationsThrough(database.pool, '0023_employee_master.sql');
 
   const db = drizzle(database.pool, {
     schema: await import('../../../shared/infrastructure/db/schema'),
