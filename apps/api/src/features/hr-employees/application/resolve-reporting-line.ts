@@ -13,18 +13,28 @@ export const createResolveReportingLineUseCase = ({
     companyId: string;
     employeeId: string;
   }): Promise<ReportingLineRecord | null> => {
-    const employee = await gateway.getEmployeeById(input.companyId, input.employeeId);
+    const employee = await gateway.getEmployeeById(
+      input.companyId,
+      input.employeeId,
+    );
 
     if (!employee) {
       throw new EmployeeNotFoundError();
     }
 
-    const activeAssignment = await gateway.getActivePrimaryAssignmentByEmployeeId(
-      input.companyId,
-      input.employeeId,
-    );
+    const activeAssignment =
+      await gateway.getActivePrimaryAssignmentByEmployeeId(
+        input.companyId,
+        input.employeeId,
+      );
 
-    if (!activeAssignment) {
+    if (
+      !activeAssignment ||
+      activeAssignment.companyId !== input.companyId ||
+      activeAssignment.employeeId !== input.employeeId ||
+      !activeAssignment.isPrimary ||
+      activeAssignment.endedAt !== null
+    ) {
       return null;
     }
 
@@ -33,16 +43,39 @@ export const createResolveReportingLineUseCase = ({
       activeAssignment.positionId,
     );
 
-    if (!employeePosition?.reportsToPositionId) {
+    if (
+      !employeePosition ||
+      employeePosition.companyId !== input.companyId ||
+      !employeePosition.reportsToPositionId
+    ) {
       return null;
     }
 
-    const managerAssignment = await gateway.getActivePrimaryAssignmentByPositionId(
+    const managerAssignment =
+      await gateway.getActivePrimaryAssignmentByPositionId(
+        input.companyId,
+        employeePosition.reportsToPositionId,
+      );
+
+    if (
+      !managerAssignment ||
+      managerAssignment.companyId !== input.companyId ||
+      !managerAssignment.isPrimary ||
+      managerAssignment.endedAt !== null
+    ) {
+      return null;
+    }
+
+    const manager = await gateway.getEmployeeById(
       input.companyId,
-      employeePosition.reportsToPositionId,
+      managerAssignment.employeeId,
+    );
+    const managerPosition = await gateway.getPositionById(
+      input.companyId,
+      managerAssignment.positionId,
     );
 
-    if (!managerAssignment) {
+    if (!manager || !managerPosition) {
       return null;
     }
 

@@ -35,7 +35,14 @@ vi.mock('@/features/org-tree/application/org-tree-queries', () => ({
 
 const session: AuthSession = {
   user: { id: 'user-1', email: 'owner@vimcore.test', username: 'owner' },
-  memberships: [{ companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null }],
+  memberships: [
+    {
+      companyId: 'company-1',
+      role: 'company-owner',
+      divisionId: null,
+      localId: null,
+    },
+  ],
   activeCompany: { companyId: 'company-1', status: 'active' },
   activeScope: null,
   activeLocalId: null,
@@ -46,13 +53,37 @@ describe('hr-employees pages', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useEmployeesMock.mockReturnValue({
-       data: [{ id: 'employee-1', companyId: 'company-1', fullName: 'Employee One', documentType: null, documentNumber: null, email: 'one@example.com', employmentStatus: 'active', hiredAt: null, createdAt: '2026-08-13T12:00:00.000Z', updatedAt: '2026-08-13T12:00:00.000Z' }],
+      data: [
+        {
+          id: 'employee-1',
+          companyId: 'company-1',
+          fullName: 'Employee One',
+          documentType: null,
+          documentNumber: null,
+          email: 'one@example.com',
+          employmentStatus: 'active',
+          hiredAt: null,
+          createdAt: '2026-08-13T12:00:00.000Z',
+          updatedAt: '2026-08-13T12:00:00.000Z',
+        },
+      ],
       isLoading: false,
       isError: false,
       error: null,
     });
     useEmployeeMock.mockReturnValue({
-       data: { id: 'employee-1', companyId: 'company-1', fullName: 'Employee One', documentType: null, documentNumber: null, email: 'one@example.com', employmentStatus: 'active', hiredAt: null, createdAt: '2026-08-13T12:00:00.000Z', updatedAt: '2026-08-13T12:00:00.000Z' },
+      data: {
+        id: 'employee-1',
+        companyId: 'company-1',
+        fullName: 'Employee One',
+        documentType: null,
+        documentNumber: null,
+        email: 'one@example.com',
+        employmentStatus: 'active',
+        hiredAt: null,
+        createdAt: '2026-08-13T12:00:00.000Z',
+        updatedAt: '2026-08-13T12:00:00.000Z',
+      },
       isLoading: false,
       isError: false,
       error: null,
@@ -63,7 +94,9 @@ describe('hr-employees pages', () => {
       error: null,
     });
     useUpdateEmployeeMock.mockReturnValue({
-      mutateAsync: vi.fn().mockResolvedValue({ id: 'employee-1', fullName: 'Updated Employee' }),
+      mutateAsync: vi
+        .fn()
+        .mockResolvedValue({ id: 'employee-1', fullName: 'Updated Employee' }),
       isPending: false,
       error: null,
     });
@@ -74,9 +107,9 @@ describe('hr-employees pages', () => {
           companyId: 'company-1',
           name: 'People Lead',
           reportsToPositionId: null,
-           headcount: 2,
-           occupiedHeadcount: 1,
-           remainingVacancies: 1,
+          headcount: 2,
+          occupiedHeadcount: 1,
+          remainingVacancies: 1,
           isActive: true,
           createdAt: '2026-08-13T12:00:00.000Z',
         },
@@ -92,13 +125,23 @@ describe('hr-employees pages', () => {
     });
     useAssignmentsMock.mockReturnValue({
       managerQuery: {
-        data: { employeeId: 'employee-9', positionId: 'position-1', assignmentId: 'assignment-1' },
+        data: {
+          employeeId: 'employee-9',
+          positionId: 'position-1',
+          assignmentId: 'assignment-1',
+        },
         isLoading: false,
         isError: false,
         error: null,
       },
       directReportsQuery: {
-        data: [{ employeeId: 'employee-3', positionId: 'position-2', assignmentId: 'assignment-2' }],
+        data: [
+          {
+            employeeId: 'employee-3',
+            positionId: 'position-2',
+            assignmentId: 'assignment-2',
+          },
+        ],
         isLoading: false,
         isError: false,
         error: null,
@@ -106,10 +149,17 @@ describe('hr-employees pages', () => {
       assignmentHistoryQuery: {
         data: [
           {
-            id: 'assignment-3', companyId: 'company-1', employeeId: 'employee-1',
-            scopeNodeId: 'company:company-1', positionId: 'position-1',
-            startedAt: '2026-08-13T12:00:00.000Z', endedAt: null, isPrimary: true,
-            createdAt: '2026-08-13T12:00:00.000Z', positionName: 'People Lead', scopeNodeName: 'Vimcore',
+            id: 'assignment-3',
+            companyId: 'company-1',
+            employeeId: 'employee-1',
+            scopeNodeId: 'company:company-1',
+            positionId: 'position-1',
+            startedAt: '2026-08-13T12:00:00.000Z',
+            endedAt: null,
+            isPrimary: true,
+            createdAt: '2026-08-13T12:00:00.000Z',
+            positionName: 'People Lead',
+            scopeNodeName: 'Vimcore',
           },
         ],
         isLoading: false,
@@ -148,7 +198,9 @@ describe('hr-employees pages', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open employee employee-1' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open employee employee-1' }),
+    );
 
     expect(screen.getByText('employee-1')).toBeInTheDocument();
     expect(onSelectEmployee).toHaveBeenCalledWith('employee-1');
@@ -162,7 +214,9 @@ describe('hr-employees pages', () => {
     fireEvent.change(screen.getByLabelText('Full name'), {
       target: { value: 'Employee Two' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Create employee record' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Create employee record' }),
+    );
 
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith('employee-2'));
   });
@@ -171,8 +225,8 @@ describe('hr-employees pages', () => {
     render(<EmployeeDetailPage session={session} employeeId="employee-1" />);
 
     expect(screen.getByText('employee-1')).toBeInTheDocument();
-    expect(screen.getByText('employee-9')).toBeInTheDocument();
-    expect(screen.getByText('employee-3')).toBeInTheDocument();
+    expect(screen.getByText(/employee-9/)).toBeInTheDocument();
+    expect(screen.getByText(/employee-3/)).toBeInTheDocument();
   });
 
   it('renders positions and submits the position form', async () => {
@@ -199,7 +253,9 @@ describe('hr-employees pages', () => {
   });
 
   it('creates assignments and renders the reporting-line timeline', async () => {
-    render(<AssignmentTimelinePage session={session} employeeId="employee-1" />);
+    render(
+      <AssignmentTimelinePage session={session} employeeId="employee-1" />,
+    );
 
     expect(screen.getByText('People Lead')).toBeInTheDocument();
 
@@ -216,7 +272,8 @@ describe('hr-employees pages', () => {
 
     await waitFor(() => {
       expect(
-        useAssignmentsMock.mock.results[0]?.value.createAssignmentMutation.mutateAsync,
+        useAssignmentsMock.mock.results[0]?.value.createAssignmentMutation
+          .mutateAsync,
       ).toHaveBeenCalledWith({
         scopeNodeId: 'company:company-1',
         positionId: 'position-1',

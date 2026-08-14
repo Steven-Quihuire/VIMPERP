@@ -121,10 +121,7 @@ export const divisionsTable = pgTable(
   },
   (table) => [
     uniqueIndex('divisions_id_company_idx').on(table.id, table.companyId),
-    uniqueIndex('divisions_company_name_idx').on(
-      table.companyId,
-      table.name,
-    ),
+    uniqueIndex('divisions_company_name_idx').on(table.companyId, table.name),
   ],
 );
 
@@ -239,9 +236,7 @@ export const roleAssignmentsTable = pgTable(
     scopeNodeId: text('scope_node_id')
       .notNull()
       .references(() => scopeNodesTable.id, { onDelete: 'restrict' }),
-    mode: roleAssignmentModeEnum('mode')
-      .notNull()
-      .default('subtree_inclusive'),
+    mode: roleAssignmentModeEnum('mode').notNull().default('subtree_inclusive'),
     scopeType: scopeNodeTypeEnum('scope_type').notNull(),
     scopeId: text('scope_id').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -249,7 +244,10 @@ export const roleAssignmentsTable = pgTable(
       .defaultNow(),
   },
   (table) => [
-    index('role_assignments_user_company_idx').on(table.userId, table.companyId),
+    index('role_assignments_user_company_idx').on(
+      table.userId,
+      table.companyId,
+    ),
     index('role_assignments_scope_node_idx').on(table.scopeNodeId),
     index('role_assignments_scope_idx').on(table.scopeType, table.scopeId),
     uniqueIndex('role_assignments_unique_scope_idx').on(
@@ -300,7 +298,11 @@ export const scopeNodesTable = pgTable(
       .defaultNow(),
   },
   (table) => [
-    uniqueIndex('scope_nodes_node_source_idx').on(table.nodeType, table.sourceId),
+    uniqueIndex('scope_nodes_node_source_idx').on(
+      table.nodeType,
+      table.sourceId,
+    ),
+    uniqueIndex('scope_nodes_id_company_idx').on(table.id, table.companyId),
     index('scope_nodes_company_idx').on(table.companyId),
     index('scope_nodes_parent_scope_node_idx').on(table.parentScopeNodeId),
   ],
@@ -374,15 +376,22 @@ export const nodeManagementInvitationsTable = pgTable(
       .defaultNow(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     acceptedAt: timestamp('accepted_at', { withTimezone: true }),
-    acceptedByUserId: text('accepted_by_user_id').references(() => usersTable.id, {
-      onDelete: 'restrict',
-    }),
+    acceptedByUserId: text('accepted_by_user_id').references(
+      () => usersTable.id,
+      {
+        onDelete: 'restrict',
+      },
+    ),
   },
   (table) => [
     index('node_management_invitations_company_idx').on(table.companyId),
     index('node_management_invitations_scope_node_idx').on(table.scopeNodeId),
-    uniqueIndex('node_management_invitations_token_hash_idx').on(table.tokenHash),
-    index('node_management_invitations_invitee_email_idx').on(table.inviteeEmail),
+    uniqueIndex('node_management_invitations_token_hash_idx').on(
+      table.tokenHash,
+    ),
+    index('node_management_invitations_invitee_email_idx').on(
+      table.inviteeEmail,
+    ),
     check(
       'node_management_invitations_acceptance_chk',
       sql`(${table.acceptedAt} IS NULL AND ${table.acceptedByUserId} IS NULL) OR (${table.acceptedAt} IS NOT NULL AND ${table.acceptedByUserId} IS NOT NULL)`,
@@ -579,7 +588,11 @@ export const employeesTable = pgTable(
   },
   (table) => [
     index('employees_company_idx').on(table.companyId),
-    index('employees_company_status_idx').on(table.companyId, table.employmentStatus),
+    index('employees_company_status_idx').on(
+      table.companyId,
+      table.employmentStatus,
+    ),
+    uniqueIndex('employees_id_company_idx').on(table.id, table.companyId),
     uniqueIndex('employees_company_document_idx')
       .on(table.companyId, table.documentType, table.documentNumber)
       .where(sql`${table.documentNumber} IS NOT NULL`),
@@ -616,6 +629,7 @@ export const positionsTable = pgTable(
     index('positions_company_idx').on(table.companyId),
     uniqueIndex('positions_company_name_idx').on(table.companyId, table.name),
     index('positions_reports_to_position_idx').on(table.reportsToPositionId),
+    uniqueIndex('positions_id_company_idx').on(table.id, table.companyId),
     check('positions_headcount_nonnegative_chk', sql`${table.headcount} >= 0`),
   ],
 );
@@ -648,6 +662,21 @@ export const employeeAssignmentsTable = pgTable(
     index('employee_assignments_employee_idx').on(table.employeeId),
     index('employee_assignments_scope_node_idx').on(table.scopeNodeId),
     index('employee_assignments_position_idx').on(table.positionId),
+    foreignKey({
+      columns: [table.employeeId, table.companyId],
+      foreignColumns: [employeesTable.id, employeesTable.companyId],
+      name: 'employee_assignments_employee_company_fk',
+    }),
+    foreignKey({
+      columns: [table.scopeNodeId, table.companyId],
+      foreignColumns: [scopeNodesTable.id, scopeNodesTable.companyId],
+      name: 'employee_assignments_scope_node_company_fk',
+    }),
+    foreignKey({
+      columns: [table.positionId, table.companyId],
+      foreignColumns: [positionsTable.id, positionsTable.companyId],
+      name: 'employee_assignments_position_company_fk',
+    }),
     uniqueIndex('employee_assignments_active_primary_idx')
       .on(table.employeeId)
       .where(sql`${table.endedAt} IS NULL AND ${table.isPrimary} = true`),
@@ -704,9 +733,12 @@ export const erpAccessInvitationsTable = pgTable(
       .defaultNow(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     acceptedAt: timestamp('accepted_at', { withTimezone: true }),
-    acceptedByUserId: text('accepted_by_user_id').references(() => usersTable.id, {
-      onDelete: 'restrict',
-    }),
+    acceptedByUserId: text('accepted_by_user_id').references(
+      () => usersTable.id,
+      {
+        onDelete: 'restrict',
+      },
+    ),
   },
   (table) => [
     index('erp_access_invitations_company_idx').on(table.companyId),

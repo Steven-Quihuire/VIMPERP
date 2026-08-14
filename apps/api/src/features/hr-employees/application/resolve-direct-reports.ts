@@ -13,18 +13,28 @@ export const createResolveDirectReportsUseCase = ({
     companyId: string;
     employeeId: string;
   }): Promise<ReportingLineRecord[]> => {
-    const employee = await gateway.getEmployeeById(input.companyId, input.employeeId);
+    const employee = await gateway.getEmployeeById(
+      input.companyId,
+      input.employeeId,
+    );
 
     if (!employee) {
       throw new EmployeeNotFoundError();
     }
 
-    const managerAssignment = await gateway.getActivePrimaryAssignmentByEmployeeId(
-      input.companyId,
-      input.employeeId,
-    );
+    const managerAssignment =
+      await gateway.getActivePrimaryAssignmentByEmployeeId(
+        input.companyId,
+        input.employeeId,
+      );
 
-    if (!managerAssignment) {
+    if (
+      !managerAssignment ||
+      managerAssignment.companyId !== input.companyId ||
+      managerAssignment.employeeId !== input.employeeId ||
+      !managerAssignment.isPrimary ||
+      managerAssignment.endedAt !== null
+    ) {
       return [];
     }
 
@@ -33,10 +43,33 @@ export const createResolveDirectReportsUseCase = ({
       managerAssignment.positionId,
     );
 
-    return directReports.map((assignment) => ({
-      employeeId: assignment.employeeId,
-      positionId: assignment.positionId,
-      assignmentId: assignment.id,
-    }));
+    const validDirectReports = await Promise.all(
+      directReports.map(async (assignment) => {
+        if (
+          assignment.companyId !== input.companyId ||
+          !assignment.isPrimary ||
+          assignment.endedAt !== null
+        ) {
+          return null;
+        }
+
+        const [employee, position] = await Promise.all([
+          gateway.getEmployeeById(input.companyId, assignment.employeeId),
+          gateway.getPositionById(input.companyId, assignment.positionId),
+        ]);
+
+        return employee && position
+          ? {
+              employeeId: assignment.employeeId,
+              positionId: assignment.positionId,
+              assignmentId: assignment.id,
+            }
+          : null;
+      }),
+    );
+
+    return validDirectReports.filter(
+      (report): report is NonNullable<typeof report> => report !== null,
+    );
   };
 };

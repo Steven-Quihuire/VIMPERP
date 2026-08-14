@@ -12,7 +12,10 @@ export const createEvaluateReportingLineScopes = ({
   erpAccessGateway: ErpAccessGateway;
 }): EvaluateReportingLineScopes => {
   return async ({ companyId, userId, currentContext }) => {
-    const activeLink = await erpAccessGateway.getActiveLinkByUserId(companyId, userId);
+    const activeLink = await erpAccessGateway.getActiveLinkByUserId(
+      companyId,
+      userId,
+    );
 
     if (!activeLink) {
       return { employeeIds: [], permissionKeys: [] };
@@ -25,10 +28,11 @@ export const createEvaluateReportingLineScopes = ({
       };
     }
 
-    const actorAssignment = await hrEmployeesGateway.getActivePrimaryAssignmentByEmployeeId(
-      companyId,
-      activeLink.employeeId,
-    );
+    const actorAssignment =
+      await hrEmployeesGateway.getActivePrimaryAssignmentByEmployeeId(
+        companyId,
+        activeLink.employeeId,
+      );
 
     if (!actorAssignment) {
       return { employeeIds: [], permissionKeys: [] };
@@ -39,9 +43,30 @@ export const createEvaluateReportingLineScopes = ({
       actorAssignment.positionId,
     );
 
+    const validDirectReports = await Promise.all(
+      directReports.map(async (assignment) => {
+        if (
+          assignment.companyId !== companyId ||
+          !assignment.isPrimary ||
+          assignment.endedAt !== null
+        ) {
+          return null;
+        }
+
+        return (await hrEmployeesGateway.getEmployeeById(
+          companyId,
+          assignment.employeeId,
+        ))
+          ? assignment.employeeId
+          : null;
+      }),
+    );
+
     return {
       employeeIds: uniqueEmployeeIds(
-        directReports.map((assignment) => assignment.employeeId),
+        validDirectReports.filter(
+          (employeeId): employeeId is string => employeeId !== null,
+        ),
       ),
       permissionKeys: ['hr.employees.read'],
     };

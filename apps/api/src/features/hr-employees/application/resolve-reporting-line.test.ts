@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { HrEmployeesGateway } from '../domain/employees';
+import { createResolveDirectReportsUseCase } from './resolve-direct-reports';
 import { createResolveReportingLineUseCase } from './resolve-reporting-line';
 
 const createGateway = (): HrEmployeesGateway => ({
@@ -37,9 +38,9 @@ const createGateway = (): HrEmployeesGateway => ({
         companyId: 'company-1',
         name: 'HR Analyst',
         reportsToPositionId: 'position-manager',
-    headcount: 1,
-    occupiedHeadcount: 0,
-    remainingVacancies: 1,
+        headcount: 1,
+        occupiedHeadcount: 0,
+        remainingVacancies: 1,
         isActive: true,
         createdAt: new Date('2026-08-13T10:00:00.000Z'),
       };
@@ -98,12 +99,150 @@ const createGateway = (): HrEmployeesGateway => ({
 });
 
 describe('createResolveReportingLineUseCase', () => {
+  it('returns the manager assigned to the position parent', async () => {
+    const baseGateway = createGateway();
+    const gateway: HrEmployeesGateway = {
+      ...baseGateway,
+      getEmployeeById: async (companyId, employeeId) => ({
+        id: employeeId,
+        companyId,
+        createdAt: new Date('2026-08-13T10:00:00.000Z'),
+      }),
+      getActivePrimaryAssignmentByPositionId: async () => ({
+        id: 'assignment-manager',
+        companyId: 'company-1',
+        employeeId: 'employee-manager',
+        scopeNodeId: 'area:area-1',
+        positionId: 'position-manager',
+        startedAt: new Date('2026-08-13T10:00:00.000Z'),
+        endedAt: null,
+        isPrimary: true,
+        createdAt: new Date('2026-08-13T10:00:00.000Z'),
+      }),
+    };
+
+    await expect(
+      createResolveReportingLineUseCase({ gateway })({
+        companyId: 'company-1',
+        employeeId: 'employee-1',
+      }),
+    ).resolves.toEqual({
+      employeeId: 'employee-manager',
+      positionId: 'position-manager',
+      assignmentId: 'assignment-manager',
+    });
+  });
+
   it('returns null when the parent position is vacant instead of treating org-node responsibility as the direct manager', async () => {
     const gateway = createGateway();
     const resolveReportingLine = createResolveReportingLineUseCase({ gateway });
 
     await expect(
-      resolveReportingLine({ companyId: 'company-1', employeeId: 'employee-1' }),
+      resolveReportingLine({
+        companyId: 'company-1',
+        employeeId: 'employee-1',
+      }),
     ).resolves.toBeNull();
+  });
+
+  it('returns no manager when the employee assignment is closed or belongs to another company', async () => {
+    const baseGateway = createGateway();
+    const resolveReportingLine = createResolveReportingLineUseCase({
+      gateway: {
+        ...baseGateway,
+        getActivePrimaryAssignmentByEmployeeId: async () => ({
+          id: 'closed-assignment',
+          companyId: 'company-2',
+          employeeId: 'employee-1',
+          scopeNodeId: 'area:area-1',
+          positionId: 'position-employee',
+          startedAt: new Date('2026-08-13T10:00:00.000Z'),
+          endedAt: new Date('2026-08-14T10:00:00.000Z'),
+          isPrimary: true,
+          createdAt: new Date('2026-08-13T10:00:00.000Z'),
+        }),
+      },
+    });
+
+    await expect(
+      resolveReportingLine({
+        companyId: 'company-1',
+        employeeId: 'employee-1',
+      }),
+    ).resolves.toBeNull();
+  });
+});
+
+describe('createResolveDirectReportsUseCase', () => {
+  it('returns only active primary assignments on child positions', async () => {
+    const baseGateway = createGateway();
+    const gateway: HrEmployeesGateway = {
+      ...baseGateway,
+      getEmployeeById: async (companyId, employeeId) => ({
+        id: employeeId,
+        companyId,
+        createdAt: new Date('2026-08-13T10:00:00.000Z'),
+      }),
+      getPositionById: async (companyId, positionId) => ({
+        id: positionId,
+        companyId,
+        name: positionId === 'position-manager' ? 'People Lead' : 'HR Analyst',
+        reportsToPositionId:
+          positionId === 'position-report' ? 'position-manager' : null,
+        headcount: 1,
+        occupiedHeadcount: 1,
+        remainingVacancies: 0,
+        isActive: true,
+        createdAt: new Date('2026-08-13T10:00:00.000Z'),
+      }),
+      getActivePrimaryAssignmentByEmployeeId: async () => ({
+        id: 'assignment-manager',
+        companyId: 'company-1',
+        employeeId: 'employee-manager',
+        scopeNodeId: 'area:area-1',
+        positionId: 'position-manager',
+        startedAt: new Date('2026-08-13T10:00:00.000Z'),
+        endedAt: null,
+        isPrimary: true,
+        createdAt: new Date('2026-08-13T10:00:00.000Z'),
+      }),
+      listDirectReportAssignments: async () => [
+        {
+          id: 'assignment-report',
+          companyId: 'company-1',
+          employeeId: 'employee-report',
+          scopeNodeId: 'area:area-1',
+          positionId: 'position-report',
+          startedAt: new Date('2026-08-13T10:00:00.000Z'),
+          endedAt: null,
+          isPrimary: true,
+          createdAt: new Date('2026-08-13T10:00:00.000Z'),
+        },
+        {
+          id: 'assignment-closed',
+          companyId: 'company-1',
+          employeeId: 'employee-closed',
+          scopeNodeId: 'area:area-1',
+          positionId: 'position-report',
+          startedAt: new Date('2026-08-13T10:00:00.000Z'),
+          endedAt: new Date('2026-08-14T10:00:00.000Z'),
+          isPrimary: true,
+          createdAt: new Date('2026-08-13T10:00:00.000Z'),
+        },
+      ],
+    };
+
+    await expect(
+      createResolveDirectReportsUseCase({ gateway })({
+        companyId: 'company-1',
+        employeeId: 'employee-manager',
+      }),
+    ).resolves.toEqual([
+      {
+        employeeId: 'employee-report',
+        positionId: 'position-report',
+        assignmentId: 'assignment-report',
+      },
+    ]);
   });
 });

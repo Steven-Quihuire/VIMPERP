@@ -22,18 +22,19 @@ import {
   type Position,
 } from '../domain/positions';
 
-const toEmployee = (row: typeof employeesTable.$inferSelect): Employee => ({
-  id: row.id,
-  companyId: row.companyId,
-  fullName: row.fullName,
-  documentType: row.documentType,
-  documentNumber: row.documentNumber,
-  email: row.email,
-  employmentStatus: row.employmentStatus as Employee['employmentStatus'],
-  hiredAt: row.hiredAt,
-  createdAt: row.createdAt,
-  updatedAt: row.updatedAt,
-}) as Employee;
+const toEmployee = (row: typeof employeesTable.$inferSelect): Employee =>
+  ({
+    id: row.id,
+    companyId: row.companyId,
+    fullName: row.fullName,
+    documentType: row.documentType,
+    documentNumber: row.documentNumber,
+    email: row.email,
+    employmentStatus: row.employmentStatus as Employee['employmentStatus'],
+    hiredAt: row.hiredAt,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }) as Employee;
 
 const isEmployeeDocumentConflict = (error: unknown) =>
   typeof error === 'object' &&
@@ -72,7 +73,9 @@ const toEmployeeAssignment = (
   createdAt: row.createdAt,
 });
 
-const toScopeNode = (row: typeof scopeNodesTable.$inferSelect): ScopeNodeRecord => ({
+const toScopeNode = (
+  row: typeof scopeNodesTable.$inferSelect,
+): ScopeNodeRecord => ({
   id: row.id,
   companyId: row.companyId,
   nodeType: row.nodeType,
@@ -123,7 +126,12 @@ export const createDrizzleHrEmployeesGateway = (
         const [existing] = await db
           .select()
           .from(employeesTable)
-          .where(and(eq(employeesTable.companyId, companyId), eq(employeesTable.id, employeeId)))
+          .where(
+            and(
+              eq(employeesTable.companyId, companyId),
+              eq(employeesTable.id, employeeId),
+            ),
+          )
           .limit(1);
         return existing ? toEmployee(existing) : null;
       }
@@ -159,13 +167,21 @@ export const createDrizzleHrEmployeesGateway = (
     const [row] = await db
       .select()
       .from(employeesTable)
-      .where(and(eq(employeesTable.companyId, companyId), eq(employeesTable.id, employeeId)))
+      .where(
+        and(
+          eq(employeesTable.companyId, companyId),
+          eq(employeesTable.id, employeeId),
+        ),
+      )
       .limit(1);
 
     return row ? toEmployee(row) : null;
   },
   listEmployees: async (companyId) => {
-    const rows = await db.select().from(employeesTable).where(eq(employeesTable.companyId, companyId));
+    const rows = await db
+      .select()
+      .from(employeesTable)
+      .where(eq(employeesTable.companyId, companyId));
     return rows.map(toEmployee);
   },
   createPosition: async (input) => {
@@ -188,42 +204,56 @@ export const createDrizzleHrEmployeesGateway = (
     const [row] = await db
       .select()
       .from(positionsTable)
-      .where(and(eq(positionsTable.companyId, companyId), eq(positionsTable.id, positionId)))
+      .where(
+        and(
+          eq(positionsTable.companyId, companyId),
+          eq(positionsTable.id, positionId),
+        ),
+      )
       .limit(1);
 
     return row
-      ? toPosition(row, await (async () => {
-          const assignments = await db
-            .select()
-            .from(employeeAssignmentsTable)
-            .where(
-              and(
-                eq(employeeAssignmentsTable.positionId, positionId),
-                eq(employeeAssignmentsTable.isPrimary, true),
-                isNull(employeeAssignmentsTable.endedAt),
-              ),
-            );
-          return assignments.length;
-        })())
+      ? toPosition(
+          row,
+          await (async () => {
+            const assignments = await db
+              .select()
+              .from(employeeAssignmentsTable)
+              .where(
+                and(
+                  eq(employeeAssignmentsTable.positionId, positionId),
+                  eq(employeeAssignmentsTable.isPrimary, true),
+                  isNull(employeeAssignmentsTable.endedAt),
+                ),
+              );
+            return assignments.length;
+          })(),
+        )
       : null;
   },
   listPositions: async (companyId) => {
-    const rows = await db.select().from(positionsTable).where(eq(positionsTable.companyId, companyId));
+    const rows = await db
+      .select()
+      .from(positionsTable)
+      .where(eq(positionsTable.companyId, companyId));
     return await Promise.all(
       rows.map(async (row) =>
-        toPosition(row, await (async () => {
-          const assignments = await db
-            .select()
-            .from(employeeAssignmentsTable)
-            .where(
-              and(
-                eq(employeeAssignmentsTable.positionId, row.id),
-                eq(employeeAssignmentsTable.isPrimary, true),
-                isNull(employeeAssignmentsTable.endedAt),
-              ),
-            );
-          return assignments.length;
-        })()),
+        toPosition(
+          row,
+          await (async () => {
+            const assignments = await db
+              .select()
+              .from(employeeAssignmentsTable)
+              .where(
+                and(
+                  eq(employeeAssignmentsTable.positionId, row.id),
+                  eq(employeeAssignmentsTable.isPrimary, true),
+                  isNull(employeeAssignmentsTable.endedAt),
+                ),
+              );
+            return assignments.length;
+          })(),
+        ),
       ),
     );
   },
@@ -245,7 +275,12 @@ export const createDrizzleHrEmployeesGateway = (
     const [row] = await db
       .select()
       .from(scopeNodesTable)
-      .where(and(eq(scopeNodesTable.companyId, companyId), eq(scopeNodesTable.id, scopeNodeId)))
+      .where(
+        and(
+          eq(scopeNodesTable.companyId, companyId),
+          eq(scopeNodesTable.id, scopeNodeId),
+        ),
+      )
       .limit(1);
 
     return row ? toScopeNode(row) : null;
@@ -256,7 +291,10 @@ export const createDrizzleHrEmployeesGateway = (
         .select()
         .from(positionsTable)
         .where(
-          and(eq(positionsTable.companyId, input.companyId), eq(positionsTable.id, input.positionId)),
+          and(
+            eq(positionsTable.companyId, input.companyId),
+            eq(positionsTable.id, input.positionId),
+          ),
         )
         .for('update')
         .limit(1);
@@ -365,6 +403,20 @@ export const createDrizzleHrEmployeesGateway = (
     const [row] = await db
       .select()
       .from(employeeAssignmentsTable)
+      .innerJoin(
+        employeesTable,
+        and(
+          eq(employeesTable.id, employeeAssignmentsTable.employeeId),
+          eq(employeesTable.companyId, employeeAssignmentsTable.companyId),
+        ),
+      )
+      .innerJoin(
+        positionsTable,
+        and(
+          eq(positionsTable.id, employeeAssignmentsTable.positionId),
+          eq(positionsTable.companyId, employeeAssignmentsTable.companyId),
+        ),
+      )
       .where(
         and(
           eq(employeeAssignmentsTable.companyId, companyId),
@@ -375,12 +427,26 @@ export const createDrizzleHrEmployeesGateway = (
       )
       .limit(1);
 
-    return row ? toEmployeeAssignment(row) : null;
+    return row ? toEmployeeAssignment(row.employee_assignments) : null;
   },
   getActivePrimaryAssignmentByPositionId: async (companyId, positionId) => {
     const [row] = await db
       .select()
       .from(employeeAssignmentsTable)
+      .innerJoin(
+        employeesTable,
+        and(
+          eq(employeesTable.id, employeeAssignmentsTable.employeeId),
+          eq(employeesTable.companyId, employeeAssignmentsTable.companyId),
+        ),
+      )
+      .innerJoin(
+        positionsTable,
+        and(
+          eq(positionsTable.id, employeeAssignmentsTable.positionId),
+          eq(positionsTable.companyId, employeeAssignmentsTable.companyId),
+        ),
+      )
       .where(
         and(
           eq(employeeAssignmentsTable.companyId, companyId),
@@ -391,24 +457,27 @@ export const createDrizzleHrEmployeesGateway = (
       )
       .limit(1);
 
-    return row ? toEmployeeAssignment(row) : null;
+    return row ? toEmployeeAssignment(row.employee_assignments) : null;
   },
   listDirectReportAssignments: async (companyId, managerPositionId) => {
-    const directReportPositions = await db
-      .select({ id: positionsTable.id })
-      .from(positionsTable)
-      .where(
-        and(
-          eq(positionsTable.companyId, companyId),
-          eq(positionsTable.reportsToPositionId, managerPositionId),
-        ),
-      );
-
-    const directReportPositionIds = new Set(directReportPositions.map((row) => row.id));
-
     const rows = await db
       .select()
       .from(employeeAssignmentsTable)
+      .innerJoin(
+        employeesTable,
+        and(
+          eq(employeesTable.id, employeeAssignmentsTable.employeeId),
+          eq(employeesTable.companyId, employeeAssignmentsTable.companyId),
+        ),
+      )
+      .innerJoin(
+        positionsTable,
+        and(
+          eq(positionsTable.id, employeeAssignmentsTable.positionId),
+          eq(positionsTable.companyId, employeeAssignmentsTable.companyId),
+          eq(positionsTable.reportsToPositionId, managerPositionId),
+        ),
+      )
       .where(
         and(
           eq(employeeAssignmentsTable.companyId, companyId),
@@ -417,8 +486,6 @@ export const createDrizzleHrEmployeesGateway = (
         ),
       );
 
-    return rows
-      .filter((row) => directReportPositionIds.has(row.positionId))
-      .map(toEmployeeAssignment);
+    return rows.map((row) => toEmployeeAssignment(row.employee_assignments));
   },
 });

@@ -11,7 +11,14 @@ const createHrEmployeesGateway = (): HrEmployeesGateway => ({
     createdAt: new Date('2026-08-13T10:00:00.000Z'),
   }),
   updateEmployee: async () => null,
-  getEmployeeById: async () => null,
+  getEmployeeById: async (_companyId, employeeId) =>
+    ['employee-1', 'employee-2', 'employee-3'].includes(employeeId)
+      ? {
+          id: employeeId,
+          companyId: 'company-1',
+          createdAt: new Date('2026-08-13T10:00:00.000Z'),
+        }
+      : null,
   listEmployees: async () => [],
   createPosition: async () => ({
     id: 'position-1',

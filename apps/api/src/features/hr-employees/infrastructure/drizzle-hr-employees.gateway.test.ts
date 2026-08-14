@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { drizzle } from 'drizzle-orm/node-postgres';
 
-import { applyMigrationsThrough, createMigrationTestDatabase } from '../../../db/migrations/__tests__/migration-test-helpers';
+import {
+  applyMigrationsThrough,
+  createMigrationTestDatabase,
+} from '../../../db/migrations/__tests__/migration-test-helpers';
 import type { AppDb } from '../../../shared/infrastructure/db/client';
 import {
   companiesTable,
@@ -25,7 +28,10 @@ afterEach(async () => {
 const createDb = async () => {
   const database = await createMigrationTestDatabase();
   cleanups.push(database.cleanup);
-  await applyMigrationsThrough(database.pool, '0023_employee_master.sql');
+  await applyMigrationsThrough(
+    database.pool,
+    '0024_hr_reporting_line_integrity.sql',
+  );
 
   const db = drizzle(database.pool, {
     schema: await import('../../../shared/infrastructure/db/schema'),
@@ -98,7 +104,10 @@ describe('createDrizzleHrEmployeesGateway', () => {
       hiredAt: now,
     });
 
-    expect(manager).toMatchObject({ fullName: 'People Manager', employmentStatus: 'active' });
+    expect(manager).toMatchObject({
+      fullName: 'People Manager',
+      employmentStatus: 'active',
+    });
     await expect(
       gateway.updateEmployee('company-1', manager.id, {
         fullName: 'People Manager Updated',
@@ -151,7 +160,9 @@ describe('createDrizzleHrEmployeesGateway', () => {
       createdAt: now,
     });
 
-    await expect(gateway.countActivePrimaryAssignmentsForPosition(analystPosition.id)).resolves.toBe(1);
+    await expect(
+      gateway.countActivePrimaryAssignmentsForPosition(analystPosition.id),
+    ).resolves.toBe(1);
     await expect(gateway.listPositions('company-1')).resolves.toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -162,19 +173,29 @@ describe('createDrizzleHrEmployeesGateway', () => {
       ]),
     );
     await expect(
-      gateway.getActivePrimaryAssignmentByEmployeeId('company-1', directReport.id),
-    ).resolves.toMatchObject({ id: employeeAssignment.id, positionId: analystPosition.id });
+      gateway.getActivePrimaryAssignmentByEmployeeId(
+        'company-1',
+        directReport.id,
+      ),
+    ).resolves.toMatchObject({
+      id: employeeAssignment.id,
+      positionId: analystPosition.id,
+    });
 
-    const managerAssignment = await gateway.getActivePrimaryAssignmentByPositionId(
-      'company-1',
-      leadPosition.id,
-    );
+    const managerAssignment =
+      await gateway.getActivePrimaryAssignmentByPositionId(
+        'company-1',
+        leadPosition.id,
+      );
     expect(managerAssignment).toMatchObject({ employeeId: manager.id });
 
     await expect(
       gateway.listDirectReportAssignments('company-1', leadPosition.id),
     ).resolves.toEqual([
-      expect.objectContaining({ employeeId: directReport.id, positionId: analystPosition.id }),
+      expect.objectContaining({
+        employeeId: directReport.id,
+        positionId: analystPosition.id,
+      }),
     ]);
 
     const replacementAssignment = await gateway.createAssignment({
@@ -186,7 +207,9 @@ describe('createDrizzleHrEmployeesGateway', () => {
       isPrimary: true,
       createdAt: now,
     });
-    await expect(gateway.listAssignmentHistory('company-1', directReport.id)).resolves.toEqual([
+    await expect(
+      gateway.listAssignmentHistory('company-1', directReport.id),
+    ).resolves.toEqual([
       expect.objectContaining({
         id: employeeAssignment.id,
         positionName: 'HR Analyst',
