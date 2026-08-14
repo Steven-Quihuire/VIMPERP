@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 
 import { chromium, defineConfig } from '@playwright/test';
 
-const databaseUrl = 'postgres://postgres:postgres@127.0.0.1:5432/vimcore';
+const databaseUrl = 'postgres://postgres:postgres@127.0.0.1:5432/vimcore_e2e';
 const executablePath =
   process.env.PLAYWRIGHT_EXECUTABLE_PATH ??
   [
@@ -34,9 +34,11 @@ export default defineConfig({
         startPostgres +
         'DATABASE_URL="' +
         databaseUrl +
-        '" pnpm --filter api exec drizzle-kit migrate && DATABASE_URL="' +
+        '" pnpm --dir apps/api exec tsx src/testing/reset-e2e-database.ts && DATABASE_URL="' +
         databaseUrl +
-        '" HOST=127.0.0.1 PORT=3000 NODE_ENV=development SEED_ADMIN_ENABLED=true pnpm --filter api exec tsx src/main.ts',
+        '" pnpm --dir apps/api exec drizzle-kit migrate --config drizzle.config.ts && DATABASE_URL="' +
+        databaseUrl +
+        '" HOST=127.0.0.1 PORT=3000 NODE_ENV=development SEED_ADMIN_ENABLED=true pnpm --dir apps/api exec tsx src/main.ts',
       url: 'http://127.0.0.1:3000/health',
       reuseExistingServer: !process.env.CI,
       stdout: 'pipe',

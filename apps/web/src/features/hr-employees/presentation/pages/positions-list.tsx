@@ -50,6 +50,8 @@ export const PositionsListPage = ({
           <TableRow>
             <TableHead>Position</TableHead>
             <TableHead>Headcount</TableHead>
+            <TableHead>Occupied</TableHead>
+            <TableHead>Vacancies</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Action</TableHead>
           </TableRow>
@@ -62,6 +64,8 @@ export const PositionsListPage = ({
                 <div className="text-xs text-muted-foreground">{position.id}</div>
               </TableCell>
               <TableCell>{position.headcount}</TableCell>
+              <TableCell>{position.occupiedHeadcount}</TableCell>
+              <TableCell>{position.remainingVacancies}</TableCell>
               <TableCell>
                 <Badge variant={position.isActive ? 'secondary' : 'outline'}>
                   {position.isActive ? 'Active' : 'Inactive'}

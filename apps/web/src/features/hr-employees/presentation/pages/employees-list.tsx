@@ -1,4 +1,5 @@
 import type { AuthSession } from '@/features/auth/domain/auth';
+import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
@@ -48,6 +49,7 @@ export const EmployeesListPage = ({
         <TableHeader>
           <TableRow>
             <TableHead>Employee</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead>Created at</TableHead>
             <TableHead className="text-right">Action</TableHead>
           </TableRow>
@@ -55,7 +57,15 @@ export const EmployeesListPage = ({
         <TableBody>
           {employees.map((employee) => (
             <TableRow key={employee.id} data-state={selectedEmployeeId === employee.id ? 'selected' : undefined}>
-              <TableCell className="font-medium">{employee.id}</TableCell>
+              <TableCell>
+                <div className="font-medium">{employee.fullName || employee.id}</div>
+                <div className="text-xs text-muted-foreground">{employee.id}</div>
+              </TableCell>
+              <TableCell>
+                <Badge variant={employee.employmentStatus === 'active' ? 'secondary' : 'outline'}>
+                  {employee.employmentStatus}
+                </Badge>
+              </TableCell>
               <TableCell>{new Date(employee.createdAt).toLocaleString('en-US')}</TableCell>
               <TableCell className="text-right">
                 <Button type="button" variant="ghost" onClick={() => onSelectEmployee?.(employee.id)} aria-label={`Open employee ${employee.id}`}>

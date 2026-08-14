@@ -1,7 +1,41 @@
+export const employmentStatusValues = ['active', 'suspended', 'separated'] as const;
+export type EmploymentStatus = (typeof employmentStatusValues)[number];
+
+export type EmployeeIdentityInput = {
+  fullName: string;
+  documentType: string | null;
+  documentNumber: string | null;
+  email: string | null;
+  employmentStatus: EmploymentStatus;
+  hiredAt: Date | null;
+};
+
 export type Employee = {
   id: string;
   companyId: string;
+  fullName?: string;
+  documentType?: string | null;
+  documentNumber?: string | null;
+  email?: string | null;
+  employmentStatus?: EmploymentStatus;
+  hiredAt?: Date | null;
   createdAt: Date;
+  updatedAt?: Date;
+};
+
+export const assertValidEmployeeIdentity = (input: EmployeeIdentityInput) => {
+  if (!input.fullName.trim()) {
+    throw new EmployeeValidationError('Employee full name is required.');
+  }
+
+  const hasDocumentType = input.documentType !== null;
+  const hasDocumentNumber = input.documentNumber !== null;
+
+  if (hasDocumentType !== hasDocumentNumber) {
+    throw new EmployeeValidationError(
+      'Document type and document number must be provided together.',
+    );
+  }
 };
 
 export type ScopeNodeRecord = {
@@ -14,11 +48,11 @@ export type ScopeNodeRecord = {
 };
 
 export type HrEmployeesGateway = {
-  createEmployee: (input: { companyId: string }) => Promise<Employee>;
+  createEmployee: (input: { companyId: string } & Partial<EmployeeIdentityInput>) => Promise<Employee>;
   updateEmployee: (
     companyId: string,
     employeeId: string,
-    input?: Record<string, never>,
+    input?: EmployeeIdentityInput,
   ) => Promise<Employee | null>;
   getEmployeeById: (companyId: string, employeeId: string) => Promise<Employee | null>;
   listEmployees: (companyId: string) => Promise<Employee[]>;
@@ -68,6 +102,24 @@ export class EmployeeNotFoundError extends Error {
   constructor(message = 'Employee not found.') {
     super(message);
     this.name = 'EmployeeNotFoundError';
+  }
+}
+
+export class EmployeeValidationError extends Error {
+  readonly code = 'HR_EMPLOYEE_VALIDATION';
+
+  constructor(message = 'Employee data is invalid.') {
+    super(message);
+    this.name = 'EmployeeValidationError';
+  }
+}
+
+export class EmployeeDocumentConflictError extends Error {
+  readonly code = 'HR_EMPLOYEE_DOCUMENT_CONFLICT';
+
+  constructor(message = 'Another employee already uses this document identity.') {
+    super(message);
+    this.name = 'EmployeeDocumentConflictError';
   }
 }
 

@@ -10,21 +10,50 @@ import {
   scopeNodesTable,
 } from '../../../shared/infrastructure/db/schema';
 import type { EmployeeAssignment } from '../domain/employee-assignments';
-import type { Employee, HrEmployeesGateway, ScopeNodeRecord } from '../domain/employees';
-import type { Position } from '../domain/positions';
+import {
+  EmployeeDocumentConflictError,
+  type Employee,
+  type HrEmployeesGateway,
+  type ScopeNodeRecord,
+} from '../domain/employees';
+import {
+  PositionHeadcountExceededError,
+  PositionNotFoundError,
+  type Position,
+} from '../domain/positions';
 
 const toEmployee = (row: typeof employeesTable.$inferSelect): Employee => ({
   id: row.id,
   companyId: row.companyId,
+  fullName: row.fullName,
+  documentType: row.documentType,
+  documentNumber: row.documentNumber,
+  email: row.email,
+  employmentStatus: row.employmentStatus as Employee['employmentStatus'],
+  hiredAt: row.hiredAt,
   createdAt: row.createdAt,
-});
+  updatedAt: row.updatedAt,
+}) as Employee;
 
-const toPosition = (row: typeof positionsTable.$inferSelect): Position => ({
+const isEmployeeDocumentConflict = (error: unknown) =>
+  typeof error === 'object' &&
+  error !== null &&
+  'code' in error &&
+  error.code === '23505' &&
+  'constraint' in error &&
+  error.constraint === 'employees_company_document_idx';
+
+const toPosition = (
+  row: typeof positionsTable.$inferSelect,
+  occupiedHeadcount: number,
+): Position => ({
   id: row.id,
   companyId: row.companyId,
   name: row.name,
   reportsToPositionId: row.reportsToPositionId,
   headcount: row.headcount,
+  occupiedHeadcount,
+  remainingVacancies: row.headcount - occupiedHeadcount,
   isActive: row.isActive,
   createdAt: row.createdAt,
 });
@@ -62,22 +91,69 @@ export const createDrizzleHrEmployeesGateway = (
     now?: () => Date;
   } = {},
 ): HrEmployeesGateway => ({
-  createEmployee: async ({ companyId }) => {
-    const [row] = await db
-      .insert(employeesTable)
-      .values({ id: createId(), companyId, createdAt: now() })
-      .returning();
+  createEmployee: async (input) => {
+    try {
+      const [row] = await db
+        .insert(employeesTable)
+        .values({
+          id: createId(),
+          companyId: input.companyId,
+          fullName: input.fullName,
+          documentType: input.documentType,
+          documentNumber: input.documentNumber,
+          email: input.email,
+          employmentStatus: input.employmentStatus,
+          hiredAt: input.hiredAt,
+          createdAt: now(),
+          updatedAt: now(),
+        })
+        .returning();
 
-    return toEmployee(row!);
+      return toEmployee(row!);
+    } catch (error) {
+      if (isEmployeeDocumentConflict(error)) {
+        throw new EmployeeDocumentConflictError();
+      }
+      throw error;
+    }
   },
-  updateEmployee: async (companyId, employeeId) => {
-    const [row] = await db
-      .select()
-      .from(employeesTable)
-      .where(and(eq(employeesTable.companyId, companyId), eq(employeesTable.id, employeeId)))
-      .limit(1);
+  updateEmployee: async (companyId, employeeId, input) => {
+    try {
+      if (!input) {
+        const [existing] = await db
+          .select()
+          .from(employeesTable)
+          .where(and(eq(employeesTable.companyId, companyId), eq(employeesTable.id, employeeId)))
+          .limit(1);
+        return existing ? toEmployee(existing) : null;
+      }
 
-    return row ? toEmployee(row) : null;
+      const [row] = await db
+        .update(employeesTable)
+        .set({
+          fullName: input.fullName,
+          documentType: input.documentType,
+          documentNumber: input.documentNumber,
+          email: input.email,
+          employmentStatus: input.employmentStatus,
+          hiredAt: input.hiredAt,
+          updatedAt: now(),
+        })
+        .where(
+          and(
+            eq(employeesTable.companyId, companyId),
+            eq(employeesTable.id, employeeId),
+          ),
+        )
+        .returning();
+
+      return row ? toEmployee(row) : null;
+    } catch (error) {
+      if (isEmployeeDocumentConflict(error)) {
+        throw new EmployeeDocumentConflictError();
+      }
+      throw error;
+    }
   },
   getEmployeeById: async (companyId, employeeId) => {
     const [row] = await db
@@ -106,7 +182,7 @@ export const createDrizzleHrEmployeesGateway = (
       })
       .returning();
 
-    return toPosition(row!);
+    return toPosition(row!, 0);
   },
   getPositionById: async (companyId, positionId) => {
     const [row] = await db
@@ -115,11 +191,41 @@ export const createDrizzleHrEmployeesGateway = (
       .where(and(eq(positionsTable.companyId, companyId), eq(positionsTable.id, positionId)))
       .limit(1);
 
-    return row ? toPosition(row) : null;
+    return row
+      ? toPosition(row, await (async () => {
+          const assignments = await db
+            .select()
+            .from(employeeAssignmentsTable)
+            .where(
+              and(
+                eq(employeeAssignmentsTable.positionId, positionId),
+                eq(employeeAssignmentsTable.isPrimary, true),
+                isNull(employeeAssignmentsTable.endedAt),
+              ),
+            );
+          return assignments.length;
+        })())
+      : null;
   },
   listPositions: async (companyId) => {
     const rows = await db.select().from(positionsTable).where(eq(positionsTable.companyId, companyId));
-    return rows.map(toPosition);
+    return await Promise.all(
+      rows.map(async (row) =>
+        toPosition(row, await (async () => {
+          const assignments = await db
+            .select()
+            .from(employeeAssignmentsTable)
+            .where(
+              and(
+                eq(employeeAssignmentsTable.positionId, row.id),
+                eq(employeeAssignmentsTable.isPrimary, true),
+                isNull(employeeAssignmentsTable.endedAt),
+              ),
+            );
+          return assignments.length;
+        })()),
+      ),
+    );
   },
   countActivePrimaryAssignmentsForPosition: async (positionId) => {
     const rows = await db
@@ -146,6 +252,49 @@ export const createDrizzleHrEmployeesGateway = (
   },
   createAssignment: async (input) => {
     return await db.transaction(async (tx) => {
+      const [position] = await tx
+        .select()
+        .from(positionsTable)
+        .where(
+          and(eq(positionsTable.companyId, input.companyId), eq(positionsTable.id, input.positionId)),
+        )
+        .for('update')
+        .limit(1);
+
+      if (!position) {
+        throw new PositionNotFoundError();
+      }
+
+      const [currentAssignment] = await tx
+        .select()
+        .from(employeeAssignmentsTable)
+        .where(
+          and(
+            eq(employeeAssignmentsTable.companyId, input.companyId),
+            eq(employeeAssignmentsTable.employeeId, input.employeeId),
+            eq(employeeAssignmentsTable.isPrimary, true),
+            isNull(employeeAssignmentsTable.endedAt),
+          ),
+        )
+        .limit(1);
+      const activeAssignments = await tx
+        .select()
+        .from(employeeAssignmentsTable)
+        .where(
+          and(
+            eq(employeeAssignmentsTable.positionId, input.positionId),
+            eq(employeeAssignmentsTable.isPrimary, true),
+            isNull(employeeAssignmentsTable.endedAt),
+          ),
+        );
+
+      if (
+        currentAssignment?.positionId !== input.positionId &&
+        activeAssignments.length >= position.headcount
+      ) {
+        throw new PositionHeadcountExceededError();
+      }
+
       await tx
         .update(employeeAssignmentsTable)
         .set({ endedAt: input.startedAt })

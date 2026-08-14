@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   PositionHeadcountExceededError,
+  PositionHierarchyError,
   assertValidPositionHierarchy,
   calculatePositionVacancy,
 } from '../positions';
@@ -14,6 +15,15 @@ describe('hr employee positions domain', () => {
         reportsToPositionId: null,
       }),
     ).toBeUndefined();
+  });
+
+  it('rejects a position that reports to itself', () => {
+    expect(() =>
+      assertValidPositionHierarchy({
+        positionId: 'position-1',
+        reportsToPositionId: 'position-1',
+      }),
+    ).toThrow(PositionHierarchyError);
   });
 
   it('exposes occupied headcount and remaining vacancies from active staffing', () => {

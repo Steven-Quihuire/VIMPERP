@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 
 import { expect, test } from '@playwright/test';
 
-const databaseUrl = 'postgres://postgres:postgres@127.0.0.1:5432/vimcore';
+const databaseUrl = 'postgres://postgres:postgres@127.0.0.1:5432/vimcore_e2e';
 const pnpmCommand = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 
 const runtime = {
@@ -45,6 +45,7 @@ test('supports the RRHH happy path from position setup to ERP invite acceptance 
   await page.goto('/dashboard/hr/positions');
 
   await expect(page.getByRole('heading', { name: 'HR positions' })).toBeVisible();
+  const createPositionButton = page.getByRole('button', { name: 'Create position' });
 
   const createLeadPositionResponsePromise = page.waitForResponse((response) =>
     response.url().endsWith(`/companies/${runtime.companyId}/hr-employees/positions`) &&
@@ -52,10 +53,12 @@ test('supports the RRHH happy path from position setup to ERP invite acceptance 
   );
   await page.getByLabel('Position name').fill('People Lead');
   await page.getByLabel('Headcount').fill('1');
-  await page.getByRole('button', { name: 'Create position' }).click();
+  await createPositionButton.click();
   const leadPosition = (await (await createLeadPositionResponsePromise).json()) as {
     id: string;
   };
+  await expect(createPositionButton).toBeEnabled();
+  await expect(page.getByLabel('Position name')).toHaveValue('');
 
   const createAnalystPositionResponsePromise = page.waitForResponse((response) =>
     response.url().endsWith(`/companies/${runtime.companyId}/hr-employees/positions`) &&
@@ -64,28 +67,32 @@ test('supports the RRHH happy path from position setup to ERP invite acceptance 
   await page.getByLabel('Position name').fill('HR Analyst');
   await page.getByLabel('Reports to position').fill(leadPosition.id);
   await page.getByLabel('Headcount').fill('1');
-  await page.getByRole('button', { name: 'Create position' }).click();
+  await createPositionButton.click();
   const analystPosition = (await (await createAnalystPositionResponsePromise).json()) as {
     id: string;
   };
 
   await page.goto('/dashboard/hr/employees');
   await expect(page.getByRole('heading', { name: 'HR employees' })).toBeVisible();
+  const createEmployeeButton = page.getByRole('button', { name: 'Create employee record' });
 
   const createLeadEmployeeResponsePromise = page.waitForResponse((response) =>
     response.url().endsWith(`/companies/${runtime.companyId}/hr-employees`) &&
     response.request().method() === 'POST',
   );
-  await page.getByRole('button', { name: 'Create employee record' }).click();
+  await page.getByLabel('Full name').fill('People Lead Employee');
+  await createEmployeeButton.click();
   const leadEmployee = (await (await createLeadEmployeeResponsePromise).json()) as {
     id: string;
   };
+  await expect(createEmployeeButton).toBeEnabled();
 
   const createAnalystEmployeeResponsePromise = page.waitForResponse((response) =>
     response.url().endsWith(`/companies/${runtime.companyId}/hr-employees`) &&
     response.request().method() === 'POST',
   );
-  await page.getByRole('button', { name: 'Create employee record' }).click();
+  await page.getByLabel('Full name').fill('HR Analyst Employee');
+  await createEmployeeButton.click();
   const analystEmployee = (await (await createAnalystEmployeeResponsePromise).json()) as {
     id: string;
   };
@@ -98,16 +105,30 @@ test('supports the RRHH happy path from position setup to ERP invite acceptance 
   ).toBeVisible();
 
   await page.getByRole('button', { name: `Open employee ${leadEmployee.id}` }).click();
+  const createAssignmentButton = page.getByRole('button', { name: 'Create assignment' });
+  const createLeadAssignmentResponsePromise = page.waitForResponse((response) =>
+    response.url().endsWith(
+      `/companies/${runtime.companyId}/hr-employees/${leadEmployee.id}/assignments`,
+    ) && response.request().method() === 'POST',
+  );
   await page.getByLabel('Scope node').fill(runtime.companyScopeNodeId);
   await page.getByLabel('Position').fill(leadPosition.id);
   await page.getByLabel('Start date').fill('2026-08-13T12:30');
-  await page.getByRole('button', { name: 'Create assignment' }).click();
+  await createAssignmentButton.click();
+  await createLeadAssignmentResponsePromise;
+  await expect(createAssignmentButton).toBeEnabled();
 
   await page.getByRole('button', { name: `Open employee ${analystEmployee.id}` }).click();
+  const createAnalystAssignmentResponsePromise = page.waitForResponse((response) =>
+    response.url().endsWith(
+      `/companies/${runtime.companyId}/hr-employees/${analystEmployee.id}/assignments`,
+    ) && response.request().method() === 'POST',
+  );
   await page.getByLabel('Scope node').fill(runtime.companyScopeNodeId);
   await page.getByLabel('Position').fill(analystPosition.id);
   await page.getByLabel('Start date').fill('2026-08-13T12:45');
-  await page.getByRole('button', { name: 'Create assignment' }).click();
+  await createAssignmentButton.click();
+  await createAnalystAssignmentResponsePromise;
 
   await expect(page.getByText(leadEmployee.id)).toBeVisible();
 

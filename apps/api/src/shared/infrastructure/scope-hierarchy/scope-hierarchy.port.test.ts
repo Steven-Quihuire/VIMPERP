@@ -90,6 +90,17 @@ describe('createInMemoryScopeResolver', () => {
     ]);
   });
 
+  it('returns only the company node when the requested lineage starts at the root', async () => {
+    const resolver = createInMemoryScopeResolver({ nodes, assignments });
+
+    await expect(
+      resolver.getLineage('company-a', {
+        scopeType: 'company',
+        scopeId: 'company-a',
+      }),
+    ).resolves.toEqual([{ scopeType: 'company', scopeId: 'company-a' }]);
+  });
+
   it('honors subtree_inclusive and exact_node authorization semantics', async () => {
     const resolver = createInMemoryScopeResolver({ nodes, assignments });
 

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import type { Pool } from 'pg';
 
@@ -8,26 +8,17 @@ import {
 } from '../../../db/migrations/__tests__/migration-test-helpers';
 import type { AppDb } from '../../../shared/infrastructure/db/client';
 import {
+  approvalPoliciesTable,
   companiesTable,
   scopeNodesTable,
 } from '../../../shared/infrastructure/db/schema';
 import { createDrizzleApprovalPolicyGateway } from './drizzle-approval-policy.gateway';
 
-const cleanups: Array<() => Promise<void>> = [];
-
-afterEach(async () => {
-  while (cleanups.length > 0) {
-    const cleanup = cleanups.pop();
-
-    if (cleanup) {
-      await cleanup();
-    }
-  }
-});
+let db: AppDb;
+let cleanup: (() => Promise<void>) | undefined;
 
 const createDb = async () => {
   const database = await createMigrationTestDatabase();
-  cleanups.push(database.cleanup);
   await applyMigrationsThrough(database.pool, '0022_rrhh_foundation.sql');
 
   const pool: Pool = database.pool;
@@ -35,12 +26,27 @@ const createDb = async () => {
     schema: await import('../../../shared/infrastructure/db/schema'),
   }) as AppDb;
 
-  return { db };
+  return { db, cleanup: database.cleanup };
 };
 
 describe('createDrizzleApprovalPolicyGateway', () => {
+  beforeAll(async () => {
+    const database = await createDb();
+    db = database.db;
+    cleanup = database.cleanup;
+  });
+
+  beforeEach(async () => {
+    await db.delete(approvalPoliciesTable);
+    await db.delete(scopeNodesTable);
+    await db.delete(companiesTable);
+  });
+
+  afterAll(async () => {
+    await cleanup?.();
+  });
+
   it('persists and updates approval policies for company and node scopes', async () => {
-    const { db } = await createDb();
     const now = new Date('2026-08-13T12:00:00.000Z');
 
     await db.insert(companiesTable).values({
@@ -107,7 +113,6 @@ describe('createDrizzleApprovalPolicyGateway', () => {
   });
 
   it('deactivates approval policies without deleting the record', async () => {
-    const { db } = await createDb();
     const now = new Date('2026-08-13T12:00:00.000Z');
 
     await db.insert(companiesTable).values({

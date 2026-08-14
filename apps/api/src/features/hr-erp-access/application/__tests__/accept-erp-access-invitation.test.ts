@@ -12,6 +12,7 @@ import type {
 } from '../../domain/erp-access-invitations';
 import {
   ErpAccessInvitationExpiredError,
+  ErpAccessInvitationNotFoundError,
   ErpAccessInvitationPasswordRequiredError,
 } from '../../domain/erp-access-invitations';
 import { ErpAccessLinkConflictError } from '../../domain/erp-access-links';
@@ -321,6 +322,21 @@ describe('hr-erp-access application', () => {
     );
   });
 
+  it('denies ERP access when no invitation token exists for the employee', async () => {
+    const gateway = new InMemoryErpAccessGateway();
+    const acceptInvitation = createAcceptErpAccessInvitationUseCase({
+      gateway,
+      passwordHasher,
+      sessionTokenService,
+      now: () => new Date('2026-08-13T12:00:00.000Z'),
+      createUserId: () => 'user-1',
+    });
+
+    await expect(
+      acceptInvitation({ token: 'missing-token', password: 'secret123' }),
+    ).rejects.toBeInstanceOf(ErpAccessInvitationNotFoundError);
+  });
+
   it('revokes active access without deleting the employee identity', async () => {
     const gateway = new InMemoryErpAccessGateway();
     gateway.activeLinkByEmployeeId = {
@@ -349,6 +365,54 @@ describe('hr-erp-access application', () => {
       employeeId: 'employee-1',
       isActive: false,
       revokedAt: new Date('2026-08-13T12:00:00.000Z'),
+    });
+  });
+
+  it('reuses the existing employee identity when the company re-invites after revocation', async () => {
+    const gateway = new InMemoryErpAccessGateway();
+    gateway.employees = [
+      {
+        id: 'employee-1',
+        companyId: 'company-1',
+        createdAt: new Date('2026-08-13T10:00:00.000Z'),
+      },
+    ];
+    gateway.userByEmail = {
+      id: 'user-1',
+      email: 'new.user@vimcore.test',
+      username: 'new.user',
+      passwordHash: 'hashed:existing',
+    };
+    gateway.invitations = [
+      {
+        id: 'inv-reinvite',
+        companyId: 'company-1',
+        employeeId: 'employee-1',
+        inviteeEmail: 'new.user@vimcore.test',
+        tokenHash: hashErpAccessInvitationToken('reinvite-token'),
+        createdByUserId: 'owner-1',
+        createdAt: new Date('2026-08-14T10:00:00.000Z'),
+        expiresAt: new Date('2026-08-21T10:00:00.000Z'),
+        acceptedAt: null,
+        acceptedByUserId: null,
+      },
+    ];
+
+    const acceptInvitation = createAcceptErpAccessInvitationUseCase({
+      gateway,
+      passwordHasher,
+      sessionTokenService,
+      now: () => new Date('2026-08-14T12:00:00.000Z'),
+      createUserId: () => 'new-user-id-should-not-be-used',
+    });
+
+    await expect(acceptInvitation({ token: 'reinvite-token' })).resolves.toEqual({
+      token: 'session-token',
+    });
+    expect(gateway.acceptedInput).toMatchObject({
+      employeeId: 'employee-1',
+      acceptedByUserId: 'user-1',
+      user: null,
     });
   });
 });

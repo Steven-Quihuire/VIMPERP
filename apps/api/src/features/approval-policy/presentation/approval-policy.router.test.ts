@@ -374,4 +374,32 @@ describe('approval policy router', () => {
 
     expect(response.status).toBe(403);
   });
+
+  it('treats approval policies as configuration groundwork even when no workflow engine exists', async () => {
+    const { app, ownerSessionCookie } = await createAuthenticatedApp();
+
+    const createResponse = await request(app)
+      .post('/companies/company-a/approval-policies')
+      .set('Cookie', ownerSessionCookie)
+      .send({
+        scopeType: 'company',
+        scopeNodeId: null,
+        name: 'Groundwork Only',
+        definition: { steps: [] },
+      });
+
+    expect(createResponse.status).toBe(201);
+
+    const getResponse = await request(app)
+      .get(`/companies/company-a/approval-policies/${createResponse.body.id}`)
+      .set('Cookie', ownerSessionCookie);
+
+    expect(getResponse.status).toBe(200);
+    expect(getResponse.body).toMatchObject({
+      id: createResponse.body.id,
+      name: 'Groundwork Only',
+      definition: { steps: [] },
+      isActive: true,
+    });
+  });
 });

@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { AssignmentFormValues } from '../domain/assignments';
+import type {
+  CreateEmployeeInput,
+  UpdateEmployeeInput,
+} from '../domain/employees';
 import type { CreatePositionInput } from '../domain/positions';
 import { createHrEmployeesApi } from '../infrastructure/create-hr-employees-api';
 
@@ -44,11 +48,35 @@ export const useCreateEmployee = (apiBaseUrl?: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (companyId: string) => api.createEmployee(companyId),
+    mutationFn: (input: CreateEmployeeInput) => api.createEmployee(input),
     onSuccess: async (employee) => {
-      await queryClient.invalidateQueries({
-        queryKey: hrEmployeesQueryKeys.employees(employee.companyId),
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: hrEmployeesQueryKeys.employees(employee.companyId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: hrEmployeesQueryKeys.employee(employee.companyId, employee.id),
+        }),
+      ]);
+    },
+  });
+};
+
+export const useUpdateEmployee = (apiBaseUrl?: string) => {
+  const api = createHrEmployeesApi(apiBaseUrl);
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: UpdateEmployeeInput) => api.updateEmployee(input),
+    onSuccess: async (employee) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: hrEmployeesQueryKeys.employees(employee.companyId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: hrEmployeesQueryKeys.employee(employee.companyId, employee.id),
+        }),
+      ]);
     },
   });
 };

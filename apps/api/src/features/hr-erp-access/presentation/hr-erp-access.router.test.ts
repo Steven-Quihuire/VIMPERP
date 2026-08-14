@@ -314,10 +314,13 @@ describe('hr erp access routes', () => {
     const app = createApp({
       adminGateway,
       authIdentityGateway: authGateway,
+      computeEffectivePermissions: async () => [
+        'hr.erp_access.invite',
+        'hr.erp_access.revoke',
+      ],
       hrErpAccessGateway,
       passwordHasher,
       sessionTokenService,
-      computeEffectivePermissions: async () => [],
       scopeResolver: createInMemoryScopeResolver({
         nodes: [
           {
@@ -403,5 +406,70 @@ describe('hr erp access routes', () => {
         isActive: false,
       }),
     ]);
+  });
+
+  it('returns 403 when the session lacks HR ERP-access permissions', async () => {
+    const authGateway = new InMemoryAuthGateway();
+    authGateway.addUser({
+      id: 'owner-1',
+      email: 'owner@vimcore.test',
+      username: 'owner',
+      passwordHash: 'hashed:secret123',
+    });
+    authGateway.setMemberships('owner-1', [
+      { companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null },
+    ]);
+    authGateway.setActiveCompanyId('owner-1', 'company-1');
+
+    const hrErpAccessGateway = new InMemoryErpAccessGateway();
+    hrErpAccessGateway.employees = [
+      {
+        id: 'employee-1',
+        companyId: 'company-1',
+        createdAt: new Date('2026-08-13T10:00:00.000Z'),
+      },
+    ];
+
+    const app = createApp({
+      adminGateway,
+      authIdentityGateway: authGateway,
+      computeEffectivePermissions: async () => [],
+      hrErpAccessGateway,
+      passwordHasher,
+      sessionTokenService,
+      scopeResolver: createInMemoryScopeResolver({
+        nodes: [
+          {
+            ref: { scopeType: 'company', scopeId: 'company-1' },
+            parentRef: null,
+            companyId: 'company-1',
+            name: 'Vimcore',
+          },
+        ],
+        assignments: [
+          {
+            companyId: 'company-1',
+            userId: 'owner-1',
+            scope: { scopeType: 'company', scopeId: 'company-1' },
+            mode: 'subtree_inclusive',
+          },
+        ],
+      }),
+      seedAdminEnabled: false,
+      nodeEnv: 'test',
+    });
+
+    const loginResponse = await request(app).post('/auth/login').send({
+      identifier: 'owner',
+      password: 'secret123',
+    });
+    const sessionCookie = getSessionCookie(loginResponse.headers['set-cookie']);
+
+    const response = await request(app)
+      .post('/companies/company-1/hr-erp-access/invitations')
+      .set('Cookie', sessionCookie)
+      .send({ employeeId: 'employee-1', inviteeEmail: 'new.user@vimcore.test' });
+
+    expect(response.status).toBe(403);
   });
 });

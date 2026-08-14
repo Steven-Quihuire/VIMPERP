@@ -100,7 +100,15 @@ describe('createHrEmployeesApi', () => {
     await expect(api.listDirectReports('company-1', 'employee-1')).resolves.toEqual([
       { employeeId: 'employee-2' },
     ]);
-    await expect(api.createEmployee('company-1')).resolves.toEqual({ id: 'employee-2' });
+    await expect(api.createEmployee({
+      companyId: 'company-1',
+      fullName: 'New Employee',
+      documentType: null,
+      documentNumber: null,
+      email: null,
+      employmentStatus: 'active',
+      hiredAt: null,
+    })).resolves.toEqual({ id: 'employee-2' });
     await expect(
       api.createPosition({
         companyId: 'company-1',

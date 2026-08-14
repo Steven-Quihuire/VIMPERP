@@ -123,8 +123,16 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
     this.employees.push(employee);
     return employee;
   }
-  async updateEmployee(companyId: string, employeeId: string) {
-    return await this.getEmployeeById(companyId, employeeId);
+  async updateEmployee(
+    companyId: string,
+    employeeId: string,
+    input?: Parameters<HrEmployeesGateway['updateEmployee']>[2],
+  ) {
+    const employee = await this.getEmployeeById(companyId, employeeId);
+    if (employee && input) {
+      Object.assign(employee, input);
+    }
+    return employee;
   }
   async getEmployeeById(companyId: string, employeeId: string) {
     return (
@@ -149,6 +157,8 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
       name: input.name,
       reportsToPositionId: input.reportsToPositionId,
       headcount: input.headcount,
+      occupiedHeadcount: 0,
+      remainingVacancies: input.headcount,
       isActive: input.isActive,
       createdAt: new Date('2026-08-13T12:00:00.000Z'),
     };
@@ -163,7 +173,18 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
     );
   }
   async listPositions(companyId: string) {
-    return this.positions.filter((position) => position.companyId === companyId);
+    return await Promise.all(
+      this.positions
+        .filter((position) => position.companyId === companyId)
+        .map(async (position) => {
+          const occupiedHeadcount = await this.countActivePrimaryAssignmentsForPosition(position.id);
+          return {
+            ...position,
+            occupiedHeadcount,
+            remainingVacancies: position.headcount - occupiedHeadcount,
+          };
+        }),
+    );
   }
   async countActivePrimaryAssignmentsForPosition(positionId: string) {
     return this.assignments.filter(
@@ -287,10 +308,28 @@ describe('hr employees routes', () => {
     authGateway.setActiveCompanyId('owner-1', 'company-1');
 
     const hrEmployeesGateway = new InMemoryHrEmployeesGateway();
+    hrEmployeesGateway.positions.push({
+      id: 'position-company-2',
+      companyId: 'company-2',
+      name: 'Other Company Lead',
+      reportsToPositionId: null,
+      headcount: 1,
+      occupiedHeadcount: 0,
+      remainingVacancies: 1,
+      isActive: true,
+      createdAt: new Date('2026-08-13T12:00:00.000Z'),
+    });
 
     const app = createApp({
       adminGateway,
       authIdentityGateway: authGateway,
+      computeEffectivePermissions: async () => [
+        'hr.employees.read',
+        'hr.employees.write',
+        'hr.employees.assign',
+        'hr.positions.read',
+        'hr.positions.write',
+      ],
       hrEmployeesGateway,
       passwordHasher,
       sessionTokenService,
@@ -325,13 +364,13 @@ describe('hr employees routes', () => {
     const createManagerResponse = await request(app)
       .post('/companies/company-1/hr-employees')
       .set('Cookie', sessionCookie)
-      .send({});
+      .send({ fullName: 'People Manager' });
     expect(createManagerResponse.status).toBe(201);
 
     const createReportResponse = await request(app)
       .post('/companies/company-1/hr-employees')
       .set('Cookie', sessionCookie)
-      .send({});
+      .send({ fullName: 'HR Analyst' });
     expect(createReportResponse.status).toBe(201);
 
     const createLeadPositionResponse = await request(app)
@@ -339,6 +378,10 @@ describe('hr employees routes', () => {
       .set('Cookie', sessionCookie)
       .send({ name: 'People Lead', reportsToPositionId: null, headcount: 2, isActive: true });
     expect(createLeadPositionResponse.status).toBe(201);
+    expect(createLeadPositionResponse.body).toMatchObject({
+      occupiedHeadcount: 0,
+      remainingVacancies: 2,
+    });
 
     const createAnalystPositionResponse = await request(app)
       .post('/companies/company-1/hr-employees/positions')
@@ -371,6 +414,34 @@ describe('hr employees routes', () => {
       });
     expect(reportAssignmentResponse.status).toBe(201);
 
+    const listedPositionsResponse = await request(app)
+      .get('/companies/company-1/hr-employees/positions')
+      .set('Cookie', sessionCookie);
+    expect(listedPositionsResponse.status).toBe(200);
+    expect(listedPositionsResponse.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: createLeadPositionResponse.body.id,
+          occupiedHeadcount: 1,
+          remainingVacancies: 1,
+        }),
+      ]),
+    );
+
+    const missingParentResponse = await request(app)
+      .post('/companies/company-1/hr-employees/positions')
+      .set('Cookie', sessionCookie)
+      .send({ name: 'Missing Parent', reportsToPositionId: 'missing-position', headcount: 1, isActive: true });
+    expect(missingParentResponse.status).toBe(404);
+    expect(missingParentResponse.body.error.code).toBe('HR_POSITION_PARENT_NOT_FOUND');
+
+    const crossCompanyParentResponse = await request(app)
+      .post('/companies/company-1/hr-employees/positions')
+      .set('Cookie', sessionCookie)
+      .send({ name: 'Cross Company Child', reportsToPositionId: 'position-company-2', headcount: 1, isActive: true });
+    expect(crossCompanyParentResponse.status).toBe(404);
+    expect(crossCompanyParentResponse.body.error.code).toBe('HR_POSITION_PARENT_NOT_FOUND');
+
     const managerResponse = await request(app)
       .get(`/companies/company-1/hr-employees/${createReportResponse.body.id}/reports/manager`)
       .set('Cookie', sessionCookie);
@@ -392,5 +463,71 @@ describe('hr employees routes', () => {
         assignmentId: reportAssignmentResponse.body.id,
       },
     ]);
+
+    const updateResponse = await request(app)
+      .patch(`/companies/company-1/hr-employees/${createReportResponse.body.id}`)
+      .set('Cookie', sessionCookie)
+      .send({ fullName: 'HR Analyst Updated', employmentStatus: 'suspended' });
+
+    expect(updateResponse.status).toBe(200);
+    expect(updateResponse.body).toMatchObject({
+      fullName: 'HR Analyst Updated',
+      employmentStatus: 'suspended',
+    });
+  });
+
+  it('returns 403 when the session lacks HR employee permissions', async () => {
+    const authGateway = new InMemoryAuthGateway();
+    authGateway.addUser({
+      id: 'owner-1',
+      email: 'owner@vimcore.test',
+      username: 'owner',
+      passwordHash: 'hashed:secret123',
+    });
+    authGateway.setMemberships('owner-1', [
+      { companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null },
+    ]);
+    authGateway.setActiveCompanyId('owner-1', 'company-1');
+
+    const app = createApp({
+      adminGateway,
+      authIdentityGateway: authGateway,
+      computeEffectivePermissions: async () => [],
+      hrEmployeesGateway: new InMemoryHrEmployeesGateway(),
+      passwordHasher,
+      sessionTokenService,
+      scopeResolver: createInMemoryScopeResolver({
+        nodes: [
+          {
+            ref: { scopeType: 'company', scopeId: 'company-1' },
+            parentRef: null,
+            companyId: 'company-1',
+            name: 'Vimcore',
+          },
+        ],
+        assignments: [
+          {
+            companyId: 'company-1',
+            userId: 'owner-1',
+            scope: { scopeType: 'company', scopeId: 'company-1' },
+            mode: 'subtree_inclusive',
+          },
+        ],
+      }),
+      seedAdminEnabled: false,
+      nodeEnv: 'test',
+    });
+
+    const loginResponse = await request(app).post('/auth/login').send({
+      identifier: 'owner',
+      password: 'secret123',
+    });
+    const sessionCookie = getSessionCookie(loginResponse.headers['set-cookie']);
+
+    const response = await request(app)
+      .get('/companies/company-1/hr-employees')
+      .set('Cookie', sessionCookie);
+
+    expect(response.status).toBe(403);
   });
 });

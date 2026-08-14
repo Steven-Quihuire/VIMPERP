@@ -564,11 +564,34 @@ export const employeesTable = pgTable(
     companyId: text('company_id')
       .notNull()
       .references(() => companiesTable.id, { onDelete: 'restrict' }),
+    fullName: text('full_name').notNull().default(''),
+    documentType: text('document_type'),
+    documentNumber: text('document_number'),
+    email: text('email'),
+    employmentStatus: text('employment_status').notNull().default('active'),
+    hiredAt: timestamp('hired_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
-  (table) => [index('employees_company_idx').on(table.companyId)],
+  (table) => [
+    index('employees_company_idx').on(table.companyId),
+    index('employees_company_status_idx').on(table.companyId, table.employmentStatus),
+    uniqueIndex('employees_company_document_idx')
+      .on(table.companyId, table.documentType, table.documentNumber)
+      .where(sql`${table.documentNumber} IS NOT NULL`),
+    check(
+      'employees_employment_status_chk',
+      sql`${table.employmentStatus} IN ('active', 'suspended', 'separated')`,
+    ),
+    check(
+      'employees_document_pair_chk',
+      sql`(${table.documentType} IS NULL AND ${table.documentNumber} IS NULL) OR (${table.documentType} IS NOT NULL AND ${table.documentNumber} IS NOT NULL)`,
+    ),
+  ],
 );
 
 export const positionsTable = pgTable(

@@ -6,6 +6,8 @@ export type Position = {
   name: string;
   reportsToPositionId: string | null;
   headcount: number;
+  occupiedHeadcount: number;
+  remainingVacancies: number;
   isActive: boolean;
   createdAt: string;
 };

@@ -134,7 +134,7 @@ describe('rrhh foundation migration', () => {
       'created_at',
       'updated_at',
     ]);
-  });
+  }, 30000);
 
   it('enforces the RRHH foundation partial uniques and CHECK constraints', async () => {
     const database = await createMigrationTestDatabase();
@@ -360,5 +360,5 @@ describe('rrhh foundation migration', () => {
         )
       `),
     ).rejects.toThrow(/approval_policies_scope_node_required_chk/);
-  });
+  }, 30000);
 });

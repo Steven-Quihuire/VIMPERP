@@ -25,7 +25,7 @@ afterEach(async () => {
 const createDb = async () => {
   const database = await createMigrationTestDatabase();
   cleanups.push(database.cleanup);
-  await applyMigrationsThrough(database.pool, '0022_rrhh_foundation.sql');
+  await applyMigrationsThrough(database.pool, '0023_employee_master.sql');
 
   const db = drizzle(database.pool, {
     schema: await import('../../../shared/infrastructure/db/schema'),
@@ -79,8 +79,40 @@ describe('createDrizzleHrEmployeesGateway', () => {
       })(),
     });
 
-    const manager = await gateway.createEmployee({ companyId: 'company-1' });
-    const directReport = await gateway.createEmployee({ companyId: 'company-1' });
+    const manager = await gateway.createEmployee({
+      companyId: 'company-1',
+      fullName: 'People Manager',
+      documentType: null,
+      documentNumber: null,
+      email: 'manager@vimcore.test',
+      employmentStatus: 'active',
+      hiredAt: now,
+    });
+    const directReport = await gateway.createEmployee({
+      companyId: 'company-1',
+      fullName: 'HR Analyst',
+      documentType: null,
+      documentNumber: null,
+      email: 'analyst@vimcore.test',
+      employmentStatus: 'active',
+      hiredAt: now,
+    });
+
+    expect(manager).toMatchObject({ fullName: 'People Manager', employmentStatus: 'active' });
+    await expect(
+      gateway.updateEmployee('company-1', manager.id, {
+        fullName: 'People Manager Updated',
+        documentType: null,
+        documentNumber: null,
+        email: 'manager.updated@vimcore.test',
+        employmentStatus: 'suspended',
+        hiredAt: now,
+      }),
+    ).resolves.toMatchObject({
+      fullName: 'People Manager Updated',
+      email: 'manager.updated@vimcore.test',
+      employmentStatus: 'suspended',
+    });
     const leadPosition = await gateway.createPosition({
       companyId: 'company-1',
       name: 'People Lead',
@@ -94,6 +126,10 @@ describe('createDrizzleHrEmployeesGateway', () => {
       reportsToPositionId: leadPosition.id,
       headcount: 2,
       isActive: true,
+    });
+    expect(analystPosition).toMatchObject({
+      occupiedHeadcount: 0,
+      remainingVacancies: 2,
     });
 
     await gateway.createAssignment({
@@ -116,6 +152,15 @@ describe('createDrizzleHrEmployeesGateway', () => {
     });
 
     await expect(gateway.countActivePrimaryAssignmentsForPosition(analystPosition.id)).resolves.toBe(1);
+    await expect(gateway.listPositions('company-1')).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: analystPosition.id,
+          occupiedHeadcount: 1,
+          remainingVacancies: 1,
+        }),
+      ]),
+    );
     await expect(
       gateway.getActivePrimaryAssignmentByEmployeeId('company-1', directReport.id),
     ).resolves.toMatchObject({ id: employeeAssignment.id, positionId: analystPosition.id });

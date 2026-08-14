@@ -22,7 +22,7 @@ The system MUST support email-or-username plus password sign-in and MUST NOT req
 
 ### Requirement: Protected Access and Roles
 
-The system MUST protect dashboard, company, and locale APIs behind authentication and SHALL define at least `platform-admin`, `company-owner`, and `company-user` roles. Authorization MUST evaluate centralized capabilities from role capabilities plus active scope context. Scope assignments MUST determine where a role applies; role definitions MUST NOT encode scope breadth. Subtree-inclusive assignments SHALL expose descendant scopes; exact-node mode MAY restrict access to the assigned node only.
+The system MUST protect dashboard, company, and locale APIs behind authentication and SHALL define at least `platform-admin`, `company-owner`, and `company-user` roles. Authorization MUST evaluate centralized capabilities from role capabilities plus active scope context. Scope assignments MUST determine where a role applies; role definitions MUST NOT encode scope breadth. Subtree-inclusive assignments SHALL expose descendant scopes; exact-node mode MAY restrict access to the assigned node only. HR authorization SHALL support permission scopes `company`, `node+descendants`, `direct_reports`, and `self`. `direct_reports` SHALL include only direct reports from the active employee reporting line, and `self` SHALL include only the actor's own employee record. `direct_reports` and `self` MUST NOT be represented as canonical scope node types.
 (Previously: Authorization used centralized capabilities derived from role plus active company context only.)
 
 #### Scenario: Authorized capability reaches a protected resource
@@ -35,9 +35,14 @@ The system MUST protect dashboard, company, and locale APIs behind authenticatio
 - WHEN the user requests a protected resource
 - THEN the system MUST deny access
 
+#### Scenario: Direct-reports scope excludes indirect reports
+- GIVEN an actor manages one employee whose own subordinate manages others
+- WHEN authorization is evaluated with `direct_reports`
+- THEN the system MUST include only the actor's direct reports
+
 ### Requirement: Active Scope Context
 
-The system MUST expose an explicit active scope for tenant-scoped flows. The active scope MUST reference one authorized `scope_nodes` node of type `company`, `division`, `local`, `area`, `warehouse`, or `point-of-sale`; derived active company context MAY still be exposed from that lineage. If one authorized scope exists, the system MAY auto-select it; if multiple authorized scopes exist, the system MUST require selection before scope-bound access. Backfill from saved `activeLocalId` MUST preserve current local behavior by resolving the matching local scope node.
+The system MUST expose an explicit active canonical scope for tenant-scoped flows. The active scope MUST reference one authorized `scope_nodes` node of type `company`, `division`, `local`, `area`, `warehouse`, or `point-of-sale`; derived active company context MAY still be exposed from that lineage. If one authorized scope exists, the system MAY auto-select it; if multiple authorized scopes exist, the system MUST require selection before scope-bound access. Backfill from saved `activeLocalId` MUST preserve current local behavior by resolving the matching local scope node. Reporting-line scopes such as `direct_reports` and `self` MUST NOT become active scope values.
 (Previously: The session exposed only active company, with optional implicit local behavior outside the requirement.)
 
 #### Scenario: Saved local backfills to active scope
@@ -49,6 +54,11 @@ The system MUST expose an explicit active scope for tenant-scoped flows. The act
 - GIVEN an authenticated user has multiple authorized scopes and no resolvable saved scope
 - WHEN the user enters a scope-bound flow
 - THEN the system MUST block scope-bound access until one active scope is selected
+
+#### Scenario: Reporting-line scope cannot become active scope
+- GIVEN an authenticated user has HR permissions using `self` or `direct_reports`
+- WHEN active scope is resolved or switched
+- THEN the system MUST reject those values as active canonical scopes
 
 ### Requirement: Authorized Active Scope Switching
 

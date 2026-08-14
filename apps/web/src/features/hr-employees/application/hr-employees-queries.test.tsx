@@ -153,7 +153,15 @@ describe('hr-employees query hooks', () => {
     await waitFor(() => expect(assignmentsHook.result.current.managerQuery.isSuccess).toBe(true));
     await waitFor(() => expect(assignmentsHook.result.current.directReportsQuery.isSuccess).toBe(true));
 
-    await expect(createEmployeeHook.result.current.mutateAsync('company-1')).resolves.toMatchObject({
+    await expect(createEmployeeHook.result.current.mutateAsync({
+      companyId: 'company-1',
+      fullName: 'New Employee',
+      documentType: null,
+      documentNumber: null,
+      email: null,
+      employmentStatus: 'active',
+      hiredAt: null,
+    })).resolves.toMatchObject({
       id: 'employee-3',
     });
     await expect(

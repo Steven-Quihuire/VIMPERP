@@ -7,7 +7,7 @@ import type {
 } from '../../domain/employees';
 import { EmployeeAssignmentConflictError } from '../../domain/employee-assignments';
 import type { EmployeeAssignment } from '../../domain/employee-assignments';
-import type { Position } from '../../domain/positions';
+import { PositionHeadcountExceededError, type Position } from '../../domain/positions';
 import { createCreateAssignmentUseCase } from '../create-assignment';
 
 class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
@@ -23,6 +23,8 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
       name: 'People Lead',
       reportsToPositionId: null,
       headcount: 2,
+      occupiedHeadcount: 1,
+      remainingVacancies: 1,
       isActive: true,
       createdAt: new Date('2026-08-13T10:00:00.000Z'),
     },
@@ -32,6 +34,8 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
       name: 'HR Analyst',
       reportsToPositionId: 'position-1',
       headcount: 2,
+      occupiedHeadcount: 0,
+      remainingVacancies: 2,
       isActive: true,
       createdAt: new Date('2026-08-13T10:00:00.000Z'),
     },
@@ -64,11 +68,11 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
 
   lastCreateAssignmentInput: Parameters<HrEmployeesGateway['createAssignment']>[0] | null = null;
 
-  async createEmployee(_input: { companyId: string }) {
+  async createEmployee(_input: { companyId: string }): Promise<Employee> {
     throw new Error('not implemented');
   }
 
-  async updateEmployee(_companyId: string, _employeeId: string) {
+  async updateEmployee(_companyId: string, _employeeId: string): Promise<Employee | null> {
     throw new Error('not implemented');
   }
 
@@ -90,7 +94,7 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
     reportsToPositionId: string | null;
     headcount: number;
     isActive: boolean;
-  }) {
+  }): Promise<Position> {
     throw new Error('not implemented');
   }
 
@@ -245,5 +249,21 @@ describe('createCreateAssignmentUseCase', () => {
         startedAt: new Date('2026-08-13T10:00:00.000Z'),
       }),
     ).rejects.toBeInstanceOf(EmployeeAssignmentConflictError);
+  });
+
+  it('rejects a new assignment when the position has no remaining vacancy', async () => {
+    const gateway = new InMemoryHrEmployeesGateway();
+    gateway.positions[0]!.headcount = 1;
+    const createAssignment = createCreateAssignmentUseCase({ gateway });
+
+    await expect(
+      createAssignment({
+        companyId: 'company-1',
+        employeeId: 'employee-2',
+        scopeNodeId: 'company:company-1',
+        positionId: 'position-1',
+        startedAt: new Date('2026-08-13T11:00:00.000Z'),
+      }),
+    ).rejects.toBeInstanceOf(PositionHeadcountExceededError);
   });
 });

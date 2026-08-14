@@ -8,7 +8,8 @@ Define the official organizational tree as the six-type canonical read model ove
 
 ### Requirement: Canonical Scope Tree
 
-The system MUST expose one official tree with node types `company`, `division`, `local`, `area`, `warehouse`, and `point-of-sale`. Each node SHALL resolve to exactly one parent in the same company, except the company root.
+The system MUST expose one official tree with node types `company`, `division`, `local`, `area`, `warehouse`, and `point-of-sale`. Each node SHALL resolve to exactly one parent in the same company, except the company root. The canonical tree MUST remain limited to organizational addressability; employees, positions, `direct_reports`, and `self` MUST NOT become canonical tree node types. Reporting-line hierarchy and organization-node responsibility SHALL remain separate from tree semantics.
+(Previously: The tree requirement defined the official six node types and single-parent lineage without explicitly excluding employee/reporting-line semantics.)
 
 #### Scenario: Resolve lineage for a descendant node
 - GIVEN a warehouse or point-of-sale stored in the canonical tree
@@ -47,3 +48,17 @@ The system MUST execute scoped operations on the active scope only and MUST NOT 
 - GIVEN a user switches the active scope to a warehouse
 - WHEN an operational flow opens
 - THEN the system MUST default the flow to that warehouse scope
+
+### Requirement: Employee-linked deletion preflight
+
+The system MUST reject organizational node deletion when the delete would orphan active employee assignments or reporting-line resolution.
+
+#### Scenario: Active employee assignment blocks deletion
+- GIVEN an organization node is referenced by an active employee assignment
+- WHEN deletion of that node is requested
+- THEN the system MUST reject the deletion
+
+#### Scenario: Node without employee references can be deleted
+- GIVEN an organization node has no active employee assignment or reporting-line dependency
+- WHEN deletion of that node is requested
+- THEN the system MAY continue with the normal deletion flow

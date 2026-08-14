@@ -80,6 +80,7 @@ import { createCreateEmployeeUseCase } from '../features/hr-employees/applicatio
 import { createCreatePositionUseCase } from '../features/hr-employees/application/create-position';
 import { createGetEmployeeUseCase } from '../features/hr-employees/application/get-employee';
 import { createListEmployeesUseCase } from '../features/hr-employees/application/list-employees';
+import { createUpdateEmployeeUseCase } from '../features/hr-employees/application/update-employee';
 import { createResolveDirectReportsUseCase } from '../features/hr-employees/application/resolve-direct-reports';
 import { createResolveReportingLineUseCase } from '../features/hr-employees/application/resolve-reporting-line';
 import type { HrEmployeesGateway } from '../features/hr-employees/domain/employees';
@@ -114,6 +115,8 @@ import {
 } from '../features/node-management/infrastructure/resend-node-management-invitation-email-sender';
 import { createNodeManagementRouter } from '../features/node-management/presentation/node-management.router';
 import { createComputeEffectivePermissionsUseCase } from '../features/roles-management/application/compute-effective-permissions';
+import { createEvaluateReportingLineScopes } from '../features/roles-management/application/evaluate-reporting-line-scopes';
+import type { PermissionScope } from '../features/roles-management/domain/assignments';
 import {
   createRequireHrCapability,
 } from '../features/roles-management/presentation/require-hr-capability';
@@ -164,6 +167,7 @@ type ComputeEffectivePermissions = (input: {
   companyId: string;
   userId: string;
   currentContext: ScopeRef;
+  permissionScope?: PermissionScope;
 }) => Promise<string[]>;
 
 type CreateAppInput = {
@@ -217,16 +221,6 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
   const scopeResolver = input.scopeResolver ?? createDrizzleScopeResolver(db);
   const roleAssignmentsGateway = createDrizzleAssignmentsGateway(db);
   const rolesGateway = createDrizzleRolesGateway(db);
-  const computeEffectivePermissions =
-    input.computeEffectivePermissions ??
-    createComputeEffectivePermissionsUseCase({
-      rolesGateway,
-      assignmentsGateway: roleAssignmentsGateway,
-      scopeHierarchyGateway: {
-        assertScopeRefBelongsToCompany: async () => undefined,
-        getScopeLineage: scopeResolver.getLineage,
-      },
-    });
   const nodeEnv = input.nodeEnv ?? 'development';
   const seedAdminEnabled = nodeEnv !== 'production' && (input.seedAdminEnabled ?? false);
   const sessionCookieName = input.sessionCookieName ?? 'vimcore_session';
@@ -242,6 +236,20 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     input.hrErpAccessGateway ?? createDrizzleErpAccessGateway(db);
   const approvalPolicyGateway =
     input.approvalPolicyGateway ?? createDrizzleApprovalPolicyGateway(db);
+  const computeEffectivePermissions =
+    input.computeEffectivePermissions ??
+    createComputeEffectivePermissionsUseCase({
+      rolesGateway,
+      assignmentsGateway: roleAssignmentsGateway,
+      evaluateReportingLineScopes: createEvaluateReportingLineScopes({
+        hrEmployeesGateway,
+        erpAccessGateway: hrErpAccessGateway,
+      }),
+      scopeHierarchyGateway: {
+        assertScopeRefBelongsToCompany: async () => undefined,
+        getScopeLineage: scopeResolver.getLineage,
+      },
+    });
   const nodeManagementGateway =
     input.nodeManagementGateway ?? createDrizzleNodeManagementGateway(db);
   const rawInvitationEmailSender =
@@ -519,7 +527,14 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
   app.use(
     createHrEmployeesRouter({
       requireAuth,
+      requireHrCapability,
       createEmployee: createCreateEmployeeUseCase({ gateway: hrEmployeesGateway }),
+      updateEmployee: (companyId, employeeId, input) =>
+        createUpdateEmployeeUseCase({ gateway: hrEmployeesGateway })({
+          companyId,
+          employeeId,
+          ...input,
+        }),
       listEmployees: createListEmployeesUseCase({ gateway: hrEmployeesGateway }),
       getEmployee: createGetEmployeeUseCase({ gateway: hrEmployeesGateway }),
       createPosition: createCreatePositionUseCase({ gateway: hrEmployeesGateway }),
@@ -533,6 +548,7 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
   app.use(
     createHrErpAccessRouter({
       requireAuth,
+      requireHrCapability,
       createInvitation: createCreateErpAccessInvitationUseCase({
         gateway: hrErpAccessGateway,
       }),

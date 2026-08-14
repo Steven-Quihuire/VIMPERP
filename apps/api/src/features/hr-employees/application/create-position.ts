@@ -1,5 +1,9 @@
 import type { HrEmployeesGateway } from '../domain/employees';
-import { assertValidPositionHierarchy, calculatePositionVacancy } from '../domain/positions';
+import {
+  assertValidPositionHierarchy,
+  calculatePositionVacancy,
+  PositionParentNotFoundError,
+} from '../domain/positions';
 
 export const createCreatePositionUseCase = ({
   gateway,
@@ -18,6 +22,13 @@ export const createCreatePositionUseCase = ({
       reportsToPositionId: input.reportsToPositionId,
     });
     calculatePositionVacancy({ headcount: input.headcount, activePrimaryAssignments: 0 });
+
+    if (
+      input.reportsToPositionId !== null &&
+      !(await gateway.getPositionById(input.companyId, input.reportsToPositionId))
+    ) {
+      throw new PositionParentNotFoundError();
+    }
 
     return await gateway.createPosition(input);
   };

@@ -1,17 +1,33 @@
 import { describe, expect, it } from 'vitest';
 
 import { assignmentFormSchema, buildAssignmentTimelineEntries, toCreateAssignmentInput } from '../assignments';
-import { employeeFormSchema, sortEmployeesByCreatedAtDesc } from '../employees';
+import {
+  employeeFormSchema,
+  sortEmployeesByCreatedAtDesc,
+  toCreateEmployeeInput,
+} from '../employees';
 import { positionFormSchema, sortPositionsByName, toCreatePositionInput } from '../positions';
 
 describe('hr-employees domain helpers', () => {
-  it('sorts employees by newest first and keeps the empty employee form valid', () => {
-    expect(employeeFormSchema.parse({})).toEqual({});
+  it('normalizes employee identity and sorts employees by newest first', () => {
+    const employeeValues = employeeFormSchema.parse({
+      fullName: ' Ana Employee ',
+      email: 'ana@example.com',
+      employmentStatus: 'active',
+      hiredAt: '2026-08-13T12:00',
+    });
+
+    expect(toCreateEmployeeInput('company-1', employeeValues)).toMatchObject({
+      companyId: 'company-1',
+      fullName: 'Ana Employee',
+      email: 'ana@example.com',
+      employmentStatus: 'active',
+    });
 
     expect(
       sortEmployeesByCreatedAtDesc([
-        { id: 'employee-1', companyId: 'company-1', createdAt: '2026-08-13T10:00:00.000Z' },
-        { id: 'employee-2', companyId: 'company-1', createdAt: '2026-08-13T12:00:00.000Z' },
+        { id: 'employee-1', companyId: 'company-1', fullName: 'One', employmentStatus: 'active', documentType: null, documentNumber: null, email: null, hiredAt: null, createdAt: '2026-08-13T10:00:00.000Z', updatedAt: '2026-08-13T10:00:00.000Z' },
+        { id: 'employee-2', companyId: 'company-1', fullName: 'Two', employmentStatus: 'active', documentType: null, documentNumber: null, email: null, hiredAt: null, createdAt: '2026-08-13T12:00:00.000Z', updatedAt: '2026-08-13T12:00:00.000Z' },
       ]).map((employee) => employee.id),
     ).toEqual(['employee-2', 'employee-1']);
   });
@@ -39,7 +55,9 @@ describe('hr-employees domain helpers', () => {
           companyId: 'company-1',
           name: 'Recruiter',
           reportsToPositionId: null,
-          headcount: 1,
+           headcount: 1,
+           occupiedHeadcount: 0,
+           remainingVacancies: 1,
           isActive: true,
           createdAt: '2026-08-13T12:00:00.000Z',
         },
@@ -48,7 +66,9 @@ describe('hr-employees domain helpers', () => {
           companyId: 'company-1',
           name: 'Analyst',
           reportsToPositionId: null,
-          headcount: 1,
+           headcount: 1,
+           occupiedHeadcount: 0,
+           remainingVacancies: 1,
           isActive: true,
           createdAt: '2026-08-13T12:00:00.000Z',
         },

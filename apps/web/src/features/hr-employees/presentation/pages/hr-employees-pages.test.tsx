@@ -13,6 +13,7 @@ import { PositionsListPage } from './positions-list';
 const useEmployeesMock = vi.fn();
 const useEmployeeMock = vi.fn();
 const useCreateEmployeeMock = vi.fn();
+const useUpdateEmployeeMock = vi.fn();
 const usePositionsMock = vi.fn();
 const useCreatePositionMock = vi.fn();
 const useAssignmentsMock = vi.fn();
@@ -22,6 +23,7 @@ vi.mock('../../application/hr-employees-queries', () => ({
   useEmployees: (...args: unknown[]) => useEmployeesMock(...args),
   useEmployee: (...args: unknown[]) => useEmployeeMock(...args),
   useCreateEmployee: (...args: unknown[]) => useCreateEmployeeMock(...args),
+  useUpdateEmployee: (...args: unknown[]) => useUpdateEmployeeMock(...args),
   usePositions: (...args: unknown[]) => usePositionsMock(...args),
   useCreatePosition: (...args: unknown[]) => useCreatePositionMock(...args),
   useAssignments: (...args: unknown[]) => useAssignmentsMock(...args),
@@ -44,19 +46,24 @@ describe('hr-employees pages', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useEmployeesMock.mockReturnValue({
-      data: [{ id: 'employee-1', companyId: 'company-1', createdAt: '2026-08-13T12:00:00.000Z' }],
+       data: [{ id: 'employee-1', companyId: 'company-1', fullName: 'Employee One', documentType: null, documentNumber: null, email: 'one@example.com', employmentStatus: 'active', hiredAt: null, createdAt: '2026-08-13T12:00:00.000Z', updatedAt: '2026-08-13T12:00:00.000Z' }],
       isLoading: false,
       isError: false,
       error: null,
     });
     useEmployeeMock.mockReturnValue({
-      data: { id: 'employee-1', companyId: 'company-1', createdAt: '2026-08-13T12:00:00.000Z' },
+       data: { id: 'employee-1', companyId: 'company-1', fullName: 'Employee One', documentType: null, documentNumber: null, email: 'one@example.com', employmentStatus: 'active', hiredAt: null, createdAt: '2026-08-13T12:00:00.000Z', updatedAt: '2026-08-13T12:00:00.000Z' },
       isLoading: false,
       isError: false,
       error: null,
     });
     useCreateEmployeeMock.mockReturnValue({
       mutateAsync: vi.fn().mockResolvedValue({ id: 'employee-2' }),
+      isPending: false,
+      error: null,
+    });
+    useUpdateEmployeeMock.mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue({ id: 'employee-1', fullName: 'Updated Employee' }),
       isPending: false,
       error: null,
     });
@@ -67,7 +74,9 @@ describe('hr-employees pages', () => {
           companyId: 'company-1',
           name: 'People Lead',
           reportsToPositionId: null,
-          headcount: 2,
+           headcount: 2,
+           occupiedHeadcount: 1,
+           remainingVacancies: 1,
           isActive: true,
           createdAt: '2026-08-13T12:00:00.000Z',
         },
@@ -137,6 +146,9 @@ describe('hr-employees pages', () => {
 
     render(<EmployeeFormPage session={session} onCreated={onCreated} />);
 
+    fireEvent.change(screen.getByLabelText('Full name'), {
+      target: { value: 'Employee Two' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Create employee record' }));
 
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith('employee-2'));

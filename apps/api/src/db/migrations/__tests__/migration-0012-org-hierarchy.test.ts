@@ -1,21 +1,14 @@
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+
+import type { Pool } from 'pg';
 
 import { applyMigrationsThrough, createMigrationTestDatabase } from './migration-test-helpers';
 
-const cleanups: Array<() => Promise<void>> = [];
-
-afterEach(async () => {
-  while (cleanups.length > 0) {
-    const cleanup = cleanups.pop();
-
-    if (cleanup) {
-      await cleanup();
-    }
-  }
-});
+let pool: Pool;
+let cleanup: (() => Promise<void>) | undefined;
 
 const getLatestMigrationFile = async () => {
   const migrationsDir = path.resolve(__dirname, '..');
@@ -29,15 +22,24 @@ const getLatestMigrationFile = async () => {
 };
 
 describe('org-hierarchy sidebar migration (divisions, local scoping)', () => {
-  it('creates the divisions table with company FK and company-name uniqueness', async () => {
+  beforeAll(async () => {
     const database = await createMigrationTestDatabase();
-    cleanups.push(database.cleanup);
+    cleanup = database.cleanup;
+    pool = database.pool;
 
+    // This file verifies the additive org-hierarchy shape through the company-integrity pass.
+    await applyMigrationsThrough(pool, '0019_org_hierarchy_company_integrity.sql');
+  });
+
+  afterAll(async () => {
+    await cleanup?.();
+  });
+
+  it('creates the divisions table with company FK and company-name uniqueness', async () => {
     const latestMigration = await getLatestMigrationFile();
     expect(latestMigration).toBeDefined();
-    await applyMigrationsThrough(database.pool, latestMigration!);
 
-    const divisionsColumns = await database.pool.query<{
+    const divisionsColumns = await pool.query<{
       tableName: string;
       columnName: string;
       dataType: string;
@@ -86,7 +88,7 @@ describe('org-hierarchy sidebar migration (divisions, local scoping)', () => {
       },
     ]);
 
-    const divisionsForeignKeys = await database.pool.query<{
+    const divisionsForeignKeys = await pool.query<{
       constraintName: string;
       columnName: string;
       foreignTableName: string;
@@ -115,7 +117,7 @@ expect(divisionsForeignKeys.rows.some(
         row.foreignColumnName === 'id',
     )).toBe(true);
 
-    const divisionsIndexes = await database.pool.query<{
+    const divisionsIndexes = await pool.query<{
       indexName: string;
       isUnique: boolean;
       columnNames: string;
@@ -142,13 +144,7 @@ expect(divisionsForeignKeys.rows.some(
   });
 
   it('adds nullable division_id to locals with FK to divisions', async () => {
-    const database = await createMigrationTestDatabase();
-    cleanups.push(database.cleanup);
-
-    const latestMigration = await getLatestMigrationFile();
-    await applyMigrationsThrough(database.pool, latestMigration!);
-
-    const localDivisionId = await database.pool.query<{
+    const localDivisionId = await pool.query<{
       isNullable: 'YES' | 'NO';
       dataType: string;
     }>(`
@@ -161,7 +157,7 @@ expect(divisionsForeignKeys.rows.some(
       { isNullable: 'YES', dataType: 'text' },
     ]);
 
-    const localForeignKeys = await database.pool.query<{
+    const localForeignKeys = await pool.query<{
       columnName: string;
       foreignTableName: string;
       foreignColumnName: string;
@@ -189,13 +185,7 @@ expect(divisionsForeignKeys.rows.some(
   });
 
   it('adds nullable division_id and local_id to memberships without FK', async () => {
-    const database = await createMigrationTestDatabase();
-    cleanups.push(database.cleanup);
-
-    const latestMigration = await getLatestMigrationFile();
-    await applyMigrationsThrough(database.pool, latestMigration!);
-
-    const membershipNewColumns = await database.pool.query<{
+    const membershipNewColumns = await pool.query<{
       columnName: string;
       isNullable: 'YES' | 'NO';
       dataType: string;
@@ -215,7 +205,7 @@ expect(divisionsForeignKeys.rows.some(
       { columnName: 'local_id', isNullable: 'YES', dataType: 'text' },
     ]);
 
-    const membershipForeignKeys = await database.pool.query<{
+    const membershipForeignKeys = await pool.query<{
       columnName: string;
       foreignTableName: string;
     }>(`
@@ -238,13 +228,7 @@ expect(divisionsForeignKeys.rows.some(
   });
 
   it('adds nullable local_id to items and replaces the unique index with (company_id, local_id, sku)', async () => {
-    const database = await createMigrationTestDatabase();
-    cleanups.push(database.cleanup);
-
-    const latestMigration = await getLatestMigrationFile();
-    await applyMigrationsThrough(database.pool, latestMigration!);
-
-    const itemsLocalId = await database.pool.query<{
+    const itemsLocalId = await pool.query<{
       isNullable: 'YES' | 'NO';
       dataType: string;
     }>(`
@@ -255,7 +239,7 @@ expect(divisionsForeignKeys.rows.some(
 
     expect(itemsLocalId.rows).toEqual([{ isNullable: 'YES', dataType: 'text' }]);
 
-    const itemsIndexes = await database.pool.query<{
+    const itemsIndexes = await pool.query<{
       indexName: string;
       isUnique: boolean;
       columnNames: string;
@@ -292,13 +276,7 @@ expect(divisionsForeignKeys.rows.some(
   });
 
   it('adds nullable local_id to item_categories and replaces the unique index', async () => {
-    const database = await createMigrationTestDatabase();
-    cleanups.push(database.cleanup);
-
-    const latestMigration = await getLatestMigrationFile();
-    await applyMigrationsThrough(database.pool, latestMigration!);
-
-    const categoryLocalId = await database.pool.query<{
+    const categoryLocalId = await pool.query<{
       isNullable: 'YES' | 'NO';
       dataType: string;
     }>(`
@@ -309,7 +287,7 @@ expect(divisionsForeignKeys.rows.some(
 
     expect(categoryLocalId.rows).toEqual([{ isNullable: 'YES', dataType: 'text' }]);
 
-    const categoryIndexes = await database.pool.query<{
+    const categoryIndexes = await pool.query<{
       indexName: string;
       isUnique: boolean;
       columnNames: string;
@@ -341,13 +319,7 @@ expect(divisionsForeignKeys.rows.some(
   });
 
   it('adds nullable active_local_id to user_preferences', async () => {
-    const database = await createMigrationTestDatabase();
-    cleanups.push(database.cleanup);
-
-    const latestMigration = await getLatestMigrationFile();
-    await applyMigrationsThrough(database.pool, latestMigration!);
-
-    const prefLocalId = await database.pool.query<{
+    const prefLocalId = await pool.query<{
       isNullable: 'YES' | 'NO';
       dataType: string;
     }>(`
@@ -360,13 +332,7 @@ expect(divisionsForeignKeys.rows.some(
   });
 
   it('enforces same-company composite parent foreign keys across hierarchy tables', async () => {
-    const database = await createMigrationTestDatabase();
-    cleanups.push(database.cleanup);
-
-    const latestMigration = await getLatestMigrationFile();
-    await applyMigrationsThrough(database.pool, latestMigration!);
-
-    const foreignKeys = await database.pool.query<{
+    const foreignKeys = await pool.query<{
       tableName: string;
       constraintName: string;
       columnNames: string;
@@ -455,13 +421,7 @@ expect(divisionsForeignKeys.rows.some(
   });
 
   it('adds nullable division_id and local_id to audit_events and indexes local_id', async () => {
-    const database = await createMigrationTestDatabase();
-    cleanups.push(database.cleanup);
-
-    const latestMigration = await getLatestMigrationFile();
-    await applyMigrationsThrough(database.pool, latestMigration!);
-
-    const auditNewColumns = await database.pool.query<{
+    const auditNewColumns = await pool.query<{
       columnName: string;
       isNullable: 'YES' | 'NO';
       dataType: string;
@@ -481,7 +441,7 @@ expect(divisionsForeignKeys.rows.some(
       { columnName: 'local_id', isNullable: 'YES', dataType: 'text' },
     ]);
 
-    const auditLocalIdIndex = await database.pool.query<{
+    const auditLocalIdIndex = await pool.query<{
       indexName: string;
       columnNames: string;
     }>(`

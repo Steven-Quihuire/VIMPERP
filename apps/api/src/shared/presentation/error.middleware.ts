@@ -23,7 +23,9 @@ import {
   EmployeeAssignmentConflictError,
 } from '../../features/hr-employees/domain/employee-assignments';
 import {
+  EmployeeDocumentConflictError,
   EmployeeNotFoundError,
+  EmployeeValidationError,
   HrEmployeesScopeNotFoundError,
 } from '../../features/hr-employees/domain/employees';
 import {
@@ -44,6 +46,7 @@ import {
 import {
   PositionHeadcountExceededError,
   PositionHierarchyError,
+  PositionParentNotFoundError,
   PositionNotFoundError,
 } from '../../features/hr-employees/domain/positions';
 import {
@@ -138,6 +141,11 @@ export const createErrorMiddleware = ({
       return;
     }
 
+    if (error instanceof EmployeeValidationError) {
+      response.status(400).json(toResponseBody(error.code, error.message));
+      return;
+    }
+
     if (
       error instanceof EmployeeAssignmentConflictError ||
       error instanceof PositionHeadcountExceededError ||
@@ -149,9 +157,15 @@ export const createErrorMiddleware = ({
       return;
     }
 
+    if (error instanceof EmployeeDocumentConflictError) {
+      response.status(409).json(toResponseBody(error.code, error.message));
+      return;
+    }
+
     if (
       error instanceof EmployeeNotFoundError ||
       error instanceof PositionNotFoundError ||
+      error instanceof PositionParentNotFoundError ||
       error instanceof HrEmployeesScopeNotFoundError ||
       error instanceof ApprovalPolicyScopeNotFoundError ||
       error instanceof ErpAccessInvitationNotFoundError ||

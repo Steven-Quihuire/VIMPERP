@@ -4,6 +4,8 @@ export type Position = {
   name: string;
   reportsToPositionId: string | null;
   headcount: number;
+  occupiedHeadcount: number;
+  remainingVacancies: number;
   isActive: boolean;
   createdAt: Date;
 };
@@ -55,5 +57,14 @@ export class PositionNotFoundError extends Error {
   constructor(message = 'Position not found.') {
     super(message);
     this.name = 'PositionNotFoundError';
+  }
+}
+
+export class PositionParentNotFoundError extends Error {
+  readonly code = 'HR_POSITION_PARENT_NOT_FOUND';
+
+  constructor(message = 'The reporting position does not exist in this company.') {
+    super(message);
+    this.name = 'PositionParentNotFoundError';
   }
 }

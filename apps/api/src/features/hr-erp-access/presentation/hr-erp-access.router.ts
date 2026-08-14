@@ -3,7 +3,6 @@ import { z } from 'zod';
 
 import {
   ForbiddenError,
-  requireTenantCapability,
   type AuthSession,
 } from '../../identity/domain/auth';
 
@@ -25,9 +24,7 @@ const getAuth = (response: Parameters<RequestHandler>[1]) =>
   (response.locals as { auth: AuthSession }).auth;
 
 const ensureCompanyAccess = (auth: AuthSession, companyId: string) => {
-  const tenant = requireTenantCapability(auth, 'catalog.read');
-
-  if (tenant.companyId !== companyId) {
+  if (auth.activeCompany?.companyId !== companyId) {
     throw new ForbiddenError();
   }
 };
@@ -48,6 +45,7 @@ const setSessionCookie = (
 
 export const createHrErpAccessRouter = ({
   requireAuth,
+  requireHrCapability,
   createInvitation,
   listInvitations,
   acceptInvitation,
@@ -56,6 +54,7 @@ export const createHrErpAccessRouter = ({
   secureCookies,
 }: {
   requireAuth: RequestHandler;
+  requireHrCapability: (permissionKey: string) => RequestHandler;
   createInvitation: (input: {
     companyId: string;
     employeeId: string;
@@ -70,7 +69,7 @@ export const createHrErpAccessRouter = ({
 }): Router => {
   const router = Router();
 
-  router.post('/companies/:companyId/hr-erp-access/invitations', requireAuth, async (request, response, next) => {
+  router.post('/companies/:companyId/hr-erp-access/invitations', requireAuth, requireHrCapability('hr.erp_access.invite'), async (request, response, next) => {
     try {
       const params = companyParamsSchema.parse(request.params);
       const body = createInvitationBodySchema.parse(request.body);
@@ -90,7 +89,7 @@ export const createHrErpAccessRouter = ({
     }
   });
 
-  router.get('/companies/:companyId/hr-erp-access/invitations', requireAuth, async (request, response, next) => {
+  router.get('/companies/:companyId/hr-erp-access/invitations', requireAuth, requireHrCapability('hr.erp_access.invite'), async (request, response, next) => {
     try {
       const params = companyParamsSchema.parse(request.params);
       ensureCompanyAccess(getAuth(response), params.companyId);
@@ -117,7 +116,7 @@ export const createHrErpAccessRouter = ({
     }
   });
 
-  router.post('/companies/:companyId/hr-erp-access/employees/:employeeId/revoke', requireAuth, async (request, response, next) => {
+  router.post('/companies/:companyId/hr-erp-access/employees/:employeeId/revoke', requireAuth, requireHrCapability('hr.erp_access.revoke'), async (request, response, next) => {
     try {
       const params = employeeParamsSchema.parse(request.params);
       ensureCompanyAccess(getAuth(response), params.companyId);
