@@ -85,6 +85,13 @@ import { createResolveReportingLineUseCase } from '../features/hr-employees/appl
 import type { HrEmployeesGateway } from '../features/hr-employees/domain/employees';
 import { createDrizzleHrEmployeesGateway } from '../features/hr-employees/infrastructure/drizzle-hr-employees.gateway';
 import { createHrEmployeesRouter } from '../features/hr-employees/presentation/hr-employees.router';
+import { createAcceptErpAccessInvitationUseCase } from '../features/hr-erp-access/application/accept-erp-access-invitation';
+import { createCreateErpAccessInvitationUseCase } from '../features/hr-erp-access/application/create-erp-access-invitation';
+import { createListErpAccessInvitationsUseCase } from '../features/hr-erp-access/application/list-erp-access-invitations';
+import { createRevokeErpAccessInvitationUseCase } from '../features/hr-erp-access/application/revoke-erp-access-invitation';
+import type { ErpAccessGateway } from '../features/hr-erp-access/domain/erp-access-invitations';
+import { createDrizzleErpAccessGateway } from '../features/hr-erp-access/infrastructure/drizzle-erp-access.gateway';
+import { createHrErpAccessRouter } from '../features/hr-erp-access/presentation/hr-erp-access.router';
 import { createAcceptNodeManagementInvitationUseCase } from '../features/node-management/application/accept-node-management-invitation';
 import { createCreateNodeManagementInvitationUseCase } from '../features/node-management/application/create-node-management-invitation';
 import { createGetNodeManagementInvitationUseCase } from '../features/node-management/application/get-node-management-invitation';
@@ -161,6 +168,7 @@ type CreateAppInput = {
   orgTreeGateway?: OrgTreeGateway;
   orgHierarchyGateway?: OrgHierarchyGateway;
   hrEmployeesGateway?: HrEmployeesGateway;
+  hrErpAccessGateway?: ErpAccessGateway;
   nodeManagementGateway?: NodeManagementGateway;
   scopeResolver?: ScopeResolver;
   computeEffectivePermissions?: ComputeEffectivePermissions;
@@ -218,6 +226,8 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     input.orgHierarchyGateway ?? createDrizzleOrgHierarchyGateway(db, { logger });
   const hrEmployeesGateway =
     input.hrEmployeesGateway ?? createDrizzleHrEmployeesGateway(db);
+  const hrErpAccessGateway =
+    input.hrErpAccessGateway ?? createDrizzleErpAccessGateway(db);
   const nodeManagementGateway =
     input.nodeManagementGateway ?? createDrizzleNodeManagementGateway(db);
   const rawInvitationEmailSender =
@@ -480,6 +490,27 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       createAssignment: createCreateAssignmentUseCase({ gateway: hrEmployeesGateway }),
       resolveReportingLine: createResolveReportingLineUseCase({ gateway: hrEmployeesGateway }),
       resolveDirectReports: createResolveDirectReportsUseCase({ gateway: hrEmployeesGateway }),
+    }),
+  );
+  app.use(
+    createHrErpAccessRouter({
+      requireAuth,
+      createInvitation: createCreateErpAccessInvitationUseCase({
+        gateway: hrErpAccessGateway,
+      }),
+      listInvitations: createListErpAccessInvitationsUseCase({
+        gateway: hrErpAccessGateway,
+      }),
+      acceptInvitation: createAcceptErpAccessInvitationUseCase({
+        gateway: hrErpAccessGateway,
+        passwordHasher,
+        sessionTokenService,
+      }),
+      revokeAccess: createRevokeErpAccessInvitationUseCase({
+        gateway: hrErpAccessGateway,
+      }),
+      sessionCookieName,
+      secureCookies: nodeEnv === 'production',
     }),
   );
   app.use(

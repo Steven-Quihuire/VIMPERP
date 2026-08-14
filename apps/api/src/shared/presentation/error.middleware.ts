@@ -27,6 +27,16 @@ import {
   HrEmployeesScopeNotFoundError,
 } from '../../features/hr-employees/domain/employees';
 import {
+  ErpAccessInvitationAlreadyAcceptedError,
+  ErpAccessInvitationExpiredError,
+  ErpAccessInvitationNotFoundError,
+  ErpAccessInvitationPasswordRequiredError,
+} from '../../features/hr-erp-access/domain/erp-access-invitations';
+import {
+  ErpAccessLinkConflictError,
+  ErpAccessLinkNotFoundError,
+} from '../../features/hr-erp-access/domain/erp-access-links';
+import {
   PositionHeadcountExceededError,
   PositionHierarchyError,
   PositionNotFoundError,
@@ -113,10 +123,17 @@ export const createErrorMiddleware = ({
       return;
     }
 
+    if (error instanceof ErpAccessInvitationPasswordRequiredError) {
+      response.status(400).json(toResponseBody(error.code, error.message));
+      return;
+    }
+
     if (
       error instanceof EmployeeAssignmentConflictError ||
       error instanceof PositionHeadcountExceededError ||
-      error instanceof PositionHierarchyError
+      error instanceof PositionHierarchyError ||
+      error instanceof ErpAccessLinkConflictError ||
+      error instanceof ErpAccessInvitationAlreadyAcceptedError
     ) {
       response.status(409).json(toResponseBody(error.code, error.message));
       return;
@@ -125,7 +142,9 @@ export const createErrorMiddleware = ({
     if (
       error instanceof EmployeeNotFoundError ||
       error instanceof PositionNotFoundError ||
-      error instanceof HrEmployeesScopeNotFoundError
+      error instanceof HrEmployeesScopeNotFoundError ||
+      error instanceof ErpAccessInvitationNotFoundError ||
+      error instanceof ErpAccessLinkNotFoundError
     ) {
       response.status(404).json(toResponseBody(error.code, error.message));
       return;
@@ -142,6 +161,11 @@ export const createErrorMiddleware = ({
     }
 
     if (error instanceof NodeManagementInvitationExpiredError) {
+      response.status(410).json(toResponseBody(error.code, error.message));
+      return;
+    }
+
+    if (error instanceof ErpAccessInvitationExpiredError) {
       response.status(410).json(toResponseBody(error.code, error.message));
       return;
     }

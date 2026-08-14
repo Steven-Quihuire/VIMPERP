@@ -40,12 +40,12 @@ Chain strategy: stacked-to-main
 
 ## Phase 3: Backend — hr-erp-access (PR-3)
 
-- [ ] 3.1 RED `domain/__tests__/erp-access.test.ts`: ambiguous active link rejected.
-- [ ] 3.2 Author `domain/{erp-access-links,erp-access-invitations}.ts`.
-- [ ] 3.3 RED `application/__tests__/accept-erp-access-invitation.test.ts`: 204 + session; expired token rejected.
-- [ ] 3.4 Author `application/{create,accept,list,revoke}-erp-access-invitation.ts`.
-- [ ] 3.5 Author `infrastructure/drizzle-erp-access.gateway.ts` + integration test.
-- [ ] 3.6 Author `presentation/hr-erp-access.router.ts` + Supertest.
+- [x] 3.1 RED `domain/__tests__/erp-access.test.ts`: ambiguous active link rejected.
+- [x] 3.2 Author `domain/{erp-access-links,erp-access-invitations}.ts`.
+- [x] 3.3 RED `application/__tests__/accept-erp-access-invitation.test.ts`: 204 + session; expired token rejected.
+- [x] 3.4 Author `application/{create,accept,list,revoke}-erp-access-invitation.ts`.
+- [x] 3.5 Author `infrastructure/drizzle-erp-access.gateway.ts` + integration test.
+- [x] 3.6 Author `presentation/hr-erp-access.router.ts` + Supertest.
 
 ## Phase 4: Backend — approval-policy + identity/org-tree MODIFIED (PR-4)
 
