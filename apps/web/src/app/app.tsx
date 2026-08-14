@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useState } from 'react';
 import {
   BrowserRouter,
   MemoryRouter,
@@ -33,10 +34,21 @@ import { DashboardThemeSettingsPage } from '../features/dashboard/presentation/d
 import { ProvisioningRunDetailPage } from '../features/dashboard/presentation/provisioning-run-detail-page';
 import { ProvisioningRunsListPage } from '../features/dashboard/presentation/provisioning-runs-list-page';
 import { DesktopGate } from '../features/desktop-access/presentation/desktop-gate';
+import { PolicyFormPage } from '../features/approval-policy/presentation/pages/policy-form';
+import { PoliciesListPage } from '../features/approval-policy/presentation/pages/policies-list';
 import { CategoriesPage } from '../features/items/presentation/categories-page';
 import { ItemCatalogPage } from '../features/items/presentation/item-catalog-page';
 import { LandingPage } from '../features/landing/presentation/landing-page';
 import { PrivacyPolicyPage } from '../features/legal/presentation/privacy-policy-page';
+import { EmployeeDetailPage } from '../features/hr-employees/presentation/pages/employee-detail';
+import { EmployeeFormPage } from '../features/hr-employees/presentation/pages/employee-form';
+import { EmployeesListPage } from '../features/hr-employees/presentation/pages/employees-list';
+import { PositionFormPage } from '../features/hr-employees/presentation/pages/position-form';
+import { PositionsListPage } from '../features/hr-employees/presentation/pages/positions-list';
+import { AssignmentTimelinePage } from '../features/hr-employees/presentation/pages/assignment-timeline';
+import { InvitationsListPage } from '../features/hr-erp-access/presentation/pages/invitations-list';
+import { AcceptErpAccessInvitationPage } from '../features/hr-erp-access/presentation/pages/accept-invitation';
+import { useApprovalPolicies } from '../features/approval-policy/application/approval-policy-queries';
 import { DivisionsPage } from '../features/org-hierarchy/presentation/divisions-page';
 import { AreasPage } from '../features/org-hierarchy/presentation/areas-page';
 import { LocalsPage } from '../features/org-hierarchy/presentation/locals-page';
@@ -46,6 +58,8 @@ import { WarehousesPage } from '../features/org-hierarchy/presentation/warehouse
 import { needsCompanyOnboarding } from '../features/onboarding/domain/onboarding';
 import { OnboardingPage } from '../features/onboarding/presentation/onboarding-page';
 import { ThemeProvider } from '../features/theme/presentation/theme-provider';
+
+import type { AuthSession } from '../features/auth/domain/auth';
 
 const getAuthenticatedEntryRoute = (
   session: Parameters<typeof needsCompanyOnboarding>[0],
@@ -103,6 +117,267 @@ const ProtectedDashboard = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   return (
     <DashboardPage
       session={auth.session}
+      {...(apiBaseUrl ? { apiBaseUrl } : {})}
+    />
+  );
+};
+
+const useCompanyScopedSession = (apiBaseUrl?: string) => {
+  const auth = useAuth(apiBaseUrl);
+
+  if (auth.isLoading) {
+    return { state: 'loading' as const, auth };
+  }
+
+  if (!auth.session) {
+    return { state: 'redirect-login' as const, auth };
+  }
+
+  if (needsCompanyOnboarding(auth.session)) {
+    return { state: 'redirect-onboarding' as const, auth };
+  }
+
+  if (needsActiveCompanySelection(auth.session)) {
+    return { state: 'redirect-dashboard' as const, auth };
+  }
+
+  if (hasBlockedActiveCompany(auth.session)) {
+    return { state: 'redirect-company-status' as const, auth };
+  }
+
+  return { state: 'ready' as const, auth };
+};
+
+const renderCompanyScopedRoute = (
+  state: ReturnType<typeof useCompanyScopedSession>['state'],
+) => {
+  if (state === 'loading') {
+    return <p>Loading...</p>;
+  }
+
+  if (state === 'redirect-login') {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (state === 'redirect-onboarding') {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  if (state === 'redirect-dashboard') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (state === 'redirect-company-status') {
+    return <Navigate to="/dashboard/company-status" replace />;
+  }
+
+  return null;
+};
+
+const HrEmployeesWorkspace = ({
+  session,
+  apiBaseUrl,
+}: {
+  session: AuthSession;
+  apiBaseUrl?: string;
+}) => {
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold">HR employees</h1>
+        <p className="text-sm text-muted-foreground">
+          Manage employee records, reporting lines, and assignment history.
+        </p>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <EmployeesListPage
+          session={session}
+          {...(apiBaseUrl ? { apiBaseUrl } : {})}
+          selectedEmployeeId={selectedEmployeeId}
+          onSelectEmployee={setSelectedEmployeeId}
+        />
+        <EmployeeFormPage
+          session={session}
+          {...(apiBaseUrl ? { apiBaseUrl } : {})}
+          onCreated={setSelectedEmployeeId}
+        />
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <EmployeeDetailPage
+          session={session}
+          {...(apiBaseUrl ? { apiBaseUrl } : {})}
+          employeeId={selectedEmployeeId}
+        />
+        <AssignmentTimelinePage
+          session={session}
+          {...(apiBaseUrl ? { apiBaseUrl } : {})}
+          employeeId={selectedEmployeeId}
+        />
+      </div>
+    </div>
+  );
+};
+
+const HrPositionsWorkspace = ({
+  session,
+  apiBaseUrl,
+}: {
+  session: AuthSession;
+  apiBaseUrl?: string;
+}) => {
+  const [selectedPositionId, setSelectedPositionId] = useState<string | null>(null);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold">HR positions</h1>
+        <p className="text-sm text-muted-foreground">
+          Define reporting positions and staffing capacity.
+        </p>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <PositionsListPage
+          session={session}
+          {...(apiBaseUrl ? { apiBaseUrl } : {})}
+          selectedPositionId={selectedPositionId}
+          onSelectPosition={setSelectedPositionId}
+        />
+        <PositionFormPage
+          session={session}
+          {...(apiBaseUrl ? { apiBaseUrl } : {})}
+          onCreated={setSelectedPositionId}
+        />
+      </div>
+    </div>
+  );
+};
+
+const HrErpAccessWorkspace = ({
+  session,
+  apiBaseUrl,
+}: {
+  session: AuthSession;
+  apiBaseUrl?: string;
+}) => {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold">ERP access invitations</h1>
+        <p className="text-sm text-muted-foreground">
+          Invite employees into ERP access without redefining employee identity.
+        </p>
+      </div>
+
+      <InvitationsListPage session={session} {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+    </div>
+  );
+};
+
+const ApprovalPoliciesWorkspace = ({
+  session,
+  apiBaseUrl,
+}: {
+  session: AuthSession;
+  apiBaseUrl?: string;
+}) => {
+  const [selectedPolicyId, setSelectedPolicyId] = useState<string | null>(null);
+  const companyId = session.activeCompany?.companyId;
+  const { policiesQuery } = useApprovalPolicies(companyId, apiBaseUrl);
+  const selectedPolicy =
+    policiesQuery.data?.find((policy) => policy.id === selectedPolicyId) ?? null;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold">Approval policies</h1>
+        <p className="text-sm text-muted-foreground">
+          Configure company and node-level approval policy groundwork.
+        </p>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <PoliciesListPage
+          session={session}
+          {...(apiBaseUrl ? { apiBaseUrl } : {})}
+          selectedPolicyId={selectedPolicyId}
+          onSelectPolicy={setSelectedPolicyId}
+        />
+        <PolicyFormPage
+          key={selectedPolicy?.id ?? 'new-policy'}
+          session={session}
+          {...(apiBaseUrl ? { apiBaseUrl } : {})}
+          policy={selectedPolicy}
+          onSaved={setSelectedPolicyId}
+        />
+      </div>
+    </div>
+  );
+};
+
+const HrEmployeesRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+  const scoped = useCompanyScopedSession(apiBaseUrl);
+  const fallback = renderCompanyScopedRoute(scoped.state);
+
+  if (fallback) {
+    return fallback;
+  }
+
+  return (
+    <HrEmployeesWorkspace
+      session={scoped.auth.session!}
+      {...(apiBaseUrl ? { apiBaseUrl } : {})}
+    />
+  );
+};
+
+const HrPositionsRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+  const scoped = useCompanyScopedSession(apiBaseUrl);
+  const fallback = renderCompanyScopedRoute(scoped.state);
+
+  if (fallback) {
+    return fallback;
+  }
+
+  return (
+    <HrPositionsWorkspace
+      session={scoped.auth.session!}
+      {...(apiBaseUrl ? { apiBaseUrl } : {})}
+    />
+  );
+};
+
+const HrErpAccessRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+  const scoped = useCompanyScopedSession(apiBaseUrl);
+  const fallback = renderCompanyScopedRoute(scoped.state);
+
+  if (fallback) {
+    return fallback;
+  }
+
+  return (
+    <HrErpAccessWorkspace
+      session={scoped.auth.session!}
+      {...(apiBaseUrl ? { apiBaseUrl } : {})}
+    />
+  );
+};
+
+const ApprovalPoliciesRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+  const scoped = useCompanyScopedSession(apiBaseUrl);
+  const fallback = renderCompanyScopedRoute(scoped.state);
+
+  if (fallback) {
+    return fallback;
+  }
+
+  return (
+    <ApprovalPoliciesWorkspace
+      session={scoped.auth.session!}
       {...(apiBaseUrl ? { apiBaseUrl } : {})}
     />
   );
@@ -451,6 +726,10 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
           path="accept-invitation/:token"
           element={<AcceptInvitationPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
         />
+        <Route
+          path="hr-erp-access/accept/:token"
+          element={<AcceptErpAccessInvitationPage {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
       </Route>
       <Route
         path="/dashboard"
@@ -493,6 +772,22 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
         <Route
           path="organization"
           element={<OrganizationRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="hr/employees"
+          element={<HrEmployeesRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="hr/positions"
+          element={<HrPositionsRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="hr/erp-access"
+          element={<HrErpAccessRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="hr/approval-policies"
+          element={<ApprovalPoliciesRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
         />
         <Route
           path="warehouses"

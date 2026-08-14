@@ -44,8 +44,10 @@ const toScopeRef = (scopeNodeId: string): ScopeRef | null => {
     return null;
   }
 
+  const normalizedScopeType = scopeType as (typeof scopeTypeValues)[number];
+
   return {
-    scopeType,
+    scopeType: normalizedScopeType,
     scopeId: scopeNodeId.slice(separatorIndex + 1),
   };
 };

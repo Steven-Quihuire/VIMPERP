@@ -65,7 +65,11 @@ export const createApprovalPolicyRouter = ({
         response.status(201).json(
           await createApprovalPolicy({
             companyId: params.companyId,
-            ...body,
+            scopeType: body.scopeType,
+            scopeNodeId: body.scopeNodeId,
+            name: body.name,
+            definition: body.definition,
+            ...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
           }),
         );
       } catch (error) {

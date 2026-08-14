@@ -62,14 +62,34 @@ export const createUpdateAreaUseCase = ({
       }
     }
 
+    const auditContext = {
+      areaId: input.areaId,
+      actorUserId: input.actorUserId,
+      correlationId: input.correlationId,
+    };
+    const namePatch =
+      input.name !== undefined ? { name: input.name.trim() } : {};
+
     try {
+      if (hasDivisionParent(input)) {
+        return await gateway.updateArea({
+          ...auditContext,
+          ...namePatch,
+          divisionId: input.divisionId,
+        });
+      }
+
+      if (hasLocalParent(input)) {
+        return await gateway.updateArea({
+          ...auditContext,
+          ...namePatch,
+          localId: input.localId,
+        });
+      }
+
       return await gateway.updateArea({
-        areaId: input.areaId,
-        actorUserId: input.actorUserId,
-        correlationId: input.correlationId,
-        ...(input.name !== undefined ? { name: input.name.trim() } : {}),
-        ...(hasDivisionParent(input) ? { divisionId: input.divisionId } : {}),
-        ...(hasLocalParent(input) ? { localId: input.localId } : {}),
+        ...auditContext,
+        name: input.name.trim(),
       });
     } catch (error) {
       if (error instanceof AreaNotFoundError) {

@@ -389,7 +389,7 @@ describe('App auth flow', () => {
               expiresAt: '2026-08-20T10:00:00.000Z',
               status: 'pending',
               userExists: true,
-            }),
+            }, 200),
           );
         }
 

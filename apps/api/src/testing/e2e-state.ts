@@ -1,6 +1,8 @@
+import { randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
 
 import { createArgon2PasswordHasher } from '../features/identity/infrastructure/argon2-password-hasher';
+import { hrPermissionKeys, permissionCatalogSeeds } from '../features/roles-management/domain/permissions';
 
 const databaseUrl =
   process.env.DATABASE_URL ??
@@ -57,6 +59,11 @@ const clearTables = async (pool: Pool) => {
   await pool.query('DELETE FROM provisioning_runs');
   await pool.query('DELETE FROM items');
   await pool.query('DELETE FROM item_categories');
+  await deleteFromIfExists(pool, 'approval_policies');
+  await deleteFromIfExists(pool, 'erp_access_invitations');
+  await deleteFromIfExists(pool, 'erp_access_links');
+  await deleteFromIfExists(pool, 'employee_assignments');
+  await deleteFromIfExists(pool, 'positions');
   await pool.query('DELETE FROM points_of_sale');
   await pool.query('DELETE FROM warehouses');
   await deleteFromIfExists(pool, 'employees');
@@ -113,6 +120,31 @@ const clearRuntimeTestData = async (pool: Pool) => {
     await pool.query(
       `DELETE FROM item_categories WHERE company_id IN (SELECT id FROM runtime_test_companies)`,
     );
+    await deleteFromIfExists(
+      pool,
+      'approval_policies',
+      'company_id IN (SELECT id FROM runtime_test_companies)',
+    );
+    await deleteFromIfExists(
+      pool,
+      'erp_access_invitations',
+      'company_id IN (SELECT id FROM runtime_test_companies)',
+    );
+    await deleteFromIfExists(
+      pool,
+      'erp_access_links',
+      'company_id IN (SELECT id FROM runtime_test_companies)',
+    );
+    await deleteFromIfExists(
+      pool,
+      'employee_assignments',
+      'company_id IN (SELECT id FROM runtime_test_companies)',
+    );
+    await deleteFromIfExists(
+      pool,
+      'positions',
+      'company_id IN (SELECT id FROM runtime_test_companies)',
+    );
     await pool.query(`
       DELETE FROM provisioning_steps
       WHERE run_id IN (
@@ -134,6 +166,11 @@ const clearRuntimeTestData = async (pool: Pool) => {
     await pool.query(
       `DELETE FROM company_services WHERE company_id IN (SELECT id FROM runtime_test_companies)`,
     );
+    await pool.query(`
+      DELETE FROM user_preferences
+      WHERE user_id IN (SELECT id FROM runtime_test_users)
+         OR active_company_id IN (SELECT id FROM runtime_test_companies)
+    `);
     await pool.query(
       `DELETE FROM points_of_sale WHERE company_id IN (SELECT id FROM runtime_test_companies)`,
     );
@@ -167,11 +204,6 @@ const clearRuntimeTestData = async (pool: Pool) => {
       DELETE FROM theme_preferences
       WHERE user_id IN (SELECT id FROM runtime_test_users)
          OR company_id IN (SELECT id FROM runtime_test_companies)
-    `);
-    await pool.query(`
-      DELETE FROM user_preferences
-      WHERE user_id IN (SELECT id FROM runtime_test_users)
-         OR active_company_id IN (SELECT id FROM runtime_test_companies)
     `);
     await pool.query(
       `DELETE FROM sessions WHERE user_id IN (SELECT id FROM runtime_test_users)`,
@@ -416,6 +448,55 @@ const seedActiveScopeHierarchy = async (pool: Pool) => {
   }
 };
 
+const seedRrhhFoundation = async (pool: Pool) => {
+  await seedActiveScopeHierarchy(pool);
+
+  await pool.query('BEGIN');
+
+  try {
+    const existingPermissions = await pool.query<{ key: string }>(
+      'SELECT key FROM permissions',
+    );
+    const existingKeys = new Set(existingPermissions.rows.map((permission) => permission.key));
+    const missingPermissions = permissionCatalogSeeds.filter(
+      (permission) => !existingKeys.has(permission.key),
+    );
+
+    for (const permission of missingPermissions) {
+      await pool.query(
+        'INSERT INTO permissions (id, key, family) VALUES ($1, $2, $3)',
+        [randomUUID(), permission.key, permission.family],
+      );
+    }
+
+    const roleResult = await pool.query<{ id: string }>(
+      'SELECT id FROM roles WHERE company_id = $1 AND key = $2 LIMIT 1',
+      [activeScopeRuntime.companyId, 'company-owner'],
+    );
+    const ownerRoleId = roleResult.rows[0]?.id;
+
+    if (!ownerRoleId) {
+      throw new Error('Expected a company-owner role for RRHH runtime seeding.');
+    }
+
+    for (const permissionKey of hrPermissionKeys) {
+      await pool.query(
+        `INSERT INTO role_permissions (role_id, permission_id)
+         SELECT $1, permissions.id
+         FROM permissions
+         WHERE permissions.key = $2
+         ON CONFLICT DO NOTHING`,
+        [ownerRoleId, permissionKey],
+      );
+    }
+
+    await pool.query('COMMIT');
+  } catch (error) {
+    await pool.query('ROLLBACK');
+    throw error;
+  }
+};
+
 const main = async () => {
   const mode = process.argv[2] ?? 'reset-and-seed-owner';
   const pool = new Pool({
@@ -430,6 +511,8 @@ const main = async () => {
       await seedOwner(pool);
     } else if (mode === 'seed-active-scope-hierarchy') {
       await seedActiveScopeHierarchy(pool);
+    } else if (mode === 'seed-rrhh-foundation') {
+      await seedRrhhFoundation(pool);
     } else if (mode === 'cleanup-runtime') {
       await clearRuntimeTestData(pool);
     } else {

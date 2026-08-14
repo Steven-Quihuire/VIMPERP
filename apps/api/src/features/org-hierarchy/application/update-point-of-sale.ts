@@ -66,14 +66,34 @@ export const createUpdatePointOfSaleUseCase = ({
       }
     }
 
+    const auditContext = {
+      pointOfSaleId: input.pointOfSaleId,
+      actorUserId: input.actorUserId,
+      correlationId: input.correlationId,
+    };
+    const namePatch =
+      input.name !== undefined ? { name: input.name.trim() } : {};
+
     try {
+      if (hasAreaParent(input)) {
+        return await gateway.updatePointOfSale({
+          ...auditContext,
+          ...namePatch,
+          areaId: input.areaId,
+        });
+      }
+
+      if (hasLocalParent(input)) {
+        return await gateway.updatePointOfSale({
+          ...auditContext,
+          ...namePatch,
+          localId: input.localId,
+        });
+      }
+
       return await gateway.updatePointOfSale({
-        pointOfSaleId: input.pointOfSaleId,
-        actorUserId: input.actorUserId,
-        correlationId: input.correlationId,
-        ...(input.name !== undefined ? { name: input.name.trim() } : {}),
-        ...(hasAreaParent(input) ? { areaId: input.areaId } : {}),
-        ...(hasLocalParent(input) ? { localId: input.localId } : {}),
+        ...auditContext,
+        name: input.name.trim(),
       });
     } catch (error) {
       if (error instanceof PointOfSaleNotFoundError) {

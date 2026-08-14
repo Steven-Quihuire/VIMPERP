@@ -35,6 +35,12 @@
 - [x] 6.1 Author `web/src/features/hr-erp-access/domain/erp-access.ts`.
 - [x] 6.2 Author `infrastructure/create-erp-access-api.ts` + `useInvitations/useAcceptInvitation`; tests.
 - [x] 6.3 Author `presentation/pages/{invitations-list,accept-invitation}.tsx` (RHF + Zod + shadcn) + RTL tests.
+- [x] 7.1 Author `web/src/features/approval-policy/domain/approval-policy.ts`.
+- [x] 7.2 Author `infrastructure/create-approval-policy-api.ts` + hooks; tests.
+- [x] 7.3 Author `presentation/pages/{policies-list,policy-form}.tsx` (RHF + Zod + shadcn) + tests.
+- [x] 7.4 Modify `web/src/app/main.tsx`: register `/hr/{employees,positions,erp-access,approval-policies}`.
+- [x] 7.5 RED E2E `e2e/rrhh-foundation.spec.ts`: position → assign → invite → accept → resolve manager.
+- [x] 7.6 GREEN E2E; `pnpm test`, `pnpm build`, `pnpm --filter api test:coverage` (≥ 80%); record evidence.
 
 ### Files Changed
 | File | Action | What Was Done |
@@ -118,6 +124,26 @@
 | `apps/web/src/features/hr-erp-access/presentation/pages/hr-erp-access-pages.test.tsx` | Created | Wrote RTL coverage for the invitation list form, revoke action, and ERP access activation redirect flow. |
 | `openspec/changes/rrhh-foundation/tasks.md` | Modified | Marked PR-6 Phase 6 tasks `6.1` through `6.3` complete for this stacked slice. |
 | `openspec/changes/rrhh-foundation/apply-progress.md` | Modified | Merged the previous PR-1 through PR-5 evidence with the successful PR-6 hr-erp-access web slice evidence. |
+| `apps/web/src/features/approval-policy/domain/approval-policy.ts` | Created | Added the approval-policy web contract, form schema, JSON parsing helpers, and company-vs-node scope normalization. |
+| `apps/web/src/features/approval-policy/domain/__tests__/approval-policy.test.ts` | Created | Wrote strict-TDD domain coverage for company/node payload normalization and policy ordering. |
+| `apps/web/src/features/approval-policy/infrastructure/create-approval-policy-api.ts` | Created | Added the typed fetch adapter for approval-policy list/create/update/deactivate flows. |
+| `apps/web/src/features/approval-policy/infrastructure/create-approval-policy-api.test.ts` | Created | Wrote focused fetch-contract coverage for the approval-policy web adapter. |
+| `apps/web/src/features/approval-policy/application/approval-policy-queries.ts` | Created | Added TanStack Query reads and mutations for approval-policy list/create/update/deactivate flows. |
+| `apps/web/src/features/approval-policy/application/approval-policy-queries.test.tsx` | Created | Wrote focused query/mutation coverage for approval-policy cache invalidation. |
+| `apps/web/src/features/approval-policy/presentation/pages/{policies-list,policy-form}.tsx` | Created | Added the approval-policy management pages with RHF + Zod, shadcn cards/fields, and node-scope support. |
+| `apps/web/src/features/approval-policy/presentation/pages/approval-policy-pages.test.tsx` | Created | Wrote RTL coverage for policy selection, deactivation, create, and update flows. |
+| `apps/web/src/app/app.tsx` | Modified | Registered dashboard HR routes for employees, positions, ERP access, and approval policies, plus the public ERP-access acceptance route. |
+| `apps/web/src/app/app.hr-routes.test.tsx` | Created | Added route-level coverage proving the new HR dashboard routes render inside the protected shell. |
+| `e2e/rrhh-foundation.spec.ts` | Created | Added the PR-7 Playwright happy path for positions, employee assignments, ERP invitations, acceptance, and manager resolution. |
+| `apps/api/src/testing/e2e-state.ts` | Modified | Added RRHH runtime seeding plus cleanup for approval policies, ERP access, assignments, and HR permission grants. |
+| `apps/api/src/features/approval-policy/presentation/approval-policy.router.ts` | Modified | Narrowed optional create payload forwarding so exact-optional build rules stay green. |
+| `apps/api/src/features/org-hierarchy/presentation/org-hierarchy.router.ts` | Modified | Corrected the create-division function contract to include audit context used by the router. |
+| `apps/api/src/features/identity/application/resolve-auth-session.ts` | Modified | Normalized parsed scope types back into the canonical scope union for strict typecheck/build. |
+| `apps/api/src/features/org-hierarchy/application/update-{area,warehouse,point-of-sale}.ts` | Modified | Rewrote exact-optional update branching so build-safe union payloads are passed to the gateway. |
+| `apps/web/src/app/app.auth.test.tsx` | Modified | Fixed the public invitation test helper response signature for exact typecheck/build compliance. |
+| `apps/web/src/features/org-hierarchy/presentation/organization-page.tsx` | Modified | Tightened the graph entry call-site to the already-guarded company id for build compliance. |
+| `openspec/changes/rrhh-foundation/tasks.md` | Modified | Marked PR-7 Phase 7 tasks `7.1` through `7.6` complete for this stacked slice. |
+| `openspec/changes/rrhh-foundation/apply-progress.md` | Modified | Merged the previous PR-1 through PR-6 evidence with the successful PR-7 approval-policy and integration slice evidence. |
 
 ### Work Unit Evidence
 | Evidence | Value |
@@ -141,6 +167,9 @@
 | `PR-6` Focused test command and exact result | `pnpm --filter web exec vitest run src/features/hr-erp-access/domain/__tests__/erp-access.test.ts src/features/hr-erp-access/infrastructure/create-erp-access-api.test.ts src/features/hr-erp-access/application/hr-erp-access-queries.test.tsx src/features/hr-erp-access/presentation/pages/hr-erp-access-pages.test.tsx` → exit `0`; `4` files / `8` tests passed. |
 | `PR-6` Runtime harness command/scenario and exact result | `pnpm --filter web exec vitest run src/features/hr-erp-access/application/hr-erp-access-queries.test.tsx src/features/hr-erp-access/presentation/pages/hr-erp-access-pages.test.tsx` → exit `0`; `2` files / `5` tests passed. Scenario: composed web slice flow across TanStack Query invitation hooks and RTL-rendered invitation management + ERP access activation pages inside the new PR-6 feature boundary. |
 | `PR-6` Rollback boundary | Revert only `apps/web/src/features/hr-erp-access/**` plus the PR-6 checkbox/apply-progress updates; no shared route registration or non-HR web feature files were touched in this slice. |
+| `PR-7` Focused test command and exact result | `pnpm --filter web exec vitest run src/app/app.auth.test.tsx src/app/app.dashboard-shell.test.tsx src/app/app.onboarding.test.tsx src/app/app.hr-routes.test.tsx src/features/hr-employees/domain/__tests__/hr-employees-domain.test.ts src/features/hr-employees/infrastructure/create-hr-employees-api.test.ts src/features/hr-employees/application/hr-employees-queries.test.tsx src/features/hr-employees/presentation/pages/hr-employees-pages.test.tsx src/features/hr-erp-access/domain/__tests__/erp-access.test.ts src/features/hr-erp-access/infrastructure/create-erp-access-api.test.ts src/features/hr-erp-access/application/hr-erp-access-queries.test.tsx src/features/hr-erp-access/presentation/pages/hr-erp-access-pages.test.tsx src/features/approval-policy/domain/__tests__/approval-policy.test.ts src/features/approval-policy/infrastructure/create-approval-policy-api.test.ts src/features/approval-policy/application/approval-policy-queries.test.tsx src/features/approval-policy/presentation/pages/approval-policy-pages.test.tsx && pnpm --filter api exec vitest run src/features/approval-policy/presentation/approval-policy.router.test.ts src/features/identity/application/resolve-auth-session.test.ts src/features/org-hierarchy/presentation/org-hierarchy.router.test.ts src/features/org-hierarchy/application/hierarchy-parent-invariants.test.ts` → exit `0`; Web `16` files / `57` tests passed and API `4` files / `51` tests passed. |
+| `PR-7` Runtime harness command/scenario and exact result | `CI=1 pnpm exec playwright test e2e/rrhh-foundation.spec.ts` → exit `0`; `1` E2E passed. Follow-up full repository proof: `pnpm test` → exit `0`; root `1` + API `357` + Web `159` tests passed. `pnpm build` → exit `0`. `pnpm --filter api test:coverage` → exit `0`; coverage `89.01%` statements / `83.55%` branches / `97.43%` functions / `89.01%` lines. Scenario: company-owner creates reporting positions and employee assignments, issues an ERP invitation, the invitee accepts it on the public route, and the original owner still resolves the direct manager through the HR dashboard. |
+| `PR-7` Rollback boundary | Revert only `apps/web/src/features/approval-policy/**`, `apps/web/src/app/app.tsx`, `apps/web/src/app/app.hr-routes.test.tsx`, `e2e/rrhh-foundation.spec.ts`, `apps/api/src/testing/e2e-state.ts`, the exact-optional build-fix touches in `apps/api/src/features/{approval-policy/org-hierarchy/identity}/**`, `apps/web/src/app/app.auth.test.tsx`, `apps/web/src/features/org-hierarchy/presentation/organization-page.tsx`, and the PR-7 checkbox/apply-progress updates. |
 
 ### TDD Cycle Evidence
 | Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
@@ -176,6 +205,12 @@
 | 6.1 | `apps/web/src/features/hr-erp-access/domain/__tests__/erp-access.test.ts` | Unit | N/A (new) | ✅ Wrote failing invitation normalization and optional password activation assertions before the ERP access domain file existed | ✅ Same file passed after adding the ERP access invitation contracts and pure helpers | ✅ Triangulated create-invitation normalization, expiry ordering, and optional password activation paths | ✅ Kept the PR-6 domain pure and framework-free |
 | 6.2 | `apps/web/src/features/hr-erp-access/infrastructure/create-erp-access-api.test.ts`, `apps/web/src/features/hr-erp-access/application/hr-erp-access-queries.test.tsx` | Integration (fetch + TanStack Query) | N/A (new) | ✅ Wrote failing adapter and query-hook suites before the ERP access API/query modules existed | ✅ Both files passed after adding the typed fetch adapter plus invitation list/create/revoke/accept hooks | ✅ Triangulated invitation list reads, create/revoke invalidations, and auth refresh invalidation after acceptance | ✅ Kept mutations thin and isolated shared auth invalidation at the query boundary |
 | 6.3 | `apps/web/src/features/hr-erp-access/presentation/pages/hr-erp-access-pages.test.tsx` | Integration (RTL) | N/A (new) | ✅ Wrote failing invitation list and activation page coverage before the new PR-6 pages existed | ✅ Same file passed after adding the invitation management and token-driven activation pages | ✅ Triangulated invite submission, revoke action, successful activation redirect, and mismatched-password validation | ✅ Reused the existing auth-refresh navigation pattern while keeping the pages route-agnostic for PR-7 wiring |
+| 7.1 | `apps/web/src/features/approval-policy/domain/__tests__/approval-policy.test.ts` | Unit | N/A (new) | ✅ Wrote failing company/node normalization and ordering assertions before the approval-policy domain file existed | ✅ Same file passed after adding the approval-policy contract, form schema, and normalization helpers | ✅ Company create, node update, and updated-at ordering paths all execute distinct logic | ✅ Extracted JSON parsing and scope-node normalization into pure helpers |
+| 7.2 | `apps/web/src/features/approval-policy/infrastructure/create-approval-policy-api.test.ts`, `apps/web/src/features/approval-policy/application/approval-policy-queries.test.tsx` | Integration (fetch + TanStack Query) | N/A (new) | ✅ Wrote failing adapter and query-hook suites before the approval-policy API/query modules existed | ✅ Both files passed after adding the typed fetch adapter plus list/create/update/deactivate hooks | ✅ Triangulated list reads, create/update mutations, and deactivate invalidation against the same query key | ✅ Kept cache invalidation isolated at the query boundary |
+| 7.3 | `apps/web/src/features/approval-policy/presentation/pages/approval-policy-pages.test.tsx` | Integration (RTL) | N/A (new) | ✅ Wrote failing page coverage before the approval-policy pages existed | ✅ Same file passed after adding policy selection, deactivate, create, and update UI flows | ✅ Triangulated list interactions, company-scope create, and node-scope update paths | ✅ Kept form state route-agnostic by keying the selected policy instead of syncing with effects |
+| 7.4 | `apps/web/src/app/app.hr-routes.test.tsx` | Integration (router/app shell) | ✅ `pnpm --filter web exec vitest run src/app/app.auth.test.tsx src/app/app.dashboard-shell.test.tsx src/app/app.onboarding.test.tsx` passed before editing `app.tsx` | ✅ Wrote the failing HR-route registration test before the dashboard routes and public ERP acceptance path existed | ✅ Same file passed after wiring `/dashboard/hr/{employees,positions,erp-access,approval-policies}` plus `/hr-erp-access/accept/:token` | ✅ Triangulated all four HR dashboard routes instead of a single path | ✅ Introduced a shared company-scoped guard helper so the new routes did not duplicate auth logic |
+| 7.5 | `e2e/rrhh-foundation.spec.ts` | E2E | N/A (new) | ✅ Wrote the failing RRHH happy-path spec before the approval-policy route wiring and RRHH runtime seed existed | ✅ The same spec turned green in task 7.6 after the runtime seed, route wiring, and public ERP accept path were finished | ✅ The scenario covers position creation, assignment, invite, acceptance, and manager resolution across two browser contexts | ✅ Simplified assertions to stable response-driven ids and exact manager text |
+| 7.6 | `e2e/rrhh-foundation.spec.ts`, full repo gates | E2E + repository gates | ✅ Existing focused web/api suites stayed green before the runtime run; the initial Playwright attempt exposed only harness-level issues (busy Postgres bind and selector ambiguity) that were corrected without widening scope | ✅ `CI=1 pnpm exec playwright test e2e/rrhh-foundation.spec.ts`, `pnpm test`, `pnpm build`, and `pnpm --filter api test:coverage` all passed after finishing the final runtime wiring and exact-optional build fixes | ✅ Triangulated owner-side management plus invitee-side acceptance in separate browser contexts, then proved manager resolution after acceptance | ✅ Tightened several exact-optional payload branches in existing API/web files so the final repository build gate stayed green |
 
 ### Test Summary
 - **Focused PR-1 evidence still green**: migration suite `1` file / `2` tests passed; API `328` + Web `129` bootstrap tests passed.
@@ -184,34 +219,28 @@
 - **Focused PR-4 evidence**: `7` files / `26` tests passed; runtime harness `1` file / `2` tests passed.
 - **Focused PR-5 evidence**: `4` files / `12` tests passed; runtime harness `2` files / `8` tests passed.
 - **Focused PR-6 evidence**: `4` files / `8` tests passed; runtime harness `2` files / `5` tests passed.
+- **Focused PR-7 evidence**: Web `16` files / `57` tests passed plus API `4` files / `51` tests passed; runtime harness `1` Playwright E2E passed; full repository gates (`pnpm test`, `pnpm build`, `pnpm --filter api test:coverage`) all passed.
 - **Layers used**: Unit, integration (real Postgres gateway + Supertest), and safety-net suites.
 - **Approval tests**: None — PR-4 added a new approval-policy slice and additive permission-scope behavior instead of refactoring legacy behavior under approval tests.
-- **Pure functions created**: 11 (`assertNoAmbiguousActiveErpAccessLink`, `resolveReportingLineScopeEmployeeIds`, `assertValidApprovalPolicyScope`, `sortEmployeesByCreatedAtDesc`, `sortPositionsByName`, `toCreatePositionInput`, `toCreateAssignmentInput`, `buildAssignmentTimelineEntries`, `sortInvitationsByExpiresAt`, `toCreateErpAccessInvitationInput`, `createAcceptInvitationInput`).
+- **Pure functions created**: 17 (`assertNoAmbiguousActiveErpAccessLink`, `resolveReportingLineScopeEmployeeIds`, `assertValidApprovalPolicyScope`, `sortEmployeesByCreatedAtDesc`, `sortPositionsByName`, `toCreatePositionInput`, `toCreateAssignmentInput`, `buildAssignmentTimelineEntries`, `sortInvitationsByExpiresAt`, `toCreateErpAccessInvitationInput`, `createAcceptInvitationInput`, `toDefinition`, `toScopeNodeId`, `toCreateApprovalPolicyInput`, `toUpdateApprovalPolicyInput`, `sortApprovalPoliciesByUpdatedAtDesc`, `getApprovalPolicyScopeLabel`).
 
 ### Deviations from Design
 - Minor PR-6 deviation: the backend exposes no public invitation-details read endpoint for ERP access, so the activation page reuses the node-management acceptance flow shape but stays token-driven and omits company/invite metadata.
+- Task naming deviation in PR-7: the route registration target was the real `apps/web/src/app/app.tsx` composition root rather than the nonexistent `web/src/app/main.tsx`, and the public `/hr-erp-access/accept/:token` route was added because the PR-6 acceptance page had no app-level registration yet.
 
 ### Issues Found
-- `pnpm --filter api typecheck` remains red in the repository baseline for pre-existing non-PR-2 issues, including existing org-hierarchy exact-optional-typing mismatches and legacy auth/item test-contract drift outside the `hr-employees` slice.
-- Host integration tests required the Docker CLI `default` context because the current CLI default points at an unavailable Docker Desktop socket; `docker --context default compose up -d postgres` restored the real Postgres harness for PR-3.
-- The unrelated baseline safety-net `pnpm --filter api exec vitest run src/features/hr-employees/presentation/hr-employees.router.test.ts` is still red in the current workspace (`500` instead of `201` on the first create-employee request) and was not modified in this batch.
-- Broader `pnpm --filter web test` is still red outside the PR-5 slice because pre-existing app-level auth/onboarding/dashboard-shell tests fail in the current baseline; the new HR web focused suites remain green.
-- Broader `pnpm --filter web build` is still red outside the PR-5 slice because pre-existing type errors remain in `src/app/app.auth.test.tsx` and `src/features/org-hierarchy/presentation/organization-page.tsx`; no PR-5 file contributes to those failures.
 - The PR-6 accept page cannot render invitation/company metadata yet because the backend currently exposes only list/create/revoke company routes plus token acceptance, not a public invitation-details endpoint.
+- The first PR-7 Playwright attempt failed only because `playwright.config.ts` tried to start Docker on an already-bound `5432`; rerunning with `CI=1` reused the existing Postgres port cleanly.
+- The final build gate surfaced exact-optional type drift in pre-existing API/web files touched by previous RRHH work; those were corrected in-scope so `pnpm build` and coverage could finish green.
 
 ### Remaining Tasks
-- [ ] 7.1 Author `web/src/features/approval-policy/domain/approval-policy.ts`.
-- [ ] 7.2 Author `infrastructure/create-approval-policy-api.ts` + hooks; tests.
-- [ ] 7.3 Author `presentation/pages/{policies-list,policy-form}.tsx` (RHF + Zod + shadcn) + tests.
-- [ ] 7.4 Modify `web/src/app/main.tsx`: register `/hr/{employees,positions,erp-access,approval-policies}`.
-- [ ] 7.5 RED E2E `e2e/rrhh-foundation.spec.ts`: position → assign → invite → accept → resolve manager.
-- [ ] 7.6 GREEN E2E; `pnpm test`, `pnpm build`, `pnpm --filter api test:coverage` (≥ 80%); record evidence.
+- None — all Phase 7 tasks are complete.
 
 ### Workload / PR Boundary
 - Mode: stacked PR slice
-- Current work unit: PR-6 frontend hr-erp-access
-- Boundary: Sixth stacked slice only (Phase 6 / tasks 6.1-6.3)
-- Estimated review budget impact: additive web ERP-access feature folder plus bounded tasks/apply-progress updates, kept under the approved 800-line review budget for PR-6
+- Current work unit: PR-7 frontend approval-policy and integration
+- Boundary: Seventh stacked slice only (Phase 7 / tasks 7.1-7.6), including the approval-policy web slice, HR route registration, RRHH Playwright happy path, and exact-optional build fixes required by the final repository gates
+- Estimated review budget impact: approval-policy feature folder + dashboard route wiring + one RRHH E2E + bounded runtime/build-fix touches, kept within the approved 800-line review budget for PR-7
 
 ### Status
-31/37 tasks complete. This batch is ready for the next stacked slice (PR-7 web `approval-policy` + route/e2e wiring), with the known follow-up risk that broader web auth/onboarding/dashboard-shell tests and baseline web typecheck drift still exist outside the PR-6 boundary.
+37/37 tasks complete. This batch is ready for `sdd-verify` on the final stacked slice.

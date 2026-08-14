@@ -66,14 +66,34 @@ export const createUpdateWarehouseUseCase = ({
       }
     }
 
+    const auditContext = {
+      warehouseId: input.warehouseId,
+      actorUserId: input.actorUserId,
+      correlationId: input.correlationId,
+    };
+    const namePatch =
+      input.name !== undefined ? { name: input.name.trim() } : {};
+
     try {
+      if (hasAreaParent(input)) {
+        return await gateway.updateWarehouse({
+          ...auditContext,
+          ...namePatch,
+          areaId: input.areaId,
+        });
+      }
+
+      if (hasLocalParent(input)) {
+        return await gateway.updateWarehouse({
+          ...auditContext,
+          ...namePatch,
+          localId: input.localId,
+        });
+      }
+
       return await gateway.updateWarehouse({
-        warehouseId: input.warehouseId,
-        actorUserId: input.actorUserId,
-        correlationId: input.correlationId,
-        ...(input.name !== undefined ? { name: input.name.trim() } : {}),
-        ...(hasAreaParent(input) ? { areaId: input.areaId } : {}),
-        ...(hasLocalParent(input) ? { localId: input.localId } : {}),
+        ...auditContext,
+        name: input.name.trim(),
       });
     } catch (error) {
       if (error instanceof WarehouseNotFoundError) {

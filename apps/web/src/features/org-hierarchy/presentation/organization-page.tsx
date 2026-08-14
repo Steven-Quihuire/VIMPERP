@@ -1698,7 +1698,7 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
   }
 
   const entries = getGraphEntries({
-    companyId,
+    companyId: companyId!,
     companyName: currentCompanyQuery.data?.name ?? 'Empresa',
     responsibilitiesByScope,
     divisions,

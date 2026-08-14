@@ -10,7 +10,12 @@ import type {
   Warehouse,
 } from '../domain/org-hierarchy';
 
-type CreateDivision = (input: { companyId: string; name: string }) =>
+type CreateDivision = (input: {
+  companyId: string;
+  name: string;
+  actorUserId: string;
+  correlationId: string;
+}) =>
   Promise<Division>;
 type ListDivisions = (companyId: string) => Promise<Division[]>;
 type FindDivisionById = (divisionId: string) => Promise<Division | null>;

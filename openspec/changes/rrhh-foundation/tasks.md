@@ -72,12 +72,12 @@ Chain strategy: stacked-to-main
 
 ## Phase 7: Frontend — approval-policy + integration (PR-7)
 
-- [ ] 7.1 Author `web/src/features/approval-policy/domain/approval-policy.ts`.
-- [ ] 7.2 Author `infrastructure/create-approval-policy-api.ts` + hooks; tests.
-- [ ] 7.3 Author `presentation/pages/{policies-list,policy-form}.tsx` (RHF + Zod + shadcn) + tests.
-- [ ] 7.4 Modify `web/src/app/main.tsx`: register `/hr/{employees,positions,erp-access,approval-policies}`.
-- [ ] 7.5 RED E2E `e2e/rrhh-foundation.spec.ts`: position → assign → invite → accept → resolve manager.
-- [ ] 7.6 GREEN E2E; `pnpm test`, `pnpm build`, `pnpm --filter api test:coverage` (≥ 80%); record evidence.
+- [x] 7.1 Author `web/src/features/approval-policy/domain/approval-policy.ts`.
+- [x] 7.2 Author `infrastructure/create-approval-policy-api.ts` + hooks; tests.
+- [x] 7.3 Author `presentation/pages/{policies-list,policy-form}.tsx` (RHF + Zod + shadcn) + tests.
+- [x] 7.4 Modify `web/src/app/main.tsx`: register `/hr/{employees,positions,erp-access,approval-policies}`.
+- [x] 7.5 RED E2E `e2e/rrhh-foundation.spec.ts`: position → assign → invite → accept → resolve manager.
+- [x] 7.6 GREEN E2E; `pnpm test`, `pnpm build`, `pnpm --filter api test:coverage` (≥ 80%); record evidence.
 
 ## Gating
 
