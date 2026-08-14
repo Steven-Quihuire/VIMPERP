@@ -163,6 +163,7 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
       responsibilities: 0,
       managementInvitations: 0,
       activeScopePreferences: 0,
+      employeeAssignments: 0,
     };
   }
 

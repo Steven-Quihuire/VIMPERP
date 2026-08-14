@@ -15,6 +15,7 @@ const zeroDependencies: ScopeNodeDependencyCounts = {
   responsibilities: 0,
   managementInvitations: 0,
   activeScopePreferences: 0,
+  employeeAssignments: 0,
 };
 
 const createGateway = (dependencies: ScopeNodeDependencyCounts) =>
@@ -224,6 +225,27 @@ describe('org hierarchy delete dependency preflight', () => {
       expect(gateway[deleteMethod]).not.toHaveBeenCalled();
     },
   );
+
+  it.each([
+    ['division', createDeleteDivisionUseCase, { divisionId: 'division-1' }, 'deleteDivision'],
+    ['local', createDeleteLocalUseCase, { localId: 'local-1' }, 'deleteLocal'],
+    ['area', createDeleteAreaUseCase, { areaId: 'area-1' }, 'deleteArea'],
+    ['warehouse', createDeleteWarehouseUseCase, { warehouseId: 'warehouse-1' }, 'deleteWarehouse'],
+    ['point-of-sale', createDeletePointOfSaleUseCase, { pointOfSaleId: 'pos-1' }, 'deletePointOfSale'],
+  ] as const)('%s blocks deletion for active or historical HR assignments', async (_kind, createUseCase, id, deleteMethod) => {
+    const gateway = createGateway({
+      ...zeroDependencies,
+      employeeAssignments: 1,
+    });
+    const useCase = createUseCase({ gateway }) as (
+      input: Record<string, string>,
+    ) => Promise<void>;
+
+    await expect(
+      useCase({ ...id, actorUserId: 'user-1', correlationId: 'corr-1' }),
+    ).rejects.toMatchObject({ code: expect.stringContaining('CONFLICT') });
+    expect(gateway[deleteMethod]).not.toHaveBeenCalled();
+  });
 
   it('allows division deletion when no restrictive scope-node dependencies exist', async () => {
     const gateway = createGateway(zeroDependencies);

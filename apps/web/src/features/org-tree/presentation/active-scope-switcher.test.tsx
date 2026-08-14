@@ -26,7 +26,7 @@ vi.mock('../../auth/presentation/use-auth', () => ({
 const session: AuthSession = { user: { id: 'user-1', email: 'owner@vimcore.test', username: 'owner' }, memberships: [{ companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null }], activeCompany: { companyId: 'company-1', status: 'active' }, activeScope: { scopeType: 'local', scopeId: 'local-1' }, activeLocalId: 'local-1', capabilities: ['catalog.read', 'catalog.write', 'catalog.delete'] };
 const orgTree: OrgTreeNode[] = [
   { ref: { scopeType: 'division', scopeId: 'division-1' }, parentRef: { scopeType: 'company', scopeId: 'company-1' }, companyId: 'company-1', name: 'North Division' },
-  { ref: { scopeType: 'local', scopeId: 'local-1' }, parentRef: { scopeType: 'division', scopeId: 'division-1' }, companyId: 'company-1', name: 'Central Store' },
+  { ref: { scopeType: 'local', scopeId: 'local-1' }, parentRef: { scopeType: 'division', scopeId: 'division-1' }, companyId: 'company-1', name: 'Central Store', employeeCount: 2 },
   { ref: { scopeType: 'area', scopeId: 'area-1' }, parentRef: { scopeType: 'local', scopeId: 'local-1' }, companyId: 'company-1', name: 'Area A' },
   { ref: { scopeType: 'warehouse', scopeId: 'warehouse-1' }, parentRef: { scopeType: 'area', scopeId: 'area-1' }, companyId: 'company-1', name: 'Warehouse East' },
   { ref: { scopeType: 'point-of-sale', scopeId: 'pos-1' }, parentRef: { scopeType: 'area', scopeId: 'area-1' }, companyId: 'company-1', name: 'POS 01' },
@@ -44,6 +44,9 @@ describe('ActiveScopeSwitcher', () => {
     expect(await screen.findByText('Nivel empresa')).toBeInTheDocument();
     expect(screen.getByText('North Division')).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: /Central Store/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('menuitem', { name: /Central Store.*Local.*2 empleados/i }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Area A')).toBeInTheDocument();
     expect(screen.getByText('Warehouse East')).toBeInTheDocument();
     expect(screen.getByText('POS 01')).toBeInTheDocument();

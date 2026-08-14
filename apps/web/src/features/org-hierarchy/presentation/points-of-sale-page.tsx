@@ -485,6 +485,9 @@ export const PointsOfSalePage = ({ session }: { session: AuthSession }) => {
                       <div className="flex items-center gap-2">
                         <ShoppingBasket className="size-4 text-muted-foreground" />
                         <p className="font-medium">{pointOfSale.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {pointOfSale.employeeCount ?? 0} empleados
+                        </p>
                         <Badge variant="secondary">Punto de venta</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">

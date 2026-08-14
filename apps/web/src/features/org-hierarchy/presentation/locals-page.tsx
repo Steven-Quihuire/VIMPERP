@@ -379,6 +379,9 @@ export const LocalsPage = ({ session }: { session: AuthSession }) => {
                   >
                     <div className="space-y-1">
                       <p className="font-medium">{local.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {local.employeeCount ?? 0} empleados
+                      </p>
                       <Badge variant={divisionName ? 'outline' : 'secondary'}>
                         {divisionName ?? 'Sin división'}
                       </Badge>

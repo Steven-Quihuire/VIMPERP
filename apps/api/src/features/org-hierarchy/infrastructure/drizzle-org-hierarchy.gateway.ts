@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { and, eq, isNotNull, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import type { Logger } from 'pino';
 
 import type { AppDb } from '../../../shared/infrastructure/db/client';
@@ -21,6 +21,7 @@ import {
 } from '../../../shared/infrastructure/db/schema';
 import {
   DivisionConflictError,
+  AreaConflictError,
   AreaNameConflictError,
   AreaNotFoundError,
   DivisionNameConflictError,
@@ -28,6 +29,7 @@ import {
   LocalConflictError,
   LocalNameConflictError,
   LocalNotFoundError,
+  PointOfSaleConflictError,
   PointOfSaleNameConflictError,
   PointOfSaleNotFoundError,
   type Area,
@@ -38,6 +40,7 @@ import {
   type PointOfSale,
   type Warehouse,
   WarehouseNameConflictError,
+  WarehouseConflictError,
   WarehouseNotFoundError,
 } from '../domain/org-hierarchy';
 
@@ -112,9 +115,61 @@ const normalizePointsOfSaleByLocal = (
 ): PointOfSaleRow[] => rows.filter((row) => row.localId === localId);
 
 const normalizeEmployeesByArea = (
-  rows: { scopeNodeId: string }[],
+  rows: { scopeNodeId: string; employeeId: string; endedAt: Date | null }[],
   scopeNodeId: string,
-) => rows.filter((row) => row.scopeNodeId === scopeNodeId);
+) =>
+  new Set(
+    rows
+      .filter(
+        (row) =>
+          row.scopeNodeId === scopeNodeId &&
+          row.endedAt === null,
+      )
+      .map((row) => row.employeeId),
+  ).size;
+
+const countActiveEmployeesByScopeNode = async (
+  db: AppDb,
+  companyId: string,
+  scopeNodeIds: string[],
+) => {
+  const requested = new Set(scopeNodeIds);
+  const rows =
+    scopeNodeIds.length === 0
+      ? []
+      : await db
+          .select()
+          .from(employeeAssignmentsTable)
+          .where(
+            and(
+              eq(employeeAssignmentsTable.companyId, companyId),
+              isNull(employeeAssignmentsTable.endedAt),
+              inArray(employeeAssignmentsTable.scopeNodeId, scopeNodeIds),
+            ),
+          );
+  const employeesByScopeNode = new Map<string, Set<string>>();
+
+  for (const row of rows) {
+    if (
+      row.companyId !== companyId ||
+      row.endedAt !== null ||
+      !requested.has(row.scopeNodeId)
+    ) {
+      continue;
+    }
+
+    const employees = employeesByScopeNode.get(row.scopeNodeId) ?? new Set<string>();
+    employees.add(row.employeeId);
+    employeesByScopeNode.set(row.scopeNodeId, employees);
+  }
+
+  return new Map(
+    scopeNodeIds.map((scopeNodeId) => [
+      scopeNodeId,
+      employeesByScopeNode.get(scopeNodeId)?.size ?? 0,
+    ]),
+  );
+};
 
 const hasErrorCode = (
   error: unknown,
@@ -240,6 +295,7 @@ export const createDrizzleOrgHierarchyGateway = (
         responsibilities,
         managementInvitations,
         activeScopePreferences,
+        employeeAssignments,
       ] = await Promise.all([
         db
           .select()
@@ -262,6 +318,10 @@ export const createDrizzleOrgHierarchyGateway = (
           .select()
           .from(userPreferencesTable)
           .where(eq(userPreferencesTable.activeScopeNodeId, scopeNodeId)),
+        db
+          .select()
+          .from(employeeAssignmentsTable)
+          .where(eq(employeeAssignmentsTable.scopeNodeId, scopeNodeId)),
       ]);
 
       return {
@@ -269,6 +329,7 @@ export const createDrizzleOrgHierarchyGateway = (
         responsibilities: responsibilities.length,
         managementInvitations: managementInvitations.length,
         activeScopePreferences: activeScopePreferences.length,
+        employeeAssignments: employeeAssignments.length,
       };
     },
     createDivision: async (input) => {
@@ -319,7 +380,16 @@ export const createDrizzleOrgHierarchyGateway = (
         .from(divisionsTable)
         .where(eq(divisionsTable.companyId, companyId));
 
-      return normalizeDivisions(rows, companyId).map(toDivision);
+      const divisions = normalizeDivisions(rows, companyId);
+      const employeeCounts = await countActiveEmployeesByScopeNode(
+        db,
+        companyId,
+        divisions.map((row) => `division:${row.id}`),
+      );
+      return divisions.map((row) => ({
+        ...toDivision(row),
+        employeeCount: employeeCounts.get(`division:${row.id}`) ?? 0,
+      }));
     },
     findDivisionById: async (divisionId) => {
       const [row] = await db
@@ -531,7 +601,16 @@ export const createDrizzleOrgHierarchyGateway = (
         .from(localsTable)
         .where(eq(localsTable.companyId, companyId));
 
-      return normalizeLocals(rows, companyId).map(toLocal);
+      const locals = normalizeLocals(rows, companyId);
+      const employeeCounts = await countActiveEmployeesByScopeNode(
+        db,
+        companyId,
+        locals.map((row) => `local:${row.id}`),
+      );
+      return locals.map((row) => ({
+        ...toLocal(row),
+        employeeCount: employeeCounts.get(`local:${row.id}`) ?? 0,
+      }));
     },
     updateLocal: async (input) => {
       const set: { name?: string; divisionId?: string | null } = {};
@@ -835,7 +914,16 @@ export const createDrizzleOrgHierarchyGateway = (
         .from(areasTable)
         .where(eq(areasTable.companyId, companyId));
 
-      return normalizeAreas(rows, companyId).map(toArea);
+      const areas = normalizeAreas(rows, companyId);
+      const employeeCounts = await countActiveEmployeesByScopeNode(
+        db,
+        companyId,
+        areas.map((row) => `area:${row.id}`),
+      );
+      return areas.map((row) => ({
+        ...toArea(row),
+        employeeCount: employeeCounts.get(`area:${row.id}`) ?? 0,
+      }));
     },
     updateArea: async (input) => {
       const set: {
@@ -909,37 +997,48 @@ export const createDrizzleOrgHierarchyGateway = (
       return toArea(updated);
     },
     deleteArea: async (input) => {
-      const [deleted] = await db.transaction(async (tx) => {
-        await clearScopeNodeReferences(tx, `area:${input.areaId}`);
-        const [row] = await tx
-          .delete(areasTable)
-          .where(eq(areasTable.id, input.areaId))
-          .returning();
+      let deleted: AreaRow | null = null;
 
-        if (row) {
-          await tx.insert(auditEventsTable).values({
-            id: generateId(),
-            actorUserId: input.actorUserId,
-            companyId: row.companyId,
-            divisionId: row.divisionId,
-            localId: row.localId,
-            type: orgHierarchyAuditEventTypes.areaDeleted,
-            correlationId: input.correlationId,
-            entityType: 'area',
-            entityId: row.id,
-            details: createAuditDetail('area'),
-            oldValues: {
-              name: row.name,
+      try {
+        [deleted] = await db.transaction(async (tx) => {
+          await clearScopeNodeReferences(tx, `area:${input.areaId}`);
+          const [row] = await tx
+            .delete(areasTable)
+            .where(eq(areasTable.id, input.areaId))
+            .returning();
+
+          if (row) {
+            await tx.insert(auditEventsTable).values({
+              id: generateId(),
+              actorUserId: input.actorUserId,
+              companyId: row.companyId,
               divisionId: row.divisionId,
               localId: row.localId,
-            },
-            newValues: null,
-            createdAt: now(),
-          });
-        }
+              type: orgHierarchyAuditEventTypes.areaDeleted,
+              correlationId: input.correlationId,
+              entityType: 'area',
+              entityId: row.id,
+              details: createAuditDetail('area'),
+              oldValues: {
+                name: row.name,
+                divisionId: row.divisionId,
+                localId: row.localId,
+              },
+              newValues: null,
+              createdAt: now(),
+            });
+          }
 
-        return [row];
-      });
+          return [row];
+        });
+      } catch (error) {
+        if (isForeignKeyViolation(error)) {
+          throw new AreaConflictError(
+            'Cannot delete area with dependent organizational or HR records.',
+          );
+        }
+        throw error;
+      }
 
       if (!deleted) {
         throw new AreaNotFoundError();
@@ -964,7 +1063,7 @@ export const createDrizzleOrgHierarchyGateway = (
     countEmployeesInArea: async (areaId) => {
       const scopeNodeId = `area:${areaId}`;
       const rows = await db
-        .select({ scopeNodeId: employeeAssignmentsTable.scopeNodeId })
+        .select()
         .from(employeeAssignmentsTable)
         .where(
           and(
@@ -973,7 +1072,7 @@ export const createDrizzleOrgHierarchyGateway = (
           ),
         );
 
-      return normalizeEmployeesByArea(rows, scopeNodeId).length;
+      return normalizeEmployeesByArea(rows, scopeNodeId);
     },
     createWarehouse: async (input) => {
       const warehouseId = generateId();
@@ -1030,7 +1129,16 @@ export const createDrizzleOrgHierarchyGateway = (
         .from(warehousesTable)
         .where(eq(warehousesTable.companyId, companyId));
 
-      return normalizeWarehouses(rows, companyId).map(toWarehouse);
+      const warehouses = normalizeWarehouses(rows, companyId);
+      const employeeCounts = await countActiveEmployeesByScopeNode(
+        db,
+        companyId,
+        warehouses.map((row) => `warehouse:${row.id}`),
+      );
+      return warehouses.map((row) => ({
+        ...toWarehouse(row),
+        employeeCount: employeeCounts.get(`warehouse:${row.id}`) ?? 0,
+      }));
     },
     findWarehouseById: async (warehouseId) => {
       const [row] = await db
@@ -1113,37 +1221,48 @@ export const createDrizzleOrgHierarchyGateway = (
       return toWarehouse(updated);
     },
     deleteWarehouse: async (input) => {
-      const [deleted] = await db.transaction(async (tx) => {
-        await clearScopeNodeReferences(tx, `warehouse:${input.warehouseId}`);
-        const [row] = await tx
-          .delete(warehousesTable)
-          .where(eq(warehousesTable.id, input.warehouseId))
-          .returning();
+      let deleted: WarehouseRow | null = null;
 
-        if (row) {
-          await tx.insert(auditEventsTable).values({
-            id: generateId(),
-            actorUserId: input.actorUserId,
-            companyId: row.companyId,
-            divisionId: null,
-            localId: row.localId,
-            type: orgHierarchyAuditEventTypes.warehouseDeleted,
-            correlationId: input.correlationId,
-            entityType: 'warehouse',
-            entityId: row.id,
-            details: createAuditDetail('warehouse'),
-            oldValues: {
-              name: row.name,
-              areaId: row.areaId,
+      try {
+        [deleted] = await db.transaction(async (tx) => {
+          await clearScopeNodeReferences(tx, `warehouse:${input.warehouseId}`);
+          const [row] = await tx
+            .delete(warehousesTable)
+            .where(eq(warehousesTable.id, input.warehouseId))
+            .returning();
+
+          if (row) {
+            await tx.insert(auditEventsTable).values({
+              id: generateId(),
+              actorUserId: input.actorUserId,
+              companyId: row.companyId,
+              divisionId: null,
               localId: row.localId,
-            },
-            newValues: null,
-            createdAt: now(),
-          });
-        }
+              type: orgHierarchyAuditEventTypes.warehouseDeleted,
+              correlationId: input.correlationId,
+              entityType: 'warehouse',
+              entityId: row.id,
+              details: createAuditDetail('warehouse'),
+              oldValues: {
+                name: row.name,
+                areaId: row.areaId,
+                localId: row.localId,
+              },
+              newValues: null,
+              createdAt: now(),
+            });
+          }
 
-        return [row];
-      });
+          return [row];
+        });
+      } catch (error) {
+        if (isForeignKeyViolation(error)) {
+          throw new WarehouseConflictError(
+            'Cannot delete warehouse with dependent organizational or HR records.',
+          );
+        }
+        throw error;
+      }
 
       if (!deleted) {
         throw new WarehouseNotFoundError();
@@ -1204,7 +1323,16 @@ export const createDrizzleOrgHierarchyGateway = (
         .from(pointsOfSaleTable)
         .where(eq(pointsOfSaleTable.companyId, companyId));
 
-      return normalizePointsOfSale(rows, companyId).map(toPointOfSale);
+      const pointsOfSale = normalizePointsOfSale(rows, companyId);
+      const employeeCounts = await countActiveEmployeesByScopeNode(
+        db,
+        companyId,
+        pointsOfSale.map((row) => `point-of-sale:${row.id}`),
+      );
+      return pointsOfSale.map((row) => ({
+        ...toPointOfSale(row),
+        employeeCount: employeeCounts.get(`point-of-sale:${row.id}`) ?? 0,
+      }));
     },
     findPointOfSaleById: async (pointOfSaleId) => {
       const [row] = await db
@@ -1287,40 +1415,51 @@ export const createDrizzleOrgHierarchyGateway = (
       return toPointOfSale(updated);
     },
     deletePointOfSale: async (input) => {
-      const [deleted] = await db.transaction(async (tx) => {
-        await clearScopeNodeReferences(
-          tx,
-          `point-of-sale:${input.pointOfSaleId}`,
-        );
-        const [row] = await tx
-          .delete(pointsOfSaleTable)
-          .where(eq(pointsOfSaleTable.id, input.pointOfSaleId))
-          .returning();
+      let deleted: PointOfSaleRow | null = null;
 
-        if (row) {
-          await tx.insert(auditEventsTable).values({
-            id: generateId(),
-            actorUserId: input.actorUserId,
-            companyId: row.companyId,
-            divisionId: null,
-            localId: row.localId,
-            type: orgHierarchyAuditEventTypes.pointOfSaleDeleted,
-            correlationId: input.correlationId,
-            entityType: 'point_of_sale',
-            entityId: row.id,
-            details: createAuditDetail('point_of_sale'),
-            oldValues: {
-              name: row.name,
-              areaId: row.areaId,
+      try {
+        [deleted] = await db.transaction(async (tx) => {
+          await clearScopeNodeReferences(
+            tx,
+            `point-of-sale:${input.pointOfSaleId}`,
+          );
+          const [row] = await tx
+            .delete(pointsOfSaleTable)
+            .where(eq(pointsOfSaleTable.id, input.pointOfSaleId))
+            .returning();
+
+          if (row) {
+            await tx.insert(auditEventsTable).values({
+              id: generateId(),
+              actorUserId: input.actorUserId,
+              companyId: row.companyId,
+              divisionId: null,
               localId: row.localId,
-            },
-            newValues: null,
-            createdAt: now(),
-          });
-        }
+              type: orgHierarchyAuditEventTypes.pointOfSaleDeleted,
+              correlationId: input.correlationId,
+              entityType: 'point_of_sale',
+              entityId: row.id,
+              details: createAuditDetail('point_of_sale'),
+              oldValues: {
+                name: row.name,
+                areaId: row.areaId,
+                localId: row.localId,
+              },
+              newValues: null,
+              createdAt: now(),
+            });
+          }
 
-        return [row];
-      });
+          return [row];
+        });
+      } catch (error) {
+        if (isForeignKeyViolation(error)) {
+          throw new PointOfSaleConflictError(
+            'Cannot delete point of sale with dependent organizational or HR records.',
+          );
+        }
+        throw error;
+      }
 
       if (!deleted) {
         throw new PointOfSaleNotFoundError();

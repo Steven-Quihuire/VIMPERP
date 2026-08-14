@@ -16,6 +16,7 @@ export type OrgTreeNode = {
   parentRef: OrgTreeScopeRef | null;
   companyId: string;
   name: string;
+  employeeCount?: number;
 };
 
 export type OrgTreeGateway = {

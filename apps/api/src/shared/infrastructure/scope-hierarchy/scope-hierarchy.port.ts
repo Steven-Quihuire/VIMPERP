@@ -30,6 +30,7 @@ export type ResolvedScopeNode = {
   parentRef: ScopeRef | null;
   companyId: string;
   name: string;
+  employeeCount?: number;
 };
 
 export type ScopeResolver = {

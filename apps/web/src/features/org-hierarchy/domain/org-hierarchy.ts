@@ -3,6 +3,7 @@ export type Division = {
   companyId: string;
   name: string;
   createdAt: string;
+  employeeCount?: number;
 };
 
 export type Local = {
@@ -11,6 +12,7 @@ export type Local = {
   divisionId: string | null;
   name: string;
   locale: string | null;
+  employeeCount?: number;
 };
 
 type AreaBase = {
@@ -19,6 +21,7 @@ type AreaBase = {
   name: string;
   kind: 'area';
   createdAt: string;
+  employeeCount?: number;
 };
 
 export type Area =
@@ -30,6 +33,7 @@ type WarehouseBase = {
   companyId: string;
   name: string;
   createdAt: string;
+  employeeCount?: number;
 };
 
 export type Warehouse =
@@ -41,6 +45,7 @@ type PointOfSaleBase = {
   companyId: string;
   name: string;
   createdAt: string;
+  employeeCount?: number;
 };
 
 export type PointOfSale =

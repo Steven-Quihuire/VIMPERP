@@ -327,6 +327,9 @@ export const DivisionsPage = ({ session }: { session: AuthSession }) => {
                   <div className="space-y-1">
                     <p className="font-medium">{division.name}</p>
                     <Badge variant="secondary">División</Badge>
+                    <p className="text-sm text-muted-foreground">
+                      {division.employeeCount ?? 0} empleados
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button

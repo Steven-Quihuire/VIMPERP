@@ -171,7 +171,8 @@ export const ActiveScopeSwitcher = ({
                   >
                     <span className="truncate">{node.name}</span>
                     <span className="text-xs text-muted-foreground">
-                      {scopeTypeLabels[node.ref.scopeType]}
+                      {scopeTypeLabels[node.ref.scopeType]} ·{' '}
+                      {node.employeeCount ?? 0} empleados
                     </span>
                   </div>
                 </DropdownMenuItem>

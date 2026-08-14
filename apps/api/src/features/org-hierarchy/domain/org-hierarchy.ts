@@ -202,12 +202,14 @@ export type ScopeNodeDependencyCounts = {
   responsibilities: number;
   managementInvitations: number;
   activeScopePreferences: number;
+  employeeAssignments: number;
 };
 
 export const hasScopeNodeDependencies = (counts: ScopeNodeDependencyCounts) =>
   counts.roleAssignments > 0 ||
   counts.responsibilities > 0 ||
-  counts.managementInvitations > 0;
+  counts.managementInvitations > 0 ||
+  counts.employeeAssignments > 0;
 
 export class ParentOwnershipError extends Error {
   readonly code = 'PARENT_OWNERSHIP_CONFLICT';
@@ -231,7 +233,7 @@ export class DivisionConflictError extends Error {
   readonly code = 'DIVISION_CONFLICT';
 
   constructor(
-    message = 'Cannot delete division with existing locals or areas.',
+    message = 'Cannot delete division with existing locals, areas, or HR assignments.',
   ) {
     super(message);
     this.name = 'DivisionConflictError';
@@ -242,7 +244,7 @@ export class LocalConflictError extends Error {
   readonly code = 'LOCAL_CONFLICT';
 
   constructor(
-    message = 'Cannot delete local with existing items, members, areas, warehouses, or points of sale.',
+    message = 'Cannot delete local with existing items, members, areas, warehouses, points of sale, or HR assignments.',
   ) {
     super(message);
     this.name = 'LocalConflictError';
@@ -253,7 +255,7 @@ export class AreaConflictError extends Error {
   readonly code = 'AREA_CONFLICT';
 
   constructor(
-    message = 'Cannot delete area with existing warehouses, points of sale, or employees.',
+    message = 'Cannot delete area with existing warehouses, points of sale, or HR assignments.',
   ) {
     super(message);
     this.name = 'AreaConflictError';
@@ -263,7 +265,7 @@ export class AreaConflictError extends Error {
 export class WarehouseConflictError extends Error {
   readonly code = 'WAREHOUSE_CONFLICT';
 
-  constructor(message = 'Cannot delete warehouse with dependent records.') {
+  constructor(message = 'Cannot delete warehouse with dependent organizational or HR records.') {
     super(message);
     this.name = 'WarehouseConflictError';
   }
@@ -272,7 +274,7 @@ export class WarehouseConflictError extends Error {
 export class PointOfSaleConflictError extends Error {
   readonly code = 'POINT_OF_SALE_CONFLICT';
 
-  constructor(message = 'Cannot delete point of sale with dependent records.') {
+  constructor(message = 'Cannot delete point of sale with dependent organizational or HR records.') {
     super(message);
     this.name = 'PointOfSaleConflictError';
   }

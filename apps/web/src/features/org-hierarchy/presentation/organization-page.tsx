@@ -350,7 +350,7 @@ const getGraphEntries = ({
       parentId: ROOT_NODE_ID,
       kind: 'division' as const,
       label: division.name,
-      meta: 'Gestiona locales y áreas bajo esta división.',
+      meta: `${division.employeeCount ?? 0} empleados · Gestiona locales y áreas bajo esta división.`,
       scopeType: 'division' as const,
       scopeId: division.id,
       responsibility:
@@ -362,9 +362,9 @@ const getGraphEntries = ({
       parentId: local.divisionId ?? ROOT_NODE_ID,
       kind: 'local' as const,
       label: local.name,
-      meta: local.divisionId
+      meta: `${local.employeeCount ?? 0} empleados · ${local.divisionId
         ? 'Local dependiente de una división.'
-        : 'Local creado directamente bajo empresa.',
+        : 'Local creado directamente bajo empresa.'}`,
       scopeType: 'local' as const,
       scopeId: local.id,
       responsibility:
@@ -376,9 +376,9 @@ const getGraphEntries = ({
       parentId: area.divisionId ?? area.localId,
       kind: 'area' as const,
       label: area.name,
-      meta: area.divisionId
+      meta: `${area.employeeCount ?? 0} empleados · ${area.divisionId
         ? 'Área asociada a una división.'
-        : 'Área asociada a un local.',
+        : 'Área asociada a un local.'}`,
       scopeType: 'area' as const,
       scopeId: area.id,
       responsibility:
@@ -390,9 +390,9 @@ const getGraphEntries = ({
       parentId: warehouse.areaId ?? warehouse.localId,
       kind: 'warehouse' as const,
       label: warehouse.name,
-      meta: warehouse.areaId
+      meta: `${warehouse.employeeCount ?? 0} empleados · ${warehouse.areaId
         ? 'Almacén dependiente de un área.'
-        : 'Almacén dependiente de un local.',
+        : 'Almacén dependiente de un local.'}`,
       scopeType: 'warehouse' as const,
       scopeId: warehouse.id,
       responsibility:
@@ -404,9 +404,9 @@ const getGraphEntries = ({
       parentId: pointOfSale.areaId ?? pointOfSale.localId,
       kind: 'point-of-sale' as const,
       label: pointOfSale.name,
-      meta: pointOfSale.areaId
+      meta: `${pointOfSale.employeeCount ?? 0} empleados · ${pointOfSale.areaId
         ? 'Punto de venta dependiente de un área.'
-        : 'Punto de venta dependiente de un local.',
+        : 'Punto de venta dependiente de un local.'}`,
       scopeType: 'point-of-sale' as const,
       scopeId: pointOfSale.id,
       responsibility:

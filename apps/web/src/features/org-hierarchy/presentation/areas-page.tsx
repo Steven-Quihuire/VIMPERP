@@ -459,6 +459,9 @@ export const AreasPage = ({ session }: { session: AuthSession }) => {
                       <div className="flex items-center gap-2">
                         <Map className="size-4 text-muted-foreground" />
                         <p className="font-medium">{area.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {area.employeeCount ?? 0} empleados
+                        </p>
                         <Badge variant="secondary">Area</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">

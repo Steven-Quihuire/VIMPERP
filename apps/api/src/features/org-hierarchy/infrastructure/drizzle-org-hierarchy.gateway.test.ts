@@ -441,6 +441,7 @@ describe('createDrizzleOrgHierarchyGateway', () => {
       responsibilities: 1,
       managementInvitations: 1,
       activeScopePreferences: 1,
+      employeeAssignments: 0,
     });
   });
 
@@ -539,7 +540,121 @@ describe('createDrizzleOrgHierarchyGateway', () => {
         companyId: 'company-a',
         name: 'Retail',
         createdAt: baseDate,
+        employeeCount: 0,
       },
+    ]);
+  });
+
+  it('counts active HR assignments per node, excluding closed and cross-company assignments', async () => {
+    const { db } = createFakeDb({
+      divisions: [
+        { id: 'division-1', companyId: 'company-a', name: 'Retail', createdAt: baseDate },
+      ],
+      locals: [
+        {
+          id: 'local-1',
+          companyId: 'company-a',
+          divisionId: null,
+          name: 'Store',
+          locale: null,
+        },
+      ],
+      areas: [
+        {
+          id: 'area-1',
+          companyId: 'company-a',
+          divisionId: null,
+          localId: 'local-1',
+          name: 'Sales',
+          kind: 'area',
+          createdAt: baseDate,
+        },
+      ],
+      warehouses: [
+        {
+          id: 'warehouse-1',
+          companyId: 'company-a',
+          areaId: 'area-1',
+          localId: null,
+          name: 'Main',
+          createdAt: baseDate,
+        },
+      ],
+      pointsOfSale: [
+        {
+          id: 'pos-1',
+          companyId: 'company-a',
+          areaId: 'area-1',
+          localId: null,
+          name: 'POS 1',
+          createdAt: baseDate,
+        },
+      ],
+      employeeAssignments: [
+        {
+          id: 'active-division',
+          companyId: 'company-a',
+          employeeId: 'employee-1',
+          scopeNodeId: 'division:division-1',
+          positionId: 'position-1',
+          startedAt: baseDate,
+          endedAt: null,
+          isPrimary: true,
+          createdAt: baseDate,
+        },
+        {
+          id: 'closed-division',
+          companyId: 'company-a',
+          employeeId: 'employee-2',
+          scopeNodeId: 'division:division-1',
+          positionId: 'position-1',
+          startedAt: baseDate,
+          endedAt: new Date('2026-08-01T00:00:00.000Z'),
+          isPrimary: true,
+          createdAt: baseDate,
+        },
+        {
+          id: 'cross-company-division',
+          companyId: 'company-b',
+          employeeId: 'employee-3',
+          scopeNodeId: 'division:division-1',
+          positionId: 'position-1',
+          startedAt: baseDate,
+          endedAt: null,
+          isPrimary: true,
+          createdAt: baseDate,
+        },
+        ...(['local', 'area', 'warehouse', 'point-of-sale'] as const).map(
+          (scopeType) => ({
+            id: `active-${scopeType}`,
+            companyId: 'company-a',
+            employeeId: `employee-${scopeType}`,
+            scopeNodeId: `${scopeType}:${scopeType === 'point-of-sale' ? 'pos-1' : `${scopeType}-1`}`,
+            positionId: 'position-1',
+            startedAt: baseDate,
+            endedAt: null,
+            isPrimary: true,
+            createdAt: baseDate,
+          }),
+        ),
+      ],
+    });
+    const gateway = createDrizzleOrgHierarchyGateway(db);
+
+    await expect(gateway.listDivisions('company-a')).resolves.toEqual([
+      expect.objectContaining({ id: 'division-1', employeeCount: 1 }),
+    ]);
+    await expect(gateway.listLocals('company-a')).resolves.toEqual([
+      expect.objectContaining({ id: 'local-1', employeeCount: 1 }),
+    ]);
+    await expect(gateway.listAreas('company-a')).resolves.toEqual([
+      expect.objectContaining({ id: 'area-1', employeeCount: 1 }),
+    ]);
+    await expect(gateway.listWarehouses('company-a')).resolves.toEqual([
+      expect.objectContaining({ id: 'warehouse-1', employeeCount: 1 }),
+    ]);
+    await expect(gateway.listPointsOfSale('company-a')).resolves.toEqual([
+      expect.objectContaining({ id: 'pos-1', employeeCount: 1 }),
     ]);
   });
 
@@ -789,6 +904,7 @@ describe('createDrizzleOrgHierarchyGateway', () => {
         divisionId: null,
         name: 'A',
         locale: null,
+        employeeCount: 0,
       },
     ]);
   });

@@ -1,6 +1,10 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 
-import { roleAssignmentsTable, scopeNodesTable } from '../db/schema';
+import {
+  employeeAssignmentsTable,
+  roleAssignmentsTable,
+  scopeNodesTable,
+} from '../db/schema';
 import type { AppDb } from '../db/client';
 import {
   isSameScopeRef,
@@ -242,6 +246,30 @@ export const createDrizzleScopeResolver = (db: AppDb): ScopeResolver => ({
       }
     }
 
-    return [...visibleNodes.values()];
+    const nodes = [...visibleNodes.values()];
+    const employeeRows = await db
+      .select()
+      .from(employeeAssignmentsTable)
+      .where(
+        and(
+          eq(employeeAssignmentsTable.companyId, companyId),
+          isNull(employeeAssignmentsTable.endedAt),
+        ),
+      );
+    const employeeIdsByScopeNode = new Map<string, Set<string>>();
+
+    for (const assignment of employeeRows) {
+      const employeeIds =
+        employeeIdsByScopeNode.get(assignment.scopeNodeId) ?? new Set<string>();
+      employeeIds.add(assignment.employeeId);
+      employeeIdsByScopeNode.set(assignment.scopeNodeId, employeeIds);
+    }
+
+    return nodes.map((node) => ({
+      ...node,
+      employeeCount: employeeIdsByScopeNode.get(
+        `${node.ref.scopeType}:${node.ref.scopeId}`,
+      )?.size ?? 0,
+    }));
   },
 });

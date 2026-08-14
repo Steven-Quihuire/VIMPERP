@@ -18,6 +18,7 @@ const baseGateway = (): OrgHierarchyGateway => ({
     responsibilities: 0,
     managementInvitations: 0,
     activeScopePreferences: 0,
+    employeeAssignments: 0,
   }),
   createDivision: async () => {
     throw new Error('not implemented');

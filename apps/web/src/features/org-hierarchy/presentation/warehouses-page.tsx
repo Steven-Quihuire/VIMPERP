@@ -471,6 +471,9 @@ export const WarehousesPage = ({ session }: { session: AuthSession }) => {
                       <div className="flex items-center gap-2">
                         <Box className="size-4 text-muted-foreground" />
                         <p className="font-medium">{warehouse.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {warehouse.employeeCount ?? 0} empleados
+                        </p>
                         <Badge variant="secondary">Almacen</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">
