@@ -49,14 +49,14 @@ Chain strategy: stacked-to-main
 
 ## Phase 4: Backend — approval-policy + identity/org-tree MODIFIED (PR-4)
 
-- [ ] 4.1 RED `features/roles-management/domain/__tests__/assignments-permission-scope.test.ts`: `direct_reports` returns only direct reports.
-- [ ] 4.2 Modify `roles-management/domain/{permissions.ts,assignments.ts}`: add `hr.*` keys + `PermissionScope` union + `evaluateReportingLineScopes` port.
-- [ ] 4.3 Modify `roles-management/application/compute-effective-permissions.ts`: union reporting-line scope keys.
-- [ ] 4.4 Author `roles-management/presentation/require-hr-capability.ts` + unit test.
-- [ ] 4.5 Modify `identity/application/resolve-auth-session.ts`: reject `direct_reports`/`self` as `activeScope`; add test.
-- [ ] 4.6 RED `approval-policy/domain/__tests__/approval-policy.test.ts`: CHECK rejects mismatched scope.
-- [ ] 4.7 Author `approval-policy/{domain,application,infrastructure,presentation}/` (CRUD only).
-- [ ] 4.8 Wire routers + `requireHrCapability` in `app/create-app.ts`; Supertest 403 test.
+- [x] 4.1 RED `features/roles-management/domain/__tests__/assignments-permission-scope.test.ts`: `direct_reports` returns only direct reports.
+- [x] 4.2 Modify `roles-management/domain/{permissions.ts,assignments.ts}`: add `hr.*` keys + `PermissionScope` union + `evaluateReportingLineScopes` port.
+- [x] 4.3 Modify `roles-management/application/compute-effective-permissions.ts`: union reporting-line scope keys.
+- [x] 4.4 Author `roles-management/presentation/require-hr-capability.ts` + unit test.
+- [x] 4.5 Modify `identity/application/resolve-auth-session.ts`: reject `direct_reports`/`self` as `activeScope`; add test.
+- [x] 4.6 RED `approval-policy/domain/__tests__/approval-policy.test.ts`: CHECK rejects mismatched scope.
+- [x] 4.7 Author `approval-policy/{domain,application,infrastructure,presentation}/` (CRUD only).
+- [x] 4.8 Wire routers + `requireHrCapability` in `app/create-app.ts`; Supertest 403 test.
 
 ## Phase 5: Frontend — hr-employees (PR-5)
 

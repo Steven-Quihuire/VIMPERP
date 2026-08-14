@@ -10,9 +10,10 @@ import {
   type AuthSession,
   toPublicAuthUser,
 } from '../domain/auth';
-import type {
-  ScopeRef,
-  ScopeResolver,
+import {
+  scopeTypeValues,
+  type ScopeRef,
+  type ScopeResolver,
 } from '../../../shared/infrastructure/scope-hierarchy/scope-hierarchy.port';
 
 type ComputeEffectivePermissions = (input: {
@@ -37,8 +38,14 @@ const toScopeRef = (scopeNodeId: string): ScopeRef | null => {
     return null;
   }
 
+  const scopeType = scopeNodeId.slice(0, separatorIndex);
+
+  if (!scopeTypeValues.includes(scopeType as (typeof scopeTypeValues)[number])) {
+    return null;
+  }
+
   return {
-    scopeType: scopeNodeId.slice(0, separatorIndex) as ScopeRef['scopeType'],
+    scopeType,
     scopeId: scopeNodeId.slice(separatorIndex + 1),
   };
 };

@@ -1,4 +1,6 @@
 import type {
+  EvaluateReportingLineScopes,
+  PermissionScope,
   RoleAssignmentsGateway,
   ScopeHierarchyGateway,
   ScopeRef,
@@ -12,15 +14,18 @@ export const createComputeEffectivePermissionsUseCase = ({
   rolesGateway,
   assignmentsGateway,
   scopeHierarchyGateway,
+  evaluateReportingLineScopes,
 }: {
   rolesGateway: RolesGateway;
   assignmentsGateway: RoleAssignmentsGateway;
   scopeHierarchyGateway: ScopeHierarchyGateway;
+  evaluateReportingLineScopes?: EvaluateReportingLineScopes;
 }) => {
   return async (input: {
     companyId: string;
     userId: string;
     currentContext: ScopeRef;
+    permissionScope?: PermissionScope;
   }) => {
     const [lineage, assignments] = await Promise.all([
       scopeHierarchyGateway.getScopeLineage(input.companyId, input.currentContext),
@@ -46,13 +51,37 @@ export const createComputeEffectivePermissionsUseCase = ({
     });
 
     if (inScopeAssignments.length === 0) {
-      return [];
+      if (
+        !input.permissionScope ||
+        (input.permissionScope.kind !== 'direct_reports' &&
+          input.permissionScope.kind !== 'self') ||
+        !evaluateReportingLineScopes
+      ) {
+        return [];
+      }
     }
 
     const rolePermissionRows = await rolesGateway.listRolePermissionRows(
       inScopeAssignments.map((assignment) => assignment.roleId),
     );
 
-    return uniqueSorted(rolePermissionRows.map((row) => row.permissionKey));
+    const reportingLinePermissionKeys =
+      input.permissionScope &&
+      (input.permissionScope.kind === 'direct_reports' ||
+        input.permissionScope.kind === 'self') &&
+      evaluateReportingLineScopes
+        ? (
+            await evaluateReportingLineScopes({
+              companyId: input.companyId,
+              userId: input.userId,
+              currentContext: input.permissionScope,
+            })
+          ).permissionKeys
+        : [];
+
+    return uniqueSorted([
+      ...rolePermissionRows.map((row) => row.permissionKey),
+      ...reportingLinePermissionKeys,
+    ]);
   };
 };

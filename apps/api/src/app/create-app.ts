@@ -92,6 +92,14 @@ import { createRevokeErpAccessInvitationUseCase } from '../features/hr-erp-acces
 import type { ErpAccessGateway } from '../features/hr-erp-access/domain/erp-access-invitations';
 import { createDrizzleErpAccessGateway } from '../features/hr-erp-access/infrastructure/drizzle-erp-access.gateway';
 import { createHrErpAccessRouter } from '../features/hr-erp-access/presentation/hr-erp-access.router';
+import { createCreateApprovalPolicyUseCase } from '../features/approval-policy/application/create-approval-policy';
+import { createDeactivateApprovalPolicyUseCase } from '../features/approval-policy/application/deactivate-approval-policy';
+import { createGetApprovalPolicyUseCase } from '../features/approval-policy/application/get-approval-policy';
+import { createListApprovalPoliciesUseCase } from '../features/approval-policy/application/list-approval-policies';
+import { createUpdateApprovalPolicyUseCase } from '../features/approval-policy/application/update-approval-policy';
+import type { ApprovalPolicyGateway } from '../features/approval-policy/domain/approval-policy';
+import { createDrizzleApprovalPolicyGateway } from '../features/approval-policy/infrastructure/drizzle-approval-policy.gateway';
+import { createApprovalPolicyRouter } from '../features/approval-policy/presentation/approval-policy.router';
 import { createAcceptNodeManagementInvitationUseCase } from '../features/node-management/application/accept-node-management-invitation';
 import { createCreateNodeManagementInvitationUseCase } from '../features/node-management/application/create-node-management-invitation';
 import { createGetNodeManagementInvitationUseCase } from '../features/node-management/application/get-node-management-invitation';
@@ -106,6 +114,9 @@ import {
 } from '../features/node-management/infrastructure/resend-node-management-invitation-email-sender';
 import { createNodeManagementRouter } from '../features/node-management/presentation/node-management.router';
 import { createComputeEffectivePermissionsUseCase } from '../features/roles-management/application/compute-effective-permissions';
+import {
+  createRequireHrCapability,
+} from '../features/roles-management/presentation/require-hr-capability';
 import { createCreateAreaUseCase } from '../features/org-hierarchy/application/create-area';
 import { createCreateLocalUseCase } from '../features/org-hierarchy/application/create-local';
 import { createCreatePointOfSaleUseCase } from '../features/org-hierarchy/application/create-point-of-sale';
@@ -169,6 +180,7 @@ type CreateAppInput = {
   orgHierarchyGateway?: OrgHierarchyGateway;
   hrEmployeesGateway?: HrEmployeesGateway;
   hrErpAccessGateway?: ErpAccessGateway;
+  approvalPolicyGateway?: ApprovalPolicyGateway;
   nodeManagementGateway?: NodeManagementGateway;
   scopeResolver?: ScopeResolver;
   computeEffectivePermissions?: ComputeEffectivePermissions;
@@ -228,6 +240,8 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     input.hrEmployeesGateway ?? createDrizzleHrEmployeesGateway(db);
   const hrErpAccessGateway =
     input.hrErpAccessGateway ?? createDrizzleErpAccessGateway(db);
+  const approvalPolicyGateway =
+    input.approvalPolicyGateway ?? createDrizzleApprovalPolicyGateway(db);
   const nodeManagementGateway =
     input.nodeManagementGateway ?? createDrizzleNodeManagementGateway(db);
   const rawInvitationEmailSender =
@@ -301,6 +315,9 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     seedAdminEnabled,
   });
   const requireAuth = createRequireAuth(resolveAuthSession, sessionCookieName);
+  const requireHrCapability = createRequireHrCapability({
+    computeEffectivePermissions,
+  });
   const requirePlatformAdmin = createRequireRole('platform-admin');
   const sweepStaleProvisioningRuns = createSweepStaleProvisioningRuns({
     recorder: provisioningRecorder,
@@ -476,6 +493,27 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
         await orgHierarchyGateway.findPointOfSaleById(pointOfSaleId),
       updatePointOfSale: createUpdatePointOfSaleUseCase({ gateway: orgHierarchyGateway }),
       deletePointOfSale: createDeletePointOfSaleUseCase({ gateway: orgHierarchyGateway }),
+    }),
+  );
+  app.use(
+    createApprovalPolicyRouter({
+      requireAuth,
+      requireHrCapability,
+      createApprovalPolicy: createCreateApprovalPolicyUseCase({
+        gateway: approvalPolicyGateway,
+      }),
+      listApprovalPolicies: createListApprovalPoliciesUseCase({
+        gateway: approvalPolicyGateway,
+      }),
+      getApprovalPolicy: createGetApprovalPolicyUseCase({
+        gateway: approvalPolicyGateway,
+      }),
+      updateApprovalPolicy: createUpdateApprovalPolicyUseCase({
+        gateway: approvalPolicyGateway,
+      }),
+      deactivateApprovalPolicy: createDeactivateApprovalPolicyUseCase({
+        gateway: approvalPolicyGateway,
+      }),
     }),
   );
   app.use(

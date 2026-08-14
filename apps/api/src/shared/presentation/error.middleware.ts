@@ -37,6 +37,11 @@ import {
   ErpAccessLinkNotFoundError,
 } from '../../features/hr-erp-access/domain/erp-access-links';
 import {
+  ApprovalPolicyNotFoundError,
+  ApprovalPolicyScopeNotFoundError,
+  ApprovalPolicyValidationError,
+} from '../../features/approval-policy/domain/approval-policy';
+import {
   PositionHeadcountExceededError,
   PositionHierarchyError,
   PositionNotFoundError,
@@ -128,6 +133,11 @@ export const createErrorMiddleware = ({
       return;
     }
 
+    if (error instanceof ApprovalPolicyValidationError) {
+      response.status(400).json(toResponseBody(error.code, error.message));
+      return;
+    }
+
     if (
       error instanceof EmployeeAssignmentConflictError ||
       error instanceof PositionHeadcountExceededError ||
@@ -143,9 +153,15 @@ export const createErrorMiddleware = ({
       error instanceof EmployeeNotFoundError ||
       error instanceof PositionNotFoundError ||
       error instanceof HrEmployeesScopeNotFoundError ||
+      error instanceof ApprovalPolicyScopeNotFoundError ||
       error instanceof ErpAccessInvitationNotFoundError ||
       error instanceof ErpAccessLinkNotFoundError
     ) {
+      response.status(404).json(toResponseBody(error.code, error.message));
+      return;
+    }
+
+    if (error instanceof ApprovalPolicyNotFoundError) {
       response.status(404).json(toResponseBody(error.code, error.message));
       return;
     }

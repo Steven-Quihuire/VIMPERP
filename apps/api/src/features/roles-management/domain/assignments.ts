@@ -14,6 +14,31 @@ export type ScopeRef = {
   scopeId: string;
 };
 
+export const permissionScopeKindValues = [
+  'company',
+  'node+descendants',
+  'direct_reports',
+  'self',
+] as const;
+
+export type PermissionScopeKind = (typeof permissionScopeKindValues)[number];
+
+export type PermissionScope =
+  | { kind: 'company' }
+  | { kind: 'node+descendants'; scope: ScopeRef }
+  | { kind: 'direct_reports' }
+  | { kind: 'self' };
+
+export type ReportingLinePermissionScope = Extract<
+  PermissionScope,
+  { kind: 'direct_reports' | 'self' }
+>;
+
+export type ReportingLineScopeResult = {
+  employeeIds: string[];
+  permissionKeys: string[];
+};
+
 export const assignmentModeValues = ['subtree_inclusive', 'exact_node'] as const;
 
 export type AssignmentMode = (typeof assignmentModeValues)[number];
@@ -53,6 +78,24 @@ export type ScopeHierarchyGateway = {
     scope: ScopeRef,
   ) => Promise<void>;
   getScopeLineage: (companyId: string, scope: ScopeRef) => Promise<ScopeRef[]>;
+};
+
+export type EvaluateReportingLineScopes = (input: {
+  companyId: string;
+  userId: string;
+  currentContext: ReportingLinePermissionScope;
+}) => Promise<ReportingLineScopeResult>;
+
+export const resolveReportingLineScopeEmployeeIds = (input: {
+  actorEmployeeId: string;
+  directReportEmployeeIds: string[];
+  scope: ReportingLinePermissionScope;
+}) => {
+  if (input.scope.kind === 'self') {
+    return [input.actorEmployeeId];
+  }
+
+  return [...new Set(input.directReportEmployeeIds)];
 };
 
 export class RoleAssignmentConflictError extends Error {

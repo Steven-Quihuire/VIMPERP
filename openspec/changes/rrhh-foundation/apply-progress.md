@@ -21,6 +21,14 @@
 - [x] 3.4 Author `application/{create,accept,list,revoke}-erp-access-invitation.ts`.
 - [x] 3.5 Author `infrastructure/drizzle-erp-access.gateway.ts` + integration test.
 - [x] 3.6 Author `presentation/hr-erp-access.router.ts` + Supertest.
+- [x] 4.1 RED `features/roles-management/domain/__tests__/assignments-permission-scope.test.ts`: `direct_reports` returns only direct reports.
+- [x] 4.2 Modify `roles-management/domain/{permissions.ts,assignments.ts}`: add `hr.*` keys + `PermissionScope` union + `evaluateReportingLineScopes` port.
+- [x] 4.3 Modify `roles-management/application/compute-effective-permissions.ts`: union reporting-line scope keys.
+- [x] 4.4 Author `roles-management/presentation/require-hr-capability.ts` + unit test.
+- [x] 4.5 Modify `identity/application/resolve-auth-session.ts`: reject `direct_reports`/`self` as `activeScope`; add test.
+- [x] 4.6 RED `approval-policy/domain/__tests__/approval-policy.test.ts`: CHECK rejects mismatched scope.
+- [x] 4.7 Author `approval-policy/{domain,application,infrastructure,presentation}/` (CRUD only).
+- [x] 4.8 Wire routers + `requireHrCapability` in `app/create-app.ts`; Supertest 403 test.
 
 ### Files Changed
 | File | Action | What Was Done |
@@ -60,10 +68,30 @@
 | `apps/api/src/features/hr-erp-access/presentation/hr-erp-access.router.test.ts` | Created | Added Supertest coverage for the create/list/accept/revoke invitation lifecycle through `createApp`. |
 | `apps/api/src/app/create-app.ts` | Modified | Wired the new HR ERP access gateway, use cases, and router into the API composition root. |
 | `apps/api/src/shared/presentation/error.middleware.ts` | Modified | Added HTTP mapping for ERP access invitation and link lifecycle errors. |
+| `apps/api/src/features/roles-management/domain/assignments.ts` | Modified | Added reporting-line permission-scope types, evaluation port contract, and a pure helper that resolves `direct_reports` vs `self` employee visibility. |
+| `apps/api/src/features/roles-management/domain/__tests__/assignments-permission-scope.test.ts` | Created | Added RED/GREEN domain coverage proving `direct_reports` returns only direct reports and `self` returns only the actor. |
+| `apps/api/src/features/roles-management/domain/permissions.ts` | Modified | Seeded the `hr.*` permission catalog keys and registered the HR module permissions alongside inventory and roles. |
+| `apps/api/src/features/roles-management/application/compute-effective-permissions.ts` | Modified | Extended effective-permission evaluation to union optional reporting-line permission keys alongside existing org-scope role assignments. |
+| `apps/api/src/features/roles-management/application/compute-effective-permissions.test.ts` | Modified | Added focused regression coverage for reporting-line permission-key union behavior. |
+| `apps/api/src/features/roles-management/presentation/require-hr-capability.ts` | Created | Added the reusable HR capability middleware factory that evaluates live scoped permissions instead of relying on catalog-only session capabilities. |
+| `apps/api/src/features/roles-management/presentation/require-hr-capability.test.ts` | Created | Added unit coverage for allowed, forbidden, and custom permission-scope middleware flows. |
+| `apps/api/src/features/identity/application/resolve-auth-session.ts` | Modified | Rejected persisted `direct_reports` and `self` values as invalid active canonical scopes while preserving fallback scope resolution. |
+| `apps/api/src/features/identity/application/resolve-auth-session.test.ts` | Modified | Added regression coverage proving reporting-line scope ids never survive as active canonical scopes. |
+| `apps/api/src/features/approval-policy/domain/approval-policy.ts` | Created | Added the approval-policy aggregate, gateway contract, DB-aligned scope validation, and not-found/validation errors. |
+| `apps/api/src/features/approval-policy/domain/__tests__/approval-policy.test.ts` | Created | Added RED/GREEN domain coverage for company-vs-node scope validation rules matching the database CHECK constraints. |
+| `apps/api/src/features/approval-policy/application/{create,list,get,update,deactivate}-approval-policy.ts` | Created | Added CRUD-only approval-policy use cases with scope-node ownership validation and not-found handling. |
+| `apps/api/src/features/approval-policy/infrastructure/drizzle-approval-policy.gateway.ts` | Created | Added the Drizzle approval-policy gateway for create/list/get/update/deactivate flows and scope-node lookups. |
+| `apps/api/src/features/approval-policy/infrastructure/drizzle-approval-policy.gateway.test.ts` | Created | Added real-Postgres integration coverage for persisted approval-policy CRUD and deactivation behavior. |
+| `apps/api/src/features/approval-policy/presentation/approval-policy.router.ts` | Created | Added the approval-policy router with Zod validation and per-route HR capability guards. |
+| `apps/api/src/features/approval-policy/presentation/approval-policy.router.test.ts` | Created | Added Supertest `createApp` coverage for approval-policy CRUD and 403 denial when `hr.approval_policy.*` permissions are missing. |
+| `apps/api/src/app/create-app.ts` | Modified | Wired the approval-policy gateway, use cases, router, and shared `requireHrCapability` middleware into the API composition root. |
+| `apps/api/src/shared/presentation/error.middleware.ts` | Modified | Added approval-policy validation and not-found HTTP mappings. |
 | `openspec/changes/rrhh-foundation/tasks.md` | Modified | Marked PR-1 Phase 1 tasks `1.1` through `1.4` complete for this stacked slice. |
 | `openspec/changes/rrhh-foundation/tasks.md` | Modified | Marked PR-2 Phase 2 tasks `2.1` through `2.7` complete for this stacked slice. |
 | `openspec/changes/rrhh-foundation/tasks.md` | Modified | Marked PR-3 Phase 3 tasks `3.1` through `3.6` complete for this stacked slice. |
+| `openspec/changes/rrhh-foundation/tasks.md` | Modified | Marked PR-4 Phase 4 tasks `4.1` through `4.8` complete for this stacked slice. |
 | `openspec/changes/rrhh-foundation/apply-progress.md` | Modified | Merged the previous PR-1/PR-2 evidence with the successful PR-3 HR ERP access slice evidence. |
+| `openspec/changes/rrhh-foundation/apply-progress.md` | Modified | Merged the previous PR-1/PR-3 evidence with the successful PR-4 approval-policy and HR capability slice evidence. |
 
 ### Work Unit Evidence
 | Evidence | Value |
@@ -78,6 +106,9 @@
 | `PR-3` Focused test command and exact result | `pnpm --filter api exec vitest run src/features/hr-erp-access/domain/__tests__/erp-access.test.ts src/features/hr-erp-access/application/__tests__/accept-erp-access-invitation.test.ts src/features/hr-erp-access/infrastructure/drizzle-erp-access.gateway.test.ts src/features/hr-erp-access/presentation/hr-erp-access.router.test.ts src/features/node-management/application/accept-node-management-invitation.test.ts src/features/node-management/presentation/node-management.router.test.ts` → exit `0`; `6` files / `14` tests passed. |
 | `PR-3` Runtime harness command/scenario and exact result | `pnpm --filter api exec vitest run src/features/hr-erp-access/presentation/hr-erp-access.router.test.ts` → exit `0`; `1` file / `1` test passed. Scenario: Supertest create/list/accept/revoke ERP access invitation flow through `createApp`, including session cookie issuance and company-scoped revoke. |
 | `PR-3` Rollback boundary | Revert only `apps/api/src/features/hr-erp-access/**`, `apps/api/src/app/create-app.ts`, `apps/api/src/shared/presentation/error.middleware.ts`, and the PR-3 checkbox/apply-progress updates. |
+| `PR-4` Focused test command and exact result | `pnpm --filter api exec vitest run src/features/roles-management/domain/__tests__/assignments-permission-scope.test.ts src/features/roles-management/application/compute-effective-permissions.test.ts src/features/roles-management/presentation/require-hr-capability.test.ts src/features/identity/application/resolve-auth-session.test.ts src/features/approval-policy/domain/__tests__/approval-policy.test.ts src/features/approval-policy/infrastructure/drizzle-approval-policy.gateway.test.ts src/features/approval-policy/presentation/approval-policy.router.test.ts` → exit `0`; `7` files / `26` tests passed. |
+| `PR-4` Runtime harness command/scenario and exact result | `pnpm --filter api exec vitest run src/features/approval-policy/presentation/approval-policy.router.test.ts` → exit `0`; `1` file / `2` tests passed. Scenario: `createApp`-backed Supertest CRUD flow for approval policies plus a `403` denial when `hr.approval_policy.*` permissions are absent. |
+| `PR-4` Rollback boundary | Revert only `apps/api/src/features/approval-policy/**`, `apps/api/src/features/roles-management/domain/assignments.ts`, `apps/api/src/features/roles-management/domain/permissions.ts`, `apps/api/src/features/roles-management/application/compute-effective-permissions.ts`, `apps/api/src/features/roles-management/presentation/require-hr-capability.ts`, `apps/api/src/features/identity/application/resolve-auth-session.ts`, `apps/api/src/app/create-app.ts`, `apps/api/src/shared/presentation/error.middleware.ts`, and the PR-4 checkbox/apply-progress updates. |
 
 ### TDD Cycle Evidence
 | Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
@@ -99,32 +130,33 @@
 | 3.4 | `apps/api/src/features/hr-erp-access/application/__tests__/accept-erp-access-invitation.test.ts` | Unit | N/A (new) | ✅ The RED file referenced the missing `create`, `accept`, `list`, and `revoke` ERP access use cases first | ✅ Passed after adding the full ERP access application lifecycle | ✅ Create→list→accept→revoke plus error paths ensure the use-case layer is real logic, not a stub | ✅ Username normalization and session issuance stayed in the application boundary |
 | 3.5 | `apps/api/src/features/hr-erp-access/infrastructure/drizzle-erp-access.gateway.test.ts` | Integration (real Postgres DB) | N/A (new) | ✅ Wrote the persistence flow before the gateway existed | ✅ Same file passed after adding the Drizzle ERP access gateway and starting Postgres on the host's default Docker context | ✅ One integration path proves invitation persistence, activation, membership/session writes, and revocation | ✅ Row mappers stayed explicit and transaction work remained bounded |
 | 3.6 | `apps/api/src/features/hr-erp-access/presentation/hr-erp-access.router.test.ts` | Integration (Supertest) | ✅ `pnpm --filter api exec vitest run src/features/node-management/application/accept-node-management-invitation.test.ts src/features/node-management/presentation/node-management.router.test.ts` passed before shared composition edits | ✅ Wrote the end-to-end ERP access router flow before the router/composition existed | ✅ Same file passed after wiring the router in `create-app.ts` | ✅ The flow triangulates invite creation, pending list, public acceptance, and company-scoped revoke | ✅ Router stays focused on Zod parsing, session cookie issuance, and use-case delegation |
+| 4.1 | `apps/api/src/features/roles-management/domain/__tests__/assignments-permission-scope.test.ts` | Unit | ✅ `pnpm --filter api exec vitest run src/features/roles-management/application/compute-effective-permissions.test.ts src/features/identity/application/resolve-auth-session.test.ts src/features/hr-erp-access/presentation/hr-erp-access.router.test.ts src/features/org-hierarchy/presentation/org-hierarchy.router.test.ts` stayed green while the unrelated pre-existing `hr-employees.router.test.ts` still failed `500` vs `201` outside this slice | ✅ Wrote direct-report and self-scope assertions before the new helper existed | ✅ Same file passed after adding the reporting-line scope helper | ✅ Happy path + self edge case | ➖ None needed |
+| 4.2 | `apps/api/src/features/roles-management/domain/__tests__/assignments-permission-scope.test.ts` | Unit | ✅ Existing scoped-permission and auth-session suites passed; unrelated pre-existing `hr-employees.router.test.ts` still red outside this slice | ✅ The RED helper tests referenced the missing permission-scope types and evaluation helpers first | ✅ Passed after adding `hr.*` permission keys, the permission-scope union, and the reporting-line port contract | ✅ `direct_reports` and `self` now exercise different scope branches with deduped employee ids | ✅ Kept domain additions pure and framework-free |
+| 4.3 | `apps/api/src/features/roles-management/application/compute-effective-permissions.test.ts` | Unit | ✅ Existing `compute-effective-permissions.test.ts` and `resolve-auth-session.test.ts` were green before the PR-4 edits | ✅ Added a failing reporting-line union case before modifying the use case | ✅ Same file passed after unioning reporting-line permission keys | ✅ Existing subtree/exact-node scenarios plus the new `direct_reports` path prove non-trivial behavior | ✅ Preserved the existing org-scope algorithm while extending only the reporting-line seam |
+| 4.4 | `apps/api/src/features/roles-management/presentation/require-hr-capability.test.ts` | Unit | N/A (new) | ✅ Wrote allow/deny/custom-scope middleware scenarios before the middleware factory existed | ✅ Same file passed after authoring `require-hr-capability.ts` | ✅ Allowed, forbidden, and custom `direct_reports` scope cases | ✅ Middleware stays thin: active-company validation + delegated permission evaluation |
+| 4.5 | `apps/api/src/features/identity/application/resolve-auth-session.test.ts` | Unit | ✅ Existing auth-session scope-resolution suite passed before the `activeScope` validation edit | ✅ Added the failing persisted `direct_reports:*` active-scope scenario first | ✅ Same file passed after rejecting non-canonical reporting-line prefixes | ✅ The suite now covers persisted warehouse scope, subtree fallback, and reporting-line rejection | ✅ Validation stayed local to `toScopeRef` so canonical-scope resolution remains unchanged |
+| 4.6 | `apps/api/src/features/approval-policy/domain/__tests__/approval-policy.test.ts` | Unit | N/A (new) | ✅ Wrote the DB-check-aligned scope mismatch assertions before the domain existed | ✅ Same file passed after authoring approval-policy validation rules | ✅ Company/node valid paths plus both mismatch cases | ➖ None needed |
+| 4.7 | `apps/api/src/features/approval-policy/infrastructure/drizzle-approval-policy.gateway.test.ts`, `apps/api/src/features/approval-policy/presentation/approval-policy.router.test.ts` | Integration (real Postgres + Supertest) | N/A (new) | ✅ Wrote failing gateway CRUD and `createApp` router scenarios before the slice existed | ✅ Both files passed after adding the approval-policy domain, use cases, gateway, and router | ✅ Gateway CRUD/deactivation plus router CRUD/403 denial cover different persistence and HTTP paths | ✅ Kept validation in the application layer and row mapping in the gateway |
+| 4.8 | `apps/api/src/features/approval-policy/presentation/approval-policy.router.test.ts` | Integration (Supertest) | ⚠️ Shared `create-app.ts` safety net confirmed the unrelated pre-existing `hr-employees.router.test.ts` failure (`500` vs `201`) before wiring the new router | ✅ Added the failing `createApp` approval-policy CRUD/403 flow before composition wiring existed | ✅ Same file passed after wiring the router and shared HR guard in `create-app.ts` | ✅ CRUD happy path plus forbidden path through the composed app | ✅ Composition stayed additive: new gateway/use cases/router without changing the existing unrelated red suite |
 
 ### Test Summary
 - **Focused PR-1 evidence still green**: migration suite `1` file / `2` tests passed; API `328` + Web `129` bootstrap tests passed.
 - **Focused PR-2 evidence still green**: `8` files / `80` tests passed; API runtime harness `60` files / `335` tests passed.
 - **Focused PR-3 evidence**: `6` files / `14` tests passed; runtime harness `1` file / `1` test passed.
+- **Focused PR-4 evidence**: `7` files / `26` tests passed; runtime harness `1` file / `2` tests passed.
 - **Layers used**: Unit, integration (real Postgres gateway + Supertest), and safety-net suites.
-- **Approval tests**: None — PR-3 added a new ERP access slice instead of refactoring existing behavior under approval tests.
-- **Pure functions created**: 1 (`assertNoAmbiguousActiveErpAccessLink`).
+- **Approval tests**: None — PR-4 added a new approval-policy slice and additive permission-scope behavior instead of refactoring legacy behavior under approval tests.
+- **Pure functions created**: 3 (`assertNoAmbiguousActiveErpAccessLink`, `resolveReportingLineScopeEmployeeIds`, `assertValidApprovalPolicyScope`).
 
 ### Deviations from Design
-- None — implementation matches the PR-1 through PR-3 design boundaries.
+- None — implementation matches the PR-1 through PR-4 design boundaries.
 
 ### Issues Found
 - `pnpm --filter api typecheck` remains red in the repository baseline for pre-existing non-PR-2 issues, including existing org-hierarchy exact-optional-typing mismatches and legacy auth/item test-contract drift outside the `hr-employees` slice.
 - Host integration tests required the Docker CLI `default` context because the current CLI default points at an unavailable Docker Desktop socket; `docker --context default compose up -d postgres` restored the real Postgres harness for PR-3.
-- The unrelated baseline safety-net `pnpm --filter api exec vitest run src/features/hr-employees/presentation/hr-employees.router.test.ts` is red in the current workspace (`500` instead of `201` on the first create-employee request) and was not modified in this batch.
+- The unrelated baseline safety-net `pnpm --filter api exec vitest run src/features/hr-employees/presentation/hr-employees.router.test.ts` is still red in the current workspace (`500` instead of `201` on the first create-employee request) and was not modified in this batch.
 
 ### Remaining Tasks
-- [ ] 4.1 RED `features/roles-management/domain/__tests__/assignments-permission-scope.test.ts`: `direct_reports` returns only direct reports.
-- [ ] 4.2 Modify `roles-management/domain/{permissions.ts,assignments.ts}`: add `hr.*` keys + `PermissionScope` union + `evaluateReportingLineScopes` port.
-- [ ] 4.3 Modify `roles-management/application/compute-effective-permissions.ts`: union reporting-line scope keys.
-- [ ] 4.4 Author `roles-management/presentation/require-hr-capability.ts` + unit test.
-- [ ] 4.5 Modify `identity/application/resolve-auth-session.ts`: reject `direct_reports`/`self` as `activeScope`; add test.
-- [ ] 4.6 RED `approval-policy/domain/__tests__/approval-policy.test.ts`: CHECK rejects mismatched scope.
-- [ ] 4.7 Author `approval-policy/{domain,application,infrastructure,presentation}/` (CRUD only).
-- [ ] 4.8 Wire routers + `requireHrCapability` in `app/create-app.ts`; Supertest 403 test.
 - [ ] 5.1 Author `web/src/features/hr-employees/domain/{employees,positions,assignments}.ts`.
 - [ ] 5.2 Author `infrastructure/create-hr-employees-api.ts` + `xxxQueryKeys` + `useEmployees/usePositions/useAssignments`; tests.
 - [ ] 5.3 Author `presentation/pages/{employees-list,employee-detail,employee-form,positions-list,position-form,assignment-timeline}.tsx` (RHF + Zod + shadcn); RTL tests.
@@ -140,9 +172,9 @@
 
 ### Workload / PR Boundary
 - Mode: stacked PR slice
-- Current work unit: PR-3 hr-erp-access backend
-- Boundary: Third stacked slice only (Phase 3 / tasks 3.1-3.6)
-- Estimated review budget impact: bounded to the new backend ERP access slice, shared composition/error wiring, and strict-TDD proof
+- Current work unit: PR-4 approval-policy backend
+- Boundary: Fourth stacked slice only (Phase 4 / tasks 4.1-4.8)
+- Estimated review budget impact: tracked diff is ~243 lines on existing files plus additive approval-policy slice files, bounded under the approved 800-line review budget for PR-4
 
 ### Status
-17/33 tasks complete. This batch is ready for the next stacked slice (PR-4 `approval-policy` + `identity-access` / `org-tree` MODIFIED), with the known follow-up risk that unrelated baseline route/typecheck issues still exist outside the PR-3 boundary.
+25/33 tasks complete. This batch is ready for the next stacked slice (PR-5 web `hr-employees`), with the known follow-up risk that the unrelated baseline `hr-employees.router.test.ts` and repository typecheck drift still exist outside the PR-4 boundary.

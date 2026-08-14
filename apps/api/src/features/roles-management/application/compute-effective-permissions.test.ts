@@ -142,4 +142,31 @@ describe('createComputeEffectivePermissionsUseCase', () => {
       }),
     ).resolves.toEqual(['catalog.read']);
   });
+
+  it('unions reporting-line permission keys for the direct_reports permission scope', async () => {
+    const computeEffectivePermissions = createComputeEffectivePermissionsUseCase({
+      rolesGateway,
+      assignmentsGateway,
+      scopeHierarchyGateway: {
+        assertScopeRefBelongsToCompany: async () => undefined,
+        getScopeLineage: scopeResolver.getLineage,
+      },
+      evaluateReportingLineScopes: async () => ({
+        employeeIds: ['employee-2'],
+        permissionKeys: ['hr.employees.read'],
+      }),
+    });
+
+    await expect(
+      computeEffectivePermissions({
+        companyId: 'company-a',
+        userId: 'user-1',
+        currentContext: {
+          scopeType: 'warehouse',
+          scopeId: 'warehouse-1',
+        },
+        permissionScope: { kind: 'direct_reports' },
+      }),
+    ).resolves.toEqual(['catalog.read', 'catalog.write', 'hr.employees.read']);
+  });
 });

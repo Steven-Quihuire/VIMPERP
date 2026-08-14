@@ -550,6 +550,63 @@ describe('createResolveAuthSession', () => {
     expect(session.activeLocalId).toBe('local-1');
   });
 
+  it('rejects reporting-line scope ids as persisted activeScope values', async () => {
+    const memberships = new Map<string, AuthMembership[]>();
+    memberships.set('user-1', [
+      {
+        companyId: 'company-1',
+        role: 'company-owner',
+        divisionId: null,
+        localId: null,
+      },
+    ]);
+    const activeCompany = new Map<string, string | null>();
+    activeCompany.set('user-1', 'company-1');
+    const activeScopeNodeId = new Map<string, string | null>();
+    activeScopeNodeId.set('user-1', 'direct_reports:employee-1');
+    const companyStatus = new Map<string, CompanyLifecycle>();
+    companyStatus.set('company-1', 'active');
+    const sessions = new Map<string, AuthSessionRecord>();
+    sessions.set('token-1', {
+      token: 'token-1',
+      userId: 'user-1',
+      expiresAt: new Date(Date.now() + 60000),
+    });
+    const users = new Map<string, AuthUser>();
+    users.set('user-1', {
+      id: 'user-1',
+      email: 'owner@vimcore.test',
+      username: 'owner',
+      passwordHash: 'hashed',
+    });
+    const gateway = createGateway({
+      membershipsByUserId: memberships,
+      activeCompanyIdByUserId: activeCompany,
+      activeScopeNodeIdByUserId: activeScopeNodeId,
+      companyStatusByCompanyId: companyStatus,
+      sessions,
+      users,
+    });
+
+    const resolve = createResolveAuthSession({
+      authIdentityGateway: gateway,
+      scopeResolver: createScopeResolver([
+        {
+          companyId: 'company-1',
+          userId: 'user-1',
+          scope: { scopeType: 'local', scopeId: 'local-1' },
+          mode: 'exact_node',
+        },
+      ]),
+      seedAdminEnabled: false,
+    });
+
+    const session = await resolve('token-1');
+
+    expect(session.activeScope).toEqual({ scopeType: 'local', scopeId: 'local-1' });
+    expect(session.activeLocalId).toBe('local-1');
+  });
+
   it('keeps activeScope null when multiple authorized scopes require explicit selection', async () => {
     const memberships = new Map<string, AuthMembership[]>();
     memberships.set('user-1', [
