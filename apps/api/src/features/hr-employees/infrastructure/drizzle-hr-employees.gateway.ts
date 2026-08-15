@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, isNull, or } from 'drizzle-orm';
 
 import type { AppDb } from '../../../shared/infrastructure/db/client';
 import {
@@ -13,6 +13,8 @@ import type { EmployeeAssignment } from '../domain/employee-assignments';
 import {
   EmployeeDocumentConflictError,
   type Employee,
+  type EmployeeListFilters,
+  type EmployeePage,
   type HrEmployeesGateway,
   type ScopeNodeRecord,
 } from '../domain/employees';
@@ -183,6 +185,46 @@ export const createDrizzleHrEmployeesGateway = (
       .from(employeesTable)
       .where(eq(employeesTable.companyId, companyId));
     return rows.map(toEmployee);
+  },
+  listEmployeesPage: async (
+    companyId,
+    filters: EmployeeListFilters,
+  ): Promise<EmployeePage> => {
+    const search = filters.search?.trim();
+    const conditions = [
+      eq(employeesTable.companyId, companyId),
+      ...(filters.status
+        ? [eq(employeesTable.employmentStatus, filters.status)]
+        : []),
+      ...(search
+        ? [
+            or(
+              ilike(employeesTable.fullName, `%${search}%`),
+              ilike(employeesTable.email, `%${search}%`),
+              ilike(employeesTable.documentNumber, `%${search}%`),
+              ilike(employeesTable.id, `%${search}%`),
+            ),
+          ]
+        : []),
+    ];
+    const where = and(...conditions);
+    const [rows, countRows] = await Promise.all([
+      db
+        .select()
+        .from(employeesTable)
+        .where(where)
+        .orderBy(desc(employeesTable.createdAt), desc(employeesTable.id))
+        .limit(filters.pageSize)
+        .offset((filters.page - 1) * filters.pageSize),
+      db.select({ total: count() }).from(employeesTable).where(where),
+    ]);
+
+    return {
+      items: rows.map(toEmployee),
+      total: Number(countRows[0]?.total ?? 0),
+      page: filters.page,
+      pageSize: filters.pageSize,
+    };
   },
   createPosition: async (input) => {
     const [row] = await db

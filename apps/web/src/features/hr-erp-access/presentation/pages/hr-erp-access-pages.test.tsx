@@ -9,12 +9,17 @@ import { AcceptErpAccessInvitationPage } from './accept-invitation';
 import { InvitationsListPage } from './invitations-list';
 
 const useInvitationsMock = vi.fn();
+const useEmployeesMock = vi.fn();
 const useAcceptInvitationMock = vi.fn();
 const useAuthMock = vi.fn();
 
 vi.mock('../../application/hr-erp-access-queries', () => ({
   useInvitations: (...args: unknown[]) => useInvitationsMock(...args),
   useAcceptInvitation: (...args: unknown[]) => useAcceptInvitationMock(...args),
+}));
+
+vi.mock('@/features/hr-employees/application/hr-employees-queries', () => ({
+  useEmployees: (...args: unknown[]) => useEmployeesMock(...args),
 }));
 
 vi.mock('@/features/auth/presentation/use-auth', () => ({
@@ -48,6 +53,23 @@ const createAcceptWrapper = (initialEntries: string[]) => {
 describe('hr-erp-access pages', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useEmployeesMock.mockReturnValue({
+      data: [
+        {
+          id: 'employee-1',
+          fullName: 'Ana Pérez',
+          email: 'person@vimcore.test',
+        },
+        {
+          id: 'employee-2',
+          fullName: 'Juan García',
+          email: 'juan@vimcore.test',
+        },
+      ],
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
     useInvitationsMock.mockReturnValue({
       invitationsQuery: {
         data: [
@@ -93,8 +115,8 @@ describe('hr-erp-access pages', () => {
 
     expect(screen.getByText('person@vimcore.test')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('ID del empleado'), {
-      target: { value: ' employee-2 ' },
+    fireEvent.change(screen.getByLabelText('¿Qué empleado va a usar el sistema?'), {
+      target: { value: 'employee-2' },
     });
     fireEvent.change(screen.getByLabelText('Correo de la persona invitada'), {
       target: { value: ' PERSON-2@VIMCORE.TEST ' },

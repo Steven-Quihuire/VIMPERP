@@ -325,15 +325,27 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       : createNoopInvitationEmailSender();
   const hrInvitationEmailSender = {
     sendInvitationEmail: async (
-      emailInput: Parameters<typeof rawHrInvitationEmailSender.sendInvitationEmail>[0],
+      emailInput: Parameters<
+        typeof rawHrInvitationEmailSender.sendInvitationEmail
+      >[0],
     ) => {
       logger.info(
-        { invitationId: emailInput.invitationId, inviteeEmail: emailInput.inviteeEmail, mode: invitationEmailMode },
+        {
+          invitationId: emailInput.invitationId,
+          inviteeEmail: emailInput.inviteeEmail,
+          mode: invitationEmailMode,
+        },
         'HR responsibility invitation email delivery attempt started',
       );
-      const delivery = await rawHrInvitationEmailSender.sendInvitationEmail(emailInput);
+      const delivery =
+        await rawHrInvitationEmailSender.sendInvitationEmail(emailInput);
       logger.info(
-        { invitationId: emailInput.invitationId, inviteeEmail: emailInput.inviteeEmail, mode: invitationEmailMode, status: delivery.status },
+        {
+          invitationId: emailInput.invitationId,
+          inviteeEmail: emailInput.inviteeEmail,
+          mode: invitationEmailMode,
+          status: delivery.status,
+        },
         'HR responsibility invitation email delivery finished',
       );
       return delivery;
@@ -512,13 +524,30 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
   const listVisibleEmployees = async ({
     companyId,
     auth,
+    filters,
   }: {
     companyId: string;
     auth: AuthSession;
+    filters?: {
+      page: number;
+      pageSize: number;
+      search?: string | undefined;
+      status?: 'active' | 'suspended' | 'separated' | undefined;
+    };
   }) => {
+    if (filters && hrEmployeesGateway.listEmployeesPage) {
+      const page = await hrEmployeesGateway.listEmployeesPage(
+        companyId,
+        filters,
+      );
+      const activeScope = getActiveScope(auth);
+      if (activeScope.scopeType === 'company') {
+        return page;
+      }
+    }
     const employees = await listEmployees({ companyId });
     const activeScope = getActiveScope(auth);
-    return (
+    const visibleEmployees = (
       await Promise.all(
         employees.map(async (employee) => {
           const assignment =
@@ -549,6 +578,32 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     ).filter(
       (employee): employee is NonNullable<typeof employee> => employee !== null,
     );
+    if (!filters) return visibleEmployees;
+
+    const normalizedSearch = filters.search?.trim().toLowerCase();
+    const filteredVisibleEmployees = visibleEmployees.filter((employee) => {
+      const matchesStatus =
+        !filters.status || employee.employmentStatus === filters.status;
+      const searchableText = [
+        employee.fullName,
+        employee.id,
+        employee.email ?? '',
+        employee.documentNumber ?? '',
+      ]
+        .join(' ')
+        .toLowerCase();
+      return (
+        matchesStatus &&
+        (!normalizedSearch || searchableText.includes(normalizedSearch))
+      );
+    });
+    const first = (filters.page - 1) * filters.pageSize;
+    return {
+      items: filteredVisibleEmployees.slice(first, first + filters.pageSize),
+      total: filteredVisibleEmployees.length,
+      page: filters.page,
+      pageSize: filters.pageSize,
+    };
   };
   const listPositions = async ({
     companyId,
@@ -919,13 +974,18 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       requireAuth,
       getState: createGetHrResponsibilityState(hrResponsibilityGateway),
       assign: createAssignHrResponsible(hrResponsibilityGateway),
-      listPendingInvitations: createListHrResponsibilityInvitations({ gateway: hrResponsibilityGateway }),
+      listPendingInvitations: createListHrResponsibilityInvitations({
+        gateway: hrResponsibilityGateway,
+      }),
       createInvitation: createHrResponsibilityInvitation({
         gateway: hrResponsibilityGateway,
         emailSender: hrInvitationEmailSender,
-        buildInvitationLink: (token) => `${appBaseUrl}/hr-responsibility/accept/${token}`,
+        buildInvitationLink: (token) =>
+          `${appBaseUrl}/hr-responsibility/accept/${token}`,
       }),
-      getInvitation: createGetHrResponsibilityInvitation({ gateway: hrResponsibilityGateway }),
+      getInvitation: createGetHrResponsibilityInvitation({
+        gateway: hrResponsibilityGateway,
+      }),
       acceptInvitation: createAcceptHrResponsibilityInvitation({
         gateway: hrResponsibilityGateway,
         passwordHasher,

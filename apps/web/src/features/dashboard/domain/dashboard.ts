@@ -66,6 +66,13 @@ export type AdminWorkspaceLink = {
   description: string;
 };
 
+export type RrhHWorkspaceLink = {
+  id: 'manage-employees' | 'request-time-off';
+  label: string;
+  href: string;
+  description: string;
+};
+
 const baseModules: DashboardModule[] = [
   { id: 'crm', label: 'CRM' },
   { id: 'sales', label: 'Sales' },
@@ -126,6 +133,23 @@ export const adminWorkspaceLinks: AdminWorkspaceLink[] = [
     href: '/dashboard/admin/audit-events',
     description:
       'Consulta la trazabilidad estructurada de la actividad de la plataforma.',
+  },
+];
+
+export const rrhhSpaceLinks: RrhHWorkspaceLink[] = [
+  {
+    id: 'manage-employees',
+    label: 'gestionar empleados',
+    href: '/manage-employees',
+    description:
+      'Gestiona el estado de los empleados de la empresa o division y sus datos registrados.',
+  },
+  {
+    id: 'request-time-off',
+    label: 'solicitud tiempo libre',
+    href: '/dashboard/hr/employees/request-time-off',
+    description:
+      'Investiga los empleados con solicitudes asociados a tiempos libres y gestionalos.',
   },
 ];
 

@@ -288,7 +288,9 @@ const getInvitationErrorMessage = (error: unknown) => {
   return 'El nodo fue creado, pero no se pudo generar la invitación del responsable.';
 };
 
-const notifyInvitationDelivery = (invitation: CreatedNodeManagementInvitation) => {
+const notifyInvitationDelivery = (
+  invitation: CreatedNodeManagementInvitation,
+) => {
   const description = (() => {
     if (!invitation.delivery || invitation.delivery.status === 'sent') {
       return `Invitation email sent to ${invitation.inviteeEmail}.`;
@@ -362,9 +364,11 @@ const getGraphEntries = ({
       parentId: local.divisionId ?? ROOT_NODE_ID,
       kind: 'local' as const,
       label: local.name,
-      meta: `${local.employeeCount ?? 0} empleados · ${local.divisionId
-        ? 'Local dependiente de una división.'
-        : 'Local creado directamente bajo empresa.'}`,
+      meta: `${local.employeeCount ?? 0} empleados · ${
+        local.divisionId
+          ? 'Local dependiente de una división.'
+          : 'Local creado directamente bajo empresa.'
+      }`,
       scopeType: 'local' as const,
       scopeId: local.id,
       responsibility:
@@ -376,9 +380,11 @@ const getGraphEntries = ({
       parentId: area.divisionId ?? area.localId,
       kind: 'area' as const,
       label: area.name,
-      meta: `${area.employeeCount ?? 0} empleados · ${area.divisionId
-        ? 'Área asociada a una división.'
-        : 'Área asociada a un local.'}`,
+      meta: `${area.employeeCount ?? 0} empleados · ${
+        area.divisionId
+          ? 'Área asociada a una división.'
+          : 'Área asociada a un local.'
+      }`,
       scopeType: 'area' as const,
       scopeId: area.id,
       responsibility:
@@ -390,9 +396,11 @@ const getGraphEntries = ({
       parentId: warehouse.areaId ?? warehouse.localId,
       kind: 'warehouse' as const,
       label: warehouse.name,
-      meta: `${warehouse.employeeCount ?? 0} empleados · ${warehouse.areaId
-        ? 'Almacén dependiente de un área.'
-        : 'Almacén dependiente de un local.'}`,
+      meta: `${warehouse.employeeCount ?? 0} empleados · ${
+        warehouse.areaId
+          ? 'Almacén dependiente de un área.'
+          : 'Almacén dependiente de un local.'
+      }`,
       scopeType: 'warehouse' as const,
       scopeId: warehouse.id,
       responsibility:
@@ -404,14 +412,17 @@ const getGraphEntries = ({
       parentId: pointOfSale.areaId ?? pointOfSale.localId,
       kind: 'point-of-sale' as const,
       label: pointOfSale.name,
-      meta: `${pointOfSale.employeeCount ?? 0} empleados · ${pointOfSale.areaId
-        ? 'Punto de venta dependiente de un área.'
-        : 'Punto de venta dependiente de un local.'}`,
+      meta: `${pointOfSale.employeeCount ?? 0} empleados · ${
+        pointOfSale.areaId
+          ? 'Punto de venta dependiente de un área.'
+          : 'Punto de venta dependiente de un local.'
+      }`,
       scopeType: 'point-of-sale' as const,
       scopeId: pointOfSale.id,
       responsibility:
-        responsibilitiesByScope.get(getScopeKey('point-of-sale', pointOfSale.id)) ??
-        buildNodeResponsibilitySummary({}),
+        responsibilitiesByScope.get(
+          getScopeKey('point-of-sale', pointOfSale.id),
+        ) ?? buildNodeResponsibilitySummary({}),
     })),
   ] satisfies GraphEntry[];
 
@@ -678,7 +689,10 @@ const buildFlowGraph = ({
     }
   }
 
-  return { nodes: [...organizationNodes, ...branchNodes] as OrganizationFlowNode[], edges };
+  return {
+    nodes: [...organizationNodes, ...branchNodes] as OrganizationFlowNode[],
+    edges,
+  };
 };
 
 const BranchLabelNode = ({ data }: NodeProps<BranchCanvasNode>) => (
@@ -723,54 +737,54 @@ const OrganizationNodeComponent = ({
           }`}
         >
           <div className="flex items-start gap-3">
-          <div className="flex min-w-0 items-start gap-3">
-            <div
-              className={`flex size-11 shrink-0 items-center justify-center rounded-2xl border ${kindTone[data.kind]}`}
-            >
-              <Icon className="size-5" />
-            </div>
-            <div className="min-w-0 space-y-1">
-              {!isCompanyNode ? (
-                <Badge
-                  variant="outline"
-                  className="rounded-full px-2.5 py-0.5 text-[11px] font-medium"
-                >
-                  {kindLabel[data.kind]}
-                </Badge>
-              ) : null}
-              <div>
-                <p className="truncate text-sm font-semibold text-foreground">
-                  {data.label}
-                </p>
-                {data.meta ? (
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                    {data.meta}
+            <div className="flex min-w-0 items-start gap-3">
+              <div
+                className={`flex size-11 shrink-0 items-center justify-center rounded-2xl border ${kindTone[data.kind]}`}
+              >
+                <Icon className="size-5" />
+              </div>
+              <div className="min-w-0 space-y-1">
+                {!isCompanyNode ? (
+                  <Badge
+                    variant="outline"
+                    className="rounded-full px-2.5 py-0.5 text-[11px] font-medium"
+                  >
+                    {kindLabel[data.kind]}
+                  </Badge>
+                ) : null}
+                <div>
+                  <p className="truncate text-sm font-semibold text-foreground">
+                    {data.label}
                   </p>
+                  {data.meta ? (
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      {data.meta}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <Badge
+                    variant="outline"
+                    className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${getNodeResponsibilityBadgeClassName(data.responsibility.status)}`}
+                  >
+                    {data.responsibility.badgeLabel}
+                  </Badge>
+                  <p className="text-[11px] leading-relaxed text-muted-foreground">
+                    {data.responsibility.detail}
+                  </p>
+                </div>
+                {isCompanyNode ? (
+                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-700">
+                    <span className="relative flex size-2.5" aria-hidden="true">
+                      <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                      <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500" />
+                    </span>
+                    Activa
+                  </div>
                 ) : null}
               </div>
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <Badge
-                  variant="outline"
-                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${getNodeResponsibilityBadgeClassName(data.responsibility.status)}`}
-                >
-                  {data.responsibility.badgeLabel}
-                </Badge>
-                <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  {data.responsibility.detail}
-                </p>
-              </div>
-              {isCompanyNode ? (
-                <div className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-700">
-                  <span className="relative flex size-2.5" aria-hidden="true">
-                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-                    <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500" />
-                  </span>
-                  Activa
-                </div>
-              ) : null}
             </div>
           </div>
-        </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
             {isCompanyNode ? (
@@ -977,13 +991,16 @@ const OrganizationEntityDialog = ({
   const isCreateMode = state.mode === 'create';
   const canEditCreateFields = !createdInviteTarget;
 
-  const creatableKinds = isCreateMode ? getCreatableKinds(state.parentKind) : [];
+  const creatableKinds = isCreateMode
+    ? getCreatableKinds(state.parentKind)
+    : [];
   const Surface = isCreateMode ? Sheet : Dialog;
   const SurfaceContent = isCreateMode ? SheetContent : DialogContent;
   const SurfaceHeader = isCreateMode ? SheetHeader : DialogHeader;
   const SurfaceTitle = isCreateMode ? SheetTitle : DialogTitle;
-  const SurfaceDescription =
-    isCreateMode ? SheetDescription : DialogDescription;
+  const SurfaceDescription = isCreateMode
+    ? SheetDescription
+    : DialogDescription;
   const SurfaceFooter = isCreateMode ? SheetFooter : DialogFooter;
   const SurfaceClose = isCreateMode ? SheetClose : DialogClose;
 
@@ -1034,7 +1051,10 @@ const OrganizationEntityDialog = ({
             name: trimmed,
           });
         } else {
-          const division = await createDivision.mutateAsync({ companyId, name: trimmed });
+          const division = await createDivision.mutateAsync({
+            companyId,
+            name: trimmed,
+          });
           createdNodeTarget = { scopeType: 'division', scopeId: division.id };
         }
       }
@@ -1144,7 +1164,10 @@ const OrganizationEntityDialog = ({
               ? { companyId, name: trimmed, areaId: storageParentId }
               : { companyId, name: trimmed, localId: storageParentId },
           );
-          createdNodeTarget = { scopeType: 'point-of-sale', scopeId: pointOfSale.id };
+          createdNodeTarget = {
+            scopeType: 'point-of-sale',
+            scopeId: pointOfSale.id,
+          };
         }
       }
 
@@ -1175,16 +1198,14 @@ const OrganizationEntityDialog = ({
 
   return (
     <Surface open onOpenChange={onOpenChange}>
-        <SurfaceContent
-          className={
-            isCreateMode
-              ? '!h-auto max-h-[min(720px,100dvh)] w-full gap-0 overflow-y-auto p-0 sm:max-w-md'
-              : undefined
-          }
-        >
-        <SurfaceHeader
-          className={isCreateMode ? 'p-5 pb-2' : undefined}
-        >
+      <SurfaceContent
+        className={
+          isCreateMode
+            ? '!h-auto max-h-[min(720px,100dvh)] w-full gap-0 overflow-y-auto p-0 sm:max-w-md'
+            : undefined
+        }
+      >
+        <SurfaceHeader className={isCreateMode ? 'p-5 pb-2' : undefined}>
           <SurfaceTitle>
             {state.mode === 'edit' ? 'Editar' : 'Crear'}{' '}
             {kindLabel[kind].toLowerCase()}
@@ -1196,9 +1217,7 @@ const OrganizationEntityDialog = ({
           </SurfaceDescription>
         </SurfaceHeader>
 
-        <FieldGroup
-          className={isCreateMode ? 'gap-5 px-5 py-4' : undefined}
-        >
+        <FieldGroup className={isCreateMode ? 'gap-5 px-5 py-4' : undefined}>
           {isCreateMode && creatableKinds.length > 1 ? (
             <Field>
               <FieldLabel>Tipo</FieldLabel>
@@ -1405,7 +1424,8 @@ const OrganizationEntityDialog = ({
                   Responsable del nodo (opcional)
                 </p>
                 <p className="text-xs leading-5 text-muted-foreground">
-                  Si completás un correo, al crear el nodo también se generará una invitación para su responsable.
+                  Si completás un correo, al crear el nodo también se generará
+                  una invitación para su responsable.
                 </p>
               </div>
 
@@ -1432,7 +1452,8 @@ const OrganizationEntityDialog = ({
 
               {createdInviteTarget && invitationError ? (
                 <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                  El nodo ya fue creado. Podés corregir el correo y reintentar la invitación sin volver a crear el nodo.
+                  El nodo ya fue creado. Podés corregir el correo y reintentar
+                  la invitación sin volver a crear el nodo.
                 </p>
               ) : null}
 
@@ -1458,11 +1479,7 @@ const OrganizationEntityDialog = ({
           </p>
         ) : null}
 
-        <SurfaceFooter
-          className={
-            isCreateMode ? 'mt-0 p-5 pt-2' : undefined
-          }
-        >
+        <SurfaceFooter className={isCreateMode ? 'mt-0 p-5 pt-2' : undefined}>
           <SurfaceClose asChild>
             <Button
               type="button"
@@ -1603,7 +1620,13 @@ const OrganizationDeleteDialog = ({
   );
 };
 
-const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
+const OrganizationWorkspace = ({
+  session,
+  readOnly = false,
+}: {
+  session: AuthSession;
+  readOnly?: boolean;
+}) => {
   const { fitView, getIntersectingNodes } = useReactFlow<
     OrganizationCanvasNode,
     Edge
@@ -1614,8 +1637,16 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
   const areasQuery = useAreas(companyId);
   const warehousesQuery = useWarehouses(companyId);
   const pointsOfSaleQuery = usePointsOfSale(companyId);
-  const responsibilitiesQuery = useNodeManagementResponsibilities(companyId);
-  const pendingInvitationsQuery = useNodeManagementPendingInvitations(companyId);
+  const responsibilitiesQuery = useNodeManagementResponsibilities(
+    companyId,
+    undefined,
+    !readOnly,
+  );
+  const pendingInvitationsQuery = useNodeManagementPendingInvitations(
+    companyId,
+    undefined,
+    !readOnly,
+  );
   const [dialogState, setDialogState] =
     useState<OrganizationDialogState | null>(null);
   const [deleteState, setDeleteState] = useState<DeleteDialogState | null>(
@@ -1681,7 +1712,9 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
     if (responsibility.isActive && responsibility.endedAt === null) {
       responsibilitiesByScope.set(
         getScopeKey(responsibility.scopeType, responsibility.scopeId),
-        buildNodeResponsibilitySummary({ activeResponsibility: responsibility }),
+        buildNodeResponsibilitySummary({
+          activeResponsibility: responsibility,
+        }),
       );
     }
   }
@@ -1721,6 +1754,8 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
     const graph = buildFlowGraph({
       entries,
       onCreateChild: (nodeId, kind) => {
+        if (readOnly) return;
+
         if (kind === 'company') {
           setDialogState({
             mode: 'create',
@@ -1758,10 +1793,12 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
         }
       },
       onEdit: (nodeId, kind) => {
+        if (readOnly) return;
         if (kind === 'company') return;
         setDialogState({ mode: 'edit', kind, entityId: nodeId });
       },
       onDelete: (nodeId, kind) => {
+        if (readOnly) return;
         if (kind === 'company') return;
         setDeleteState({ kind, entityId: nodeId });
       },
@@ -1827,13 +1864,12 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
       const height = node.measured?.height ?? node.height ?? 0;
       return `${node.id}:${width}x${height}`;
     })
-    .join('|')}::${edges.map((edge) => `${edge.source}>${edge.target}`).join('|')}`;
+    .join(
+      '|',
+    )}::${edges.map((edge) => `${edge.source}>${edge.target}`).join('|')}`;
 
   useEffect(() => {
-    if (
-      !nodes.length ||
-      lastLayoutKeyRef.current === layoutKey
-    ) {
+    if (!nodes.length || lastLayoutKeyRef.current === layoutKey) {
       return;
     }
 
@@ -1864,7 +1900,10 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
         isOrganizationNode(node)
           ? {
               ...node,
-              data: { ...node.data, isDropTarget: activeDropTargetId === node.id },
+              data: {
+                ...node.data,
+                isDropTarget: activeDropTargetId === node.id,
+              },
             }
           : node,
       ),
@@ -1963,7 +2002,8 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
     }
 
     const currentEntry = entries.find((entry) => entry.id === node.id);
-    const targetParentId = validTarget.id === ROOT_NODE_ID ? ROOT_NODE_ID : validTarget.id;
+    const targetParentId =
+      validTarget.id === ROOT_NODE_ID ? ROOT_NODE_ID : validTarget.id;
 
     if (currentEntry?.parentId === targetParentId) {
       setHasManualArrangement(true);
@@ -2013,7 +2053,9 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
     } catch (error) {
       restoreNodePosition(node.id);
       const message =
-        error instanceof Error ? error.message : 'No se pudo mover el nodo seleccionado.';
+        error instanceof Error
+          ? error.message
+          : 'No se pudo mover el nodo seleccionado.';
       sileo.error({
         description: message,
         position: 'bottom-right',
@@ -2087,7 +2129,7 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
             void handleNodeDragStop(event, node as OrganizationCanvasNode);
           }}
           panOnDrag
-          nodesDraggable
+          nodesDraggable={!readOnly}
           nodesConnectable={false}
           elementsSelectable
           proOptions={{ hideAttribution: true }}
@@ -2141,8 +2183,8 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
                     )}
                   </Button>
 
-                    <div
-                      className={`flex items-center gap-2 transition-[opacity,transform] duration-300 ${
+                  <div
+                    className={`flex items-center gap-2 transition-[opacity,transform] duration-300 ${
                       isToolbarOpen
                         ? 'translate-x-0 opacity-100'
                         : 'pointer-events-none -translate-x-3 opacity-0'
@@ -2185,7 +2227,11 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
                           'Marcan dónde se concreta la venta. Sirven para separar operación comercial del resto del árbol.',
                       },
                     ].map((item) => (
-                      <HoverCard key={item.label} openDelay={120} closeDelay={80}>
+                      <HoverCard
+                        key={item.label}
+                        openDelay={120}
+                        closeDelay={80}
+                      >
                         <HoverCardTrigger asChild>
                           <button
                             type="button"
@@ -2222,20 +2268,26 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
 
                     <div className="h-6 w-px bg-border/70" />
 
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="rounded-full"
-                      onClick={() => {
-                        setHasManualArrangement(false);
-                        syncLayout(false);
-                        setLayoutRevision((revision) => revision + 1);
-                      }}
-                      aria-label="Autoestructurar árbol"
-                    >
-                      <PencilSparkles className="size-4" />
-                    </Button>
+                    {readOnly ? (
+                      <span className="rounded-full border border-border/70 px-3 py-1 text-xs font-medium text-muted-foreground">
+                        Vista de consulta
+                      </span>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-full"
+                        onClick={() => {
+                          setHasManualArrangement(false);
+                          syncLayout(false);
+                          setLayoutRevision((revision) => revision + 1);
+                        }}
+                        aria-label="Autoestructurar árbol"
+                      >
+                        <PencilSparkles className="size-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2244,7 +2296,7 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
         </ReactFlow>
       </div>
 
-      {dialogState ? (
+      {!readOnly && dialogState ? (
         <OrganizationEntityDialog
           key={JSON.stringify(dialogState)}
           state={dialogState}
@@ -2262,7 +2314,7 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
         />
       ) : null}
 
-      {deleteState ? (
+      {!readOnly && deleteState ? (
         <OrganizationDeleteDialog
           key={`${deleteState.kind}-${deleteState.entityId}`}
           state={deleteState}
@@ -2283,10 +2335,16 @@ const OrganizationWorkspace = ({ session }: { session: AuthSession }) => {
   );
 };
 
-export const OrganizationPage = ({ session }: { session: AuthSession }) => {
+export const OrganizationPage = ({
+  session,
+  readOnly = false,
+}: {
+  session: AuthSession;
+  readOnly?: boolean;
+}) => {
   return (
     <ReactFlowProvider>
-      <OrganizationWorkspace session={session} />
+      <OrganizationWorkspace session={session} readOnly={readOnly} />
     </ReactFlowProvider>
   );
 };

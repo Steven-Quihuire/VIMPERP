@@ -104,7 +104,7 @@ export const DashboardShell = ({
         {...(apiBaseUrl ? { apiBaseUrl } : {})}
       />
       <SidebarInset className="h-dvh max-h-dvh overflow-hidden">
-        <header className="flex h-14 shrink-0 items-center justify-between border-b bg-[#FBFAF7] px-4 text-black lg:px-6">
+        <header className="flex h-14 shrink-0 items-center justify-between border-b bg-[#f6f6f6] px-4 text-black lg:px-6">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />

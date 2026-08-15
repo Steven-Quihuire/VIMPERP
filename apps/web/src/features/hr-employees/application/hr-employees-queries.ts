@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 
 import type { AssignmentFormValues } from '../domain/assignments';
 import type {
@@ -6,13 +11,31 @@ import type {
   UpdateEmployeeInput,
 } from '../domain/employees';
 import type { CreatePositionInput } from '../domain/positions';
+import type { EmploymentStatus } from '../domain/employees';
 import { createHrEmployeesApi } from '../infrastructure/create-hr-employees-api';
 
 export const hrEmployeesQueryKeys = {
-  employees: (companyId: string) => ['hr-employees', 'employees', companyId] as const,
+  employees: (companyId: string) =>
+    ['hr-employees', 'employees', companyId] as const,
+  employeesPage: (
+    companyId: string,
+    page: number,
+    search: string,
+    status: string,
+  ) =>
+    [
+      'hr-employees',
+      'employees',
+      companyId,
+      'page',
+      page,
+      search,
+      status,
+    ] as const,
   employee: (companyId: string, employeeId: string) =>
     ['hr-employees', 'employee', companyId, employeeId] as const,
-  positions: (companyId: string) => ['hr-employees', 'positions', companyId] as const,
+  positions: (companyId: string) =>
+    ['hr-employees', 'positions', companyId] as const,
   manager: (companyId: string, employeeId: string) =>
     ['hr-employees', 'manager', companyId, employeeId] as const,
   directReports: (companyId: string, employeeId: string) =>
@@ -21,13 +44,46 @@ export const hrEmployeesQueryKeys = {
     ['hr-employees', 'assignment-history', companyId, employeeId] as const,
 };
 
-export const useEmployees = (companyId: string | undefined, apiBaseUrl?: string) => {
+export const useEmployees = (
+  companyId: string | undefined,
+  apiBaseUrl?: string,
+) => {
   const api = createHrEmployeesApi(apiBaseUrl);
 
   return useQuery({
     queryKey: hrEmployeesQueryKeys.employees(companyId ?? ''),
     queryFn: () => api.listEmployees(companyId as string),
     enabled: Boolean(companyId),
+  });
+};
+
+export const useEmployeesPage = (
+  input: {
+    companyId: string | undefined;
+    page: number;
+    search: string;
+    status: EmploymentStatus | undefined;
+  },
+  apiBaseUrl?: string,
+) => {
+  const api = createHrEmployeesApi(apiBaseUrl);
+  return useQuery({
+    queryKey: hrEmployeesQueryKeys.employeesPage(
+      input.companyId ?? '',
+      input.page,
+      input.search,
+      input.status ?? 'all',
+    ),
+    queryFn: () =>
+      api.listEmployeesPage({
+        companyId: input.companyId as string,
+        page: input.page,
+        pageSize: 10,
+        ...(input.search ? { search: input.search } : {}),
+        ...(input.status ? { status: input.status } : {}),
+      }),
+    placeholderData: keepPreviousData,
+    enabled: Boolean(input.companyId),
   });
 };
 
@@ -57,7 +113,10 @@ export const useCreateEmployee = (apiBaseUrl?: string) => {
           queryKey: hrEmployeesQueryKeys.employees(employee.companyId),
         }),
         queryClient.invalidateQueries({
-          queryKey: hrEmployeesQueryKeys.employee(employee.companyId, employee.id),
+          queryKey: hrEmployeesQueryKeys.employee(
+            employee.companyId,
+            employee.id,
+          ),
         }),
       ]);
     },
@@ -76,14 +135,20 @@ export const useUpdateEmployee = (apiBaseUrl?: string) => {
           queryKey: hrEmployeesQueryKeys.employees(employee.companyId),
         }),
         queryClient.invalidateQueries({
-          queryKey: hrEmployeesQueryKeys.employee(employee.companyId, employee.id),
+          queryKey: hrEmployeesQueryKeys.employee(
+            employee.companyId,
+            employee.id,
+          ),
         }),
       ]);
     },
   });
 };
 
-export const usePositions = (companyId: string | undefined, apiBaseUrl?: string) => {
+export const usePositions = (
+  companyId: string | undefined,
+  apiBaseUrl?: string,
+) => {
   const api = createHrEmployeesApi(apiBaseUrl);
 
   return useQuery({
@@ -127,14 +192,22 @@ export const useAssignments = (
   });
 
   const directReportsQuery = useQuery({
-    queryKey: hrEmployeesQueryKeys.directReports(companyId ?? '', employeeId ?? ''),
-    queryFn: () => api.listDirectReports(companyId as string, employeeId as string),
+    queryKey: hrEmployeesQueryKeys.directReports(
+      companyId ?? '',
+      employeeId ?? '',
+    ),
+    queryFn: () =>
+      api.listDirectReports(companyId as string, employeeId as string),
     enabled: Boolean(companyId) && Boolean(employeeId),
   });
 
   const assignmentHistoryQuery = useQuery({
-    queryKey: hrEmployeesQueryKeys.assignmentHistory(companyId ?? '', employeeId ?? ''),
-    queryFn: () => api.listAssignmentHistory(companyId as string, employeeId as string),
+    queryKey: hrEmployeesQueryKeys.assignmentHistory(
+      companyId ?? '',
+      employeeId ?? '',
+    ),
+    queryFn: () =>
+      api.listAssignmentHistory(companyId as string, employeeId as string),
     enabled: Boolean(companyId) && Boolean(employeeId),
   });
 
@@ -150,13 +223,22 @@ export const useAssignments = (
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: hrEmployeesQueryKeys.assignmentHistory(companyId ?? '', employeeId ?? ''),
+          queryKey: hrEmployeesQueryKeys.assignmentHistory(
+            companyId ?? '',
+            employeeId ?? '',
+          ),
         }),
         queryClient.invalidateQueries({
-          queryKey: hrEmployeesQueryKeys.manager(companyId ?? '', employeeId ?? ''),
+          queryKey: hrEmployeesQueryKeys.manager(
+            companyId ?? '',
+            employeeId ?? '',
+          ),
         }),
         queryClient.invalidateQueries({
-          queryKey: hrEmployeesQueryKeys.directReports(companyId ?? '', employeeId ?? ''),
+          queryKey: hrEmployeesQueryKeys.directReports(
+            companyId ?? '',
+            employeeId ?? '',
+          ),
         }),
       ]);
     },

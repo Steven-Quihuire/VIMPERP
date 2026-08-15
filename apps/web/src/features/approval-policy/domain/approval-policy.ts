@@ -53,6 +53,19 @@ export const approvalPolicyFormSchema = z
 
 export type ApprovalPolicyFormValues = z.output<typeof approvalPolicyFormSchema>;
 
+export const getApprovalPolicySteps = (definition: unknown): string[] => {
+  if (!definition || typeof definition !== 'object' || !('steps' in definition)) {
+    return [];
+  }
+
+  const steps = (definition as { steps?: unknown }).steps;
+  return Array.isArray(steps) && steps.every((step) => typeof step === 'string')
+    ? steps
+    : [];
+};
+
+export const toApprovalPolicyDefinition = (steps: string[]) => ({ steps });
+
 export type CreateApprovalPolicyInput = {
   companyId: string;
   scopeType: OrgTreeScopeType;

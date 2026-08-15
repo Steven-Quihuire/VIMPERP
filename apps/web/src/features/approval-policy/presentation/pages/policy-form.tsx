@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Loader2, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
 
@@ -7,7 +8,7 @@ import type { AuthSession } from '@/features/auth/domain/auth';
 import { useOrgTree } from '@/features/org-tree/application/org-tree-queries';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
-import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/shared/ui/field';
+import { Field, FieldContent, FieldError, FieldGroup, FieldLabel } from '@/shared/ui/field';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 
@@ -15,14 +16,25 @@ import { useApprovalPolicies } from '../../application/approval-policy-queries';
 import {
   approvalPolicyFormSchema,
   approvalPolicyScopeTypes,
+  getApprovalPolicySteps,
   toCreateApprovalPolicyInput,
   toPolicyFormValues,
+  toApprovalPolicyDefinition,
   toUpdateApprovalPolicyInput,
   type ApprovalPolicy,
   type ApprovalPolicyFormValues,
 } from '../../domain/approval-policy';
 
 type ApprovalPolicyFormInput = z.input<typeof approvalPolicyFormSchema>;
+
+const scopeTypeLabels: Record<(typeof approvalPolicyScopeTypes)[number], string> = {
+  company: 'Toda la empresa',
+  division: 'Una división',
+  local: 'Un local',
+  area: 'Un área',
+  warehouse: 'Un depósito',
+  'point-of-sale': 'Un punto de venta',
+};
 
 export const PolicyFormPage = ({
   session,
@@ -39,11 +51,14 @@ export const PolicyFormPage = ({
   const { createPolicyMutation, updatePolicyMutation } = useApprovalPolicies(companyId, apiBaseUrl);
   const orgTreeQuery = useOrgTree(companyId, apiBaseUrl, policy?.scopeType !== 'company');
   const defaultValues = toPolicyFormValues(policy);
+  const [approvalSteps, setApprovalSteps] = useState(() => getApprovalPolicySteps(policy?.definition));
+  const [newStep, setNewStep] = useState('');
   const form = useForm<ApprovalPolicyFormInput, unknown, ApprovalPolicyFormValues>({
     resolver: zodResolver(approvalPolicyFormSchema),
     defaultValues,
   });
   const scopeType = form.watch('scopeType');
+  const scopeNodeId = form.watch('scopeNodeId');
   const isEditing = Boolean(policy);
   const mutation = isEditing ? updatePolicyMutation : createPolicyMutation;
 
@@ -60,7 +75,8 @@ export const PolicyFormPage = ({
       <CardHeader>
         <CardTitle>{isEditing ? 'Actualizar política' : 'Crear política'}</CardTitle>
         <CardDescription>
-          Configurá las bases de la política de aprobación sin habilitar todavía la ejecución del flujo.
+          Indicá qué trámite necesita aprobación y en qué parte de la empresa se aplica.
+          La aprobación todavía no se ejecuta automáticamente.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -68,12 +84,16 @@ export const PolicyFormPage = ({
           className="space-y-5"
           onSubmit={(event) => {
             void form.handleSubmit(async (values) => {
+              const valuesWithSteps = {
+                ...values,
+                definitionJson: JSON.stringify(toApprovalPolicyDefinition(approvalSteps)),
+              };
               const savedPolicy = policy
                 ? await updatePolicyMutation.mutateAsync(
-                    toUpdateApprovalPolicyInput(companyId, policy.id, values),
+                    toUpdateApprovalPolicyInput(companyId, policy.id, valuesWithSteps),
                   )
                 : await createPolicyMutation.mutateAsync(
-                    toCreateApprovalPolicyInput(companyId, values),
+                    toCreateApprovalPolicyInput(companyId, valuesWithSteps),
                   );
 
               onSaved?.(savedPolicy.id);
@@ -87,6 +107,7 @@ export const PolicyFormPage = ({
                 <Input
                   id="approval-policy-name"
                   aria-label="Nombre de la política"
+                  placeholder="Ej.: Vacaciones del equipo"
                   {...form.register('name')}
                 />
                 <FieldError errors={[form.formState.errors.name]} />
@@ -94,11 +115,11 @@ export const PolicyFormPage = ({
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="approval-policy-scope-type">Tipo de alcance</FieldLabel>
+              <FieldLabel htmlFor="approval-policy-scope-type">¿Dónde se aplica?</FieldLabel>
               <FieldContent>
                 <select
                   id="approval-policy-scope-type"
-                  aria-label="Tipo de alcance"
+                  aria-label="¿Dónde se aplica?"
                   className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-2 text-sm"
                   value={scopeType}
                   onChange={(event) => {
@@ -111,7 +132,7 @@ export const PolicyFormPage = ({
                 >
                   {approvalPolicyScopeTypes.map((value) => (
                     <option key={value} value={value}>
-                      {value}
+                      {scopeTypeLabels[value]}
                     </option>
                   ))}
                 </select>
@@ -119,34 +140,146 @@ export const PolicyFormPage = ({
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="approval-policy-scope-node-id">ID del nodo de alcance</FieldLabel>
+              <FieldLabel htmlFor="approval-policy-scope-node-id">¿A qué lugar aplica?</FieldLabel>
               <FieldContent>
-                <Input
+                <select
                   id="approval-policy-scope-node-id"
-                  aria-label="ID del nodo de alcance"
-                  placeholder={orgTreeQuery.data?.[0]?.ref.scopeId ?? 'area:area-1'}
+                  aria-label="¿A qué lugar aplica?"
                   disabled={scopeType === 'company'}
-                  {...form.register('scopeNodeId')}
-                />
-                <FieldDescription>
-                   Usá el ID canónico del nodo de alcance para las políticas que no sean de compañía.
-                </FieldDescription>
+                  className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-2 text-sm"
+                  value={scopeNodeId}
+                  onChange={(event) =>
+                    form.setValue('scopeNodeId', event.target.value, { shouldValidate: true })
+                  }
+                >
+                  <option value="">Elegí una división, local o área</option>
+                  {(orgTreeQuery.data ?? [])
+                    .filter((node) => node.ref.scopeType === scopeType)
+                    .map((node) => (
+                      <option key={node.ref.scopeId} value={node.ref.scopeId}>
+                        {node.name}
+                      </option>
+                    ))}
+                </select>
                 <FieldError errors={[form.formState.errors.scopeNodeId]} />
               </FieldContent>
             </Field>
 
+            <input type="hidden" {...form.register('definitionJson')} />
+
             <Field>
-              <FieldLabel htmlFor="approval-policy-definition-json">JSON de definición</FieldLabel>
+              <FieldLabel htmlFor="approval-policy-new-step">¿Quién debe aprobar?</FieldLabel>
               <FieldContent>
-                <Input
-                  id="approval-policy-definition-json"
-                  aria-label="JSON de definición"
-                  {...form.register('definitionJson')}
-                />
-                <FieldDescription>
-                   Guardá el JSON sin modificar de la configuración de la política de aprobación.
-                </FieldDescription>
-                <FieldError errors={[form.formState.errors.definitionJson]} />
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    id="approval-policy-new-step"
+                    aria-label="¿Quién debe aprobar?"
+                    placeholder="Ej.: Jefe directo o responsable de RRHH"
+                    value={newStep}
+                    onChange={(event) => setNewStep(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        const step = newStep.trim();
+                        if (step) {
+                          setApprovalSteps((current) => [...current, step]);
+                          setNewStep('');
+                        }
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!newStep.trim()}
+                    onClick={() => {
+                      const step = newStep.trim();
+                      if (step) {
+                        setApprovalSteps((current) => [...current, step]);
+                        setNewStep('');
+                      }
+                    }}
+                  >
+                    Agregar aprobador
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Agregá las personas o roles en el orden en que deben aprobar.
+                </p>
+                {approvalSteps.length > 0 ? (
+                  <ol className="space-y-2" aria-label="Pasos de aprobación">
+                    {approvalSteps.map((step, index) => (
+                      <li
+                        key={`${step}-${index}`}
+                        className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
+                      >
+                        <span>
+                          <span className="mr-2 text-muted-foreground">{index + 1}.</span>
+                          {step}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Subir aprobador ${step}`}
+                            disabled={index === 0}
+                            onClick={() => {
+                              setApprovalSteps((current) => {
+                                const next = [...current];
+                                const previous = next[index - 1];
+                                const currentStep = next[index];
+                                if (previous !== undefined && currentStep !== undefined) {
+                                  next[index - 1] = currentStep;
+                                  next[index] = previous;
+                                }
+                                return next;
+                              });
+                            }}
+                          >
+                            <ChevronUp className="size-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Bajar aprobador ${step}`}
+                            disabled={index === approvalSteps.length - 1}
+                            onClick={() => {
+                              setApprovalSteps((current) => {
+                                const next = [...current];
+                                const currentStep = next[index];
+                                const following = next[index + 1];
+                                if (currentStep !== undefined && following !== undefined) {
+                                  next[index] = following;
+                                  next[index + 1] = currentStep;
+                                }
+                                return next;
+                              });
+                            }}
+                          >
+                            <ChevronDown className="size-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Quitar aprobador ${step}`}
+                            onClick={() => {
+                              setApprovalSteps((current) => current.filter((_, stepIndex) => stepIndex !== index));
+                            }}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Todavía no agregaste ningún aprobador.
+                  </p>
+                )}
               </FieldContent>
             </Field>
 

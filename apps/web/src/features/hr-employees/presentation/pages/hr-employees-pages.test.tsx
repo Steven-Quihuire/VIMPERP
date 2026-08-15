@@ -11,6 +11,7 @@ import { PositionFormPage } from './position-form';
 import { PositionsListPage } from './positions-list';
 
 const useEmployeesMock = vi.fn();
+const useEmployeesPageMock = vi.fn();
 const useEmployeeMock = vi.fn();
 const useCreateEmployeeMock = vi.fn();
 const useUpdateEmployeeMock = vi.fn();
@@ -21,6 +22,7 @@ const useOrgTreeMock = vi.fn();
 
 vi.mock('../../application/hr-employees-queries', () => ({
   useEmployees: (...args: unknown[]) => useEmployeesMock(...args),
+  useEmployeesPage: (...args: unknown[]) => useEmployeesPageMock(...args),
   useEmployee: (...args: unknown[]) => useEmployeeMock(...args),
   useCreateEmployee: (...args: unknown[]) => useCreateEmployeeMock(...args),
   useUpdateEmployee: (...args: unknown[]) => useUpdateEmployeeMock(...args),
@@ -68,6 +70,31 @@ describe('hr-employees pages', () => {
         },
       ],
       isLoading: false,
+      isError: false,
+      error: null,
+    });
+    useEmployeesPageMock.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: 'employee-1',
+            companyId: 'company-1',
+            fullName: 'Employee One',
+            documentType: null,
+            documentNumber: null,
+            email: 'one@example.com',
+            employmentStatus: 'active',
+            hiredAt: null,
+            createdAt: '2026-08-13T12:00:00.000Z',
+            updatedAt: '2026-08-13T12:00:00.000Z',
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 10,
+      },
+      isLoading: false,
+      isFetching: false,
       isError: false,
       error: null,
     });
@@ -202,7 +229,7 @@ describe('hr-employees pages', () => {
       screen.getByRole('button', { name: 'Abrir empleado employee-1' }),
     );
 
-    expect(screen.getByText('employee-1')).toBeInTheDocument();
+    expect(screen.getByText('Employee One')).toBeInTheDocument();
     expect(onSelectEmployee).toHaveBeenCalledWith('employee-1');
   });
 
@@ -214,11 +241,22 @@ describe('hr-employees pages', () => {
     fireEvent.change(screen.getByLabelText('Nombre completo'), {
       target: { value: 'Employee Two' },
     });
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Crear registro de empleado' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Crear empleado' }));
 
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith('employee-2'));
+  });
+
+  it('switches from document type choices to the animated document input', () => {
+    render(<EmployeeFormPage session={session} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cédula' }));
+
+    expect(screen.getByLabelText('Número de Cédula')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'RUC' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cédula' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
   });
 
   it('renders employee detail with manager and direct reports', () => {
@@ -239,15 +277,15 @@ describe('hr-employees pages', () => {
       </>,
     );
 
-    expect(screen.getByText('People Lead')).toBeInTheDocument();
+    expect(screen.getAllByText('People Lead').length).toBeGreaterThan(0);
 
-      fireEvent.change(screen.getByLabelText('Nombre del puesto'), {
+    fireEvent.change(screen.getByLabelText('Nombre del puesto'), {
       target: { value: 'HR Analyst' },
     });
-      fireEvent.change(screen.getByLabelText('Dotación'), {
+    fireEvent.change(screen.getByLabelText('¿Cuántas personas puede tener?'), {
       target: { value: '2' },
     });
-      fireEvent.click(screen.getByRole('button', { name: 'Crear puesto' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Crear puesto' }));
 
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith('position-2'));
   });
@@ -259,16 +297,16 @@ describe('hr-employees pages', () => {
 
     expect(screen.getByText('People Lead')).toBeInTheDocument();
 
-      fireEvent.change(screen.getByLabelText('Nodo de alcance'), {
+    fireEvent.change(screen.getByLabelText('Nodo de alcance'), {
       target: { value: 'company:company-1' },
     });
-      fireEvent.change(screen.getByLabelText('Puesto'), {
+    fireEvent.change(screen.getByLabelText('Puesto'), {
       target: { value: 'position-1' },
     });
     fireEvent.change(screen.getByLabelText('Fecha de inicio'), {
       target: { value: '2026-08-13T12:30' },
     });
-      fireEvent.click(screen.getByRole('button', { name: 'Crear asignación' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Crear asignación' }));
 
     await waitFor(() => {
       expect(

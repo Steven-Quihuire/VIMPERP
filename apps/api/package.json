@@ -4,6 +4,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "db:migrate": "drizzle-kit migrate",
+    "db:seed:employees": "tsx src/db/seed-demo-employees.ts",
     "dev": "pnpm db:migrate && SEED_ADMIN_ENABLED=true tsx watch src/main.ts",
     "lint": "eslint src --max-warnings=0",
     "start": "node dist/main.js",

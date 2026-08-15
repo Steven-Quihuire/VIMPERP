@@ -1,7 +1,18 @@
 import { z } from 'zod';
 
-export const employmentStatusValues = ['active', 'suspended', 'separated'] as const;
+export const employmentStatusValues = [
+  'active',
+  'suspended',
+  'separated',
+] as const;
 export type EmploymentStatus = (typeof employmentStatusValues)[number];
+
+export const employeeDocumentTypeValues = [
+  'cedula',
+  'ruc',
+  'pasaporte',
+] as const;
+export type EmployeeDocumentType = (typeof employeeDocumentTypeValues)[number];
 
 export type Employee = {
   id: string;
@@ -14,6 +25,7 @@ export type Employee = {
   hiredAt: string | null;
   createdAt: string;
   updatedAt: string;
+  avatarUrl?: string | null;
 };
 
 export const employeeFormSchema = z
@@ -26,7 +38,7 @@ export const employeeFormSchema = z
     hiredAt: z.string().trim().default(''),
   })
   .superRefine((values, context) => {
-    if ((values.documentType.length > 0) !== (values.documentNumber.length > 0)) {
+    if (values.documentType.length > 0 !== values.documentNumber.length > 0) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['documentType'],
@@ -34,7 +46,10 @@ export const employeeFormSchema = z
       });
     }
 
-    if (values.email.length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) {
+    if (
+      values.email.length > 0 &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)
+    ) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['email'],
@@ -55,7 +70,10 @@ export type EmployeePayload = {
 };
 
 export type CreateEmployeeInput = EmployeePayload & { companyId: string };
-export type UpdateEmployeeInput = EmployeePayload & { companyId: string; employeeId: string };
+export type UpdateEmployeeInput = EmployeePayload & {
+  companyId: string;
+  employeeId: string;
+};
 
 const normalizeDate = (value: string) => {
   if (!value) return null;
@@ -91,7 +109,9 @@ export const toUpdateEmployeeInput = (
   ...toEmployeePayload(values),
 });
 
-export const toEmployeeFormValues = (employee?: Employee | null): EmployeeFormValues => ({
+export const toEmployeeFormValues = (
+  employee?: Employee | null,
+): EmployeeFormValues => ({
   fullName: employee?.fullName ?? '',
   documentType: employee?.documentType ?? '',
   documentNumber: employee?.documentNumber ?? '',

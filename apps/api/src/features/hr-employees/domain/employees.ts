@@ -1,4 +1,8 @@
-export const employmentStatusValues = ['active', 'suspended', 'separated'] as const;
+export const employmentStatusValues = [
+  'active',
+  'suspended',
+  'separated',
+] as const;
 export type EmploymentStatus = (typeof employmentStatusValues)[number];
 
 export type EmployeeIdentityInput = {
@@ -23,6 +27,20 @@ export type Employee = {
   updatedAt?: Date;
 };
 
+export type EmployeeListFilters = {
+  page: number;
+  pageSize: number;
+  search?: string | undefined;
+  status?: EmploymentStatus | undefined;
+};
+
+export type EmployeePage = {
+  items: Employee[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 export const assertValidEmployeeIdentity = (input: EmployeeIdentityInput) => {
   if (!input.fullName.trim()) {
     throw new EmployeeValidationError('Employee full name is required.');
@@ -41,21 +59,31 @@ export const assertValidEmployeeIdentity = (input: EmployeeIdentityInput) => {
 export type ScopeNodeRecord = {
   id: string;
   companyId: string;
-  nodeType: 'company' | 'division' | 'local' | 'area' | 'warehouse' | 'point-of-sale';
+  nodeType:
+    'company' | 'division' | 'local' | 'area' | 'warehouse' | 'point-of-sale';
   sourceId: string;
   parentScopeNodeId: string | null;
   name: string;
 };
 
 export type HrEmployeesGateway = {
-  createEmployee: (input: { companyId: string } & Partial<EmployeeIdentityInput>) => Promise<Employee>;
+  createEmployee: (
+    input: { companyId: string } & Partial<EmployeeIdentityInput>,
+  ) => Promise<Employee>;
   updateEmployee: (
     companyId: string,
     employeeId: string,
     input?: EmployeeIdentityInput,
   ) => Promise<Employee | null>;
-  getEmployeeById: (companyId: string, employeeId: string) => Promise<Employee | null>;
+  getEmployeeById: (
+    companyId: string,
+    employeeId: string,
+  ) => Promise<Employee | null>;
   listEmployees: (companyId: string) => Promise<Employee[]>;
+  listEmployeesPage?: (
+    companyId: string,
+    filters: EmployeeListFilters,
+  ) => Promise<EmployeePage>;
 
   createPosition: (input: {
     companyId: string;
@@ -68,9 +96,16 @@ export type HrEmployeesGateway = {
     companyId: string,
     positionId: string,
   ) => Promise<import('./positions').Position | null>;
-  listPositions: (companyId: string) => Promise<import('./positions').Position[]>;
-  countActivePrimaryAssignmentsForPosition: (positionId: string) => Promise<number>;
-  findScopeNode: (companyId: string, scopeNodeId: string) => Promise<ScopeNodeRecord | null>;
+  listPositions: (
+    companyId: string,
+  ) => Promise<import('./positions').Position[]>;
+  countActivePrimaryAssignmentsForPosition: (
+    positionId: string,
+  ) => Promise<number>;
+  findScopeNode: (
+    companyId: string,
+    scopeNodeId: string,
+  ) => Promise<ScopeNodeRecord | null>;
 
   createAssignment: (input: {
     companyId: string;
@@ -121,7 +156,9 @@ export class EmployeeValidationError extends Error {
 export class EmployeeDocumentConflictError extends Error {
   readonly code = 'HR_EMPLOYEE_DOCUMENT_CONFLICT';
 
-  constructor(message = 'Another employee already uses this document identity.') {
+  constructor(
+    message = 'Another employee already uses this document identity.',
+  ) {
     super(message);
     this.name = 'EmployeeDocumentConflictError';
   }

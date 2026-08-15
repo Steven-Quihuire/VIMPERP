@@ -49,7 +49,7 @@ const workspaceItems = [
 ];
 
 const hrItems = [
-  { label: 'Empleados', href: '/dashboard/hr/employees', icon: Users },
+  { label: 'Empleados', href: '/manage-employees', icon: Users },
   {
     label: 'Puestos',
     href: '/dashboard/hr/positions',
@@ -70,7 +70,9 @@ const sidebarParentItemClass =
   'hover:bg-muted hover:text-foreground data-[active=true]:bg-muted data-[active=true]:text-foreground data-[active=true]:font-medium transition-colors duration-200';
 
 export const isHrNavigationActive = (pathname: string) =>
-  pathname.startsWith('/dashboard/hr/') || pathname === '/hr/responsibility';
+  pathname.startsWith('/dashboard/hr/') ||
+  pathname === '/manage-employees' ||
+  pathname === '/hr/responsibility';
 
 const getRoleLabel = (role: AuthSession['memberships'][number]['role']) => {
   switch (role) {
@@ -109,6 +111,11 @@ export const DashboardAppSidebar = ({
       : undefined,
     apiBaseUrl,
   );
+  const hasHrResponsibility = Boolean(
+    hrResponsibilityQuery.data?.hasResponsibles,
+  );
+  const canViewHr = canConfigureHr || hasHrResponsibility;
+  const canViewOrganization = canConfigureHr || hasHrResponsibility;
   const switchActiveCompany = useSwitchActiveCompany(apiBaseUrl);
   const companyMemberships = getCompanyMemberships(session);
   const companyOptions = companyMemberships.map((membership, index) => ({
@@ -181,7 +188,7 @@ export const DashboardAppSidebar = ({
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {session.activeCompany ? (
+        {session.activeCompany && canViewHr ? (
           <SidebarGroup>
             <SidebarGroupLabel>Recursos Humanos</SidebarGroupLabel>
             <SidebarGroupContent>
@@ -208,7 +215,7 @@ export const DashboardAppSidebar = ({
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub>
-                        {hrResponsibilityQuery.data?.hasResponsibles
+                        {hasHrResponsibility
                           ? hrItems.map((item) => (
                               <SidebarMenuSubItem key={item.href}>
                                 <NavLink to={item.href} end>
@@ -255,7 +262,7 @@ export const DashboardAppSidebar = ({
           </SidebarGroup>
         ) : null}
 
-        {isCompanyOwner ? (
+        {canViewOrganization ? (
           <SidebarGroup>
             <SidebarGroupLabel>Organización</SidebarGroupLabel>
             <SidebarGroupContent>
@@ -271,7 +278,9 @@ export const DashboardAppSidebar = ({
                       >
                         <span>
                           <Network />
-                          <span>Organigrama</span>
+                          <span>
+                            {canConfigureHr ? 'Organigrama' : 'Organigrama'}
+                          </span>
                         </span>
                       </SidebarMenuButton>
                     )}

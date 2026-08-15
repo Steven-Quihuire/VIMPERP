@@ -2,65 +2,76 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import {
   BrowserRouter,
+  Link,
   MemoryRouter,
   Navigate,
   Outlet,
   Route,
   Routes,
+  useLocation,
+  useNavigate,
+  useParams,
 } from 'react-router-dom';
-import { Toaster } from 'sileo';
+import { Toaster as SileoToaster } from 'sileo';
 
-import { LoginPage } from '../features/auth/presentation/login-page';
-import { RegisterPage } from '../features/auth/presentation/register-page';
-import { AuthLayout } from '../features/auth/presentation/auth-layout';
-import { useAuth } from '../features/auth/presentation/use-auth';
-import { AcceptInvitationPage } from '../features/node-management/presentation/accept-invitation-page';
+import { useApprovalPolicies } from '../features/approval-policy/application/approval-policy-queries';
+import { PoliciesListPage } from '../features/approval-policy/presentation/pages/policies-list';
+import { PolicyFormPage } from '../features/approval-policy/presentation/pages/policy-form';
 import {
   hasBlockedActiveCompany,
   needsActiveCompanySelection,
 } from '../features/auth/domain/auth';
+import { AuthLayout } from '../features/auth/presentation/auth-layout';
+import { LoginPage } from '../features/auth/presentation/login-page';
+import { RegisterPage } from '../features/auth/presentation/register-page';
+import { useAuth } from '../features/auth/presentation/use-auth';
 import { canViewAdminSignals } from '../features/dashboard/domain/dashboard';
+import { AdminCompaniesPage } from '../features/dashboard/presentation/admin-companies-page';
 import { ApplicationErrorDetailPage } from '../features/dashboard/presentation/application-error-detail-page';
 import { ApplicationErrorsListPage } from '../features/dashboard/presentation/application-errors-list-page';
 import { AuditEventDetailPage } from '../features/dashboard/presentation/audit-event-detail-page';
 import { AuditEventsListPage } from '../features/dashboard/presentation/audit-events-list-page';
-import { DashboardPage } from '../features/dashboard/presentation/dashboard-page';
-import { AdminCompaniesPage } from '../features/dashboard/presentation/admin-companies-page';
 import { BlockedCompanyPage } from '../features/dashboard/presentation/blocked-company-page';
 import { DashboardNotificationsPage } from '../features/dashboard/presentation/dashboard-notifications-page';
+import { DashboardPage } from '../features/dashboard/presentation/dashboard-page';
 import { DashboardProfileSettingsPage } from '../features/dashboard/presentation/dashboard-profile-settings-page';
 import { DashboardShell } from '../features/dashboard/presentation/dashboard-shell';
 import { DashboardThemeSettingsPage } from '../features/dashboard/presentation/dashboard-theme-settings-page';
 import { ProvisioningRunDetailPage } from '../features/dashboard/presentation/provisioning-run-detail-page';
 import { ProvisioningRunsListPage } from '../features/dashboard/presentation/provisioning-runs-list-page';
 import { DesktopGate } from '../features/desktop-access/presentation/desktop-gate';
-import { PolicyFormPage } from '../features/approval-policy/presentation/pages/policy-form';
-import { PoliciesListPage } from '../features/approval-policy/presentation/pages/policies-list';
+import { useEmployees } from '../features/hr-employees/application/hr-employees-queries';
+import { AssignmentTimelinePage } from '../features/hr-employees/presentation/pages/assignment-timeline';
+import { EmployeeDetailPage } from '../features/hr-employees/presentation/pages/employee-detail';
+import { EmployeesListPage } from '../features/hr-employees/presentation/pages/employees-list';
+import { PositionFormPage } from '../features/hr-employees/presentation/pages/position-form';
+import { PositionsListPage } from '../features/hr-employees/presentation/pages/positions-list';
+import { AcceptErpAccessInvitationPage } from '../features/hr-erp-access/presentation/pages/accept-invitation';
+import { InvitationsListPage } from '../features/hr-erp-access/presentation/pages/invitations-list';
+import { useHrResponsibility } from '../features/hr-responsibility/application/hr-responsibility-queries';
+import { AcceptHrResponsibilityInvitationPage } from '../features/hr-responsibility/presentation/accept-invitation-page';
+import { HrResponsibilityPage } from '../features/hr-responsibility/presentation/hr-responsibility-page';
 import { CategoriesPage } from '../features/items/presentation/categories-page';
 import { ItemCatalogPage } from '../features/items/presentation/item-catalog-page';
 import { LandingPage } from '../features/landing/presentation/landing-page';
 import { PrivacyPolicyPage } from '../features/legal/presentation/privacy-policy-page';
-import { EmployeeDetailPage } from '../features/hr-employees/presentation/pages/employee-detail';
-import { EmployeeFormPage } from '../features/hr-employees/presentation/pages/employee-form';
-import { EmployeesListPage } from '../features/hr-employees/presentation/pages/employees-list';
-import { PositionFormPage } from '../features/hr-employees/presentation/pages/position-form';
-import { PositionsListPage } from '../features/hr-employees/presentation/pages/positions-list';
-import { AssignmentTimelinePage } from '../features/hr-employees/presentation/pages/assignment-timeline';
-import { InvitationsListPage } from '../features/hr-erp-access/presentation/pages/invitations-list';
-import { AcceptErpAccessInvitationPage } from '../features/hr-erp-access/presentation/pages/accept-invitation';
-import { HrResponsibilityPage } from '../features/hr-responsibility/presentation/hr-responsibility-page';
-import { AcceptHrResponsibilityInvitationPage } from '../features/hr-responsibility/presentation/accept-invitation-page';
-import { useApprovalPolicies } from '../features/approval-policy/application/approval-policy-queries';
-import { DivisionsPage } from '../features/org-hierarchy/presentation/divisions-page';
-import { AreasPage } from '../features/org-hierarchy/presentation/areas-page';
-import { LocalsPage } from '../features/org-hierarchy/presentation/locals-page';
-import { OrganizationPage } from '../features/org-hierarchy/presentation/organization-page';
-import { PointsOfSalePage } from '../features/org-hierarchy/presentation/points-of-sale-page';
-import { WarehousesPage } from '../features/org-hierarchy/presentation/warehouses-page';
+import { AcceptInvitationPage } from '../features/node-management/presentation/accept-invitation-page';
 import { needsCompanyOnboarding } from '../features/onboarding/domain/onboarding';
 import { OnboardingPage } from '../features/onboarding/presentation/onboarding-page';
+import { OrganizationPage } from '../features/org-hierarchy/presentation/organization-page';
 import { ThemeProvider } from '../features/theme/presentation/theme-provider';
 
+import { RrhHWorkspaceNav } from '@/features/dashboard/presentation/rrhh-workspace-nav';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/shared/ui/breadcrumb';
+import { Toaster as ShadcnToaster } from '@/shared/ui/sonner';
+import { ChevronLeft } from 'lucide-react';
 import type { AuthSession } from '../features/auth/domain/auth';
 
 const getAuthenticatedEntryRoute = (
@@ -183,46 +194,135 @@ const HrEmployeesWorkspace = ({
   session: AuthSession;
   apiBaseUrl?: string;
 }) => {
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(
-    null,
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { employeeId: routeEmployeeId } = useParams<{ employeeId?: string }>();
+  const [localEmployeeId, setLocalEmployeeId] = useState<string | null>(null);
+  const selectedEmployeeId = routeEmployeeId ?? localEmployeeId;
+  const employeesQuery = useEmployees(
+    session.activeCompany?.companyId,
+    apiBaseUrl,
   );
+  const selectedEmployeeName = employeesQuery.data?.find(
+    (employee) => employee.id === selectedEmployeeId,
+  )?.fullName;
+  const selectEmployee = (employeeId: string) => {
+    if (location.pathname.startsWith('/manage-employees')) {
+      void navigate(`/manage-employees/${employeeId}`);
+      return;
+    }
+
+    setLocalEmployeeId(employeeId);
+  };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Empleados de Recursos Humanos</h1>
-        <p className="text-sm text-muted-foreground">
-          Gestioná los registros de empleados, las líneas de reporte y el historial de asignaciones.
-        </p>
-      </div>
+    <main className="mx-auto flex w-full max-w-[1480px] flex-col gap-6 p-4 md:p-6">
+      <div className="space-y-6">
+        <header>
+          <div className="">
+            {selectedEmployeeId ? (
+              <button
+                type="button"
+                aria-label="Volver a empleados"
+                className="cursor-pointer"
+                onClick={() => {
+                  if (routeEmployeeId) {
+                    void navigate('/manage-employees');
+                    return;
+                  }
 
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <EmployeesListPage
-          session={session}
-          {...(apiBaseUrl ? { apiBaseUrl } : {})}
-          selectedEmployeeId={selectedEmployeeId}
-          onSelectEmployee={setSelectedEmployeeId}
-        />
-        <EmployeeFormPage
-          session={session}
-          {...(apiBaseUrl ? { apiBaseUrl } : {})}
-          onCreated={setSelectedEmployeeId}
-        />
-      </div>
+                  setLocalEmployeeId(null);
+                }}
+              >
+                <ChevronLeft className="size-7" />
+              </button>
+            ) : null}
+            <h1 className="text-3xl font-medium tracking-tight">
+              {selectedEmployeeId ? 'Detalles del empleado' : 'Empleados'}
+            </h1>
+          </div>
+          <Breadcrumb className="mt-1">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link
+                    className="text-gray-500 text-xs hover:text-gray-700 transition-all ease-in-out duration-300"
+                    to="/dashboard"
+                  >
+                    Inicio
+                  </Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="text-gray-500 text-xs" />
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link
+                    className="text-gray-500 text-xs hover:text-gray-700 transition-all ease-in-out duration-300"
+                    to="/dashboard/hr/employees"
+                  >
+                    Recursos humanos
+                  </Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              {selectedEmployeeId ? (
+                <>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink asChild>
+                      <Link
+                        className="text-gray-500 text-xs hover:text-gray-700 transition-all ease-in-out duration-300"
+                        to="/manage-employees"
+                      >
+                        Empleados
+                      </Link>
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage className="text-gray-800 text-xs">
+                      {selectedEmployeeName || 'Detalles del empleado'}
+                    </BreadcrumbPage>
+                  </BreadcrumbItem>
+                </>
+              ) : (
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="text-gray-800 text-xs">
+                    Empleados
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              )}
+            </BreadcrumbList>
+          </Breadcrumb>
+        </header>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <EmployeeDetailPage
-          session={session}
-          {...(apiBaseUrl ? { apiBaseUrl } : {})}
-          employeeId={selectedEmployeeId}
-        />
-        <AssignmentTimelinePage
-          session={session}
-          {...(apiBaseUrl ? { apiBaseUrl } : {})}
-          employeeId={selectedEmployeeId}
-        />
+        {!selectedEmployeeId ? <RrhHWorkspaceNav /> : null}
+
+        {selectedEmployeeId ? (
+          <div className="space-y-4">
+            <EmployeeDetailPage
+              session={session}
+              {...(apiBaseUrl ? { apiBaseUrl } : {})}
+              employeeId={selectedEmployeeId}
+              onSelectEmployee={selectEmployee}
+            />
+            <AssignmentTimelinePage
+              session={session}
+              {...(apiBaseUrl ? { apiBaseUrl } : {})}
+              employeeId={selectedEmployeeId}
+            />
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <EmployeesListPage
+              session={session}
+              {...(apiBaseUrl ? { apiBaseUrl } : {})}
+              selectedEmployeeId={selectedEmployeeId}
+              onSelectEmployee={selectEmployee}
+            />
+          </div>
+        )}
       </div>
-    </div>
+    </main>
   );
 };
 
@@ -273,7 +373,9 @@ const HrErpAccessWorkspace = ({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Invitaciones de acceso al ERP</h1>
+        <h1 className="text-2xl font-semibold">
+          Invitaciones de acceso al ERP
+        </h1>
         <p className="text-sm text-muted-foreground">
           Invitá empleados al acceso ERP sin redefinir su identidad.
         </p>
@@ -306,7 +408,8 @@ const ApprovalPoliciesWorkspace = ({
       <div>
         <h1 className="text-2xl font-semibold">Políticas de aprobación</h1>
         <p className="text-sm text-muted-foreground">
-          Configurá las bases de las políticas de aprobación de la compañía y sus nodos.
+          Configurá las bases de las políticas de aprobación de la compañía y
+          sus nodos.
         </p>
       </div>
 
@@ -622,6 +725,12 @@ const PointsOfSaleRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
 
 const OrganizationRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   const auth = useAuth(apiBaseUrl);
+  const { stateQuery: hrResponsibilityQuery } = useHrResponsibility(
+    auth.session?.activeCompany?.status === 'active'
+      ? auth.session.activeCompany.companyId
+      : undefined,
+    apiBaseUrl,
+  );
 
   if (auth.isLoading) {
     return <p>Cargando...</p>;
@@ -643,11 +752,20 @@ const OrganizationRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
     return <Navigate to="/dashboard/company-status" replace />;
   }
 
-  if (getActiveRole(auth.session) !== 'company-owner') {
+  const canViewOrganization =
+    getActiveRole(auth.session) === 'company-owner' ||
+    Boolean(hrResponsibilityQuery.data?.hasResponsibles);
+
+  if (!canViewOrganization) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  return <OrganizationPage session={auth.session} />;
+  return (
+    <OrganizationPage
+      session={auth.session}
+      readOnly={getActiveRole(auth.session) !== 'company-owner'}
+    />
+  );
 };
 
 const LoginRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
@@ -824,6 +942,10 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
           element={<HrEmployeesRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
         />
         <Route
+          path="hr/employees/manage-employees"
+          element={<HrEmployeesRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
           path="hr/positions"
           element={<HrPositionsRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
         />
@@ -957,6 +1079,21 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
         element={<Navigate to="/dashboard/admin/companies" replace />}
       />
       <Route
+        path="/manage-employees"
+        element={
+          <ProtectedDashboardShell {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+        }
+      >
+        <Route
+          index
+          element={<HrEmployeesRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path=":employeeId"
+          element={<HrEmployeesRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+      </Route>
+      <Route
         path="/companies"
         element={<Navigate to="/dashboard/admin/companies" replace />}
       />
@@ -988,7 +1125,8 @@ export const App = ({
         <DesktopGate>
           <ThemeProvider {...(apiBaseUrl ? { apiBaseUrl } : {})}>
             <AppRoutes {...(apiBaseUrl ? { apiBaseUrl } : {})} />
-            <Toaster position="top-center" theme="dark" />
+            <SileoToaster position="top-center" theme="dark" />
+            <ShadcnToaster position="bottom-right" />
           </ThemeProvider>
         </DesktopGate>
       </RouterComponent>

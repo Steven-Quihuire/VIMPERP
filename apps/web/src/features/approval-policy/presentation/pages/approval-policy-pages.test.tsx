@@ -121,9 +121,10 @@ describe('approval-policy pages', () => {
     fireEvent.change(screen.getByLabelText('Nombre de la política'), {
       target: { value: 'Company approvals' },
     });
-    fireEvent.change(screen.getByLabelText('JSON de definición'), {
-      target: { value: '{"steps":["manager"]}' },
+    fireEvent.change(screen.getByLabelText('¿Quién debe aprobar?'), {
+      target: { value: 'Jefe directo' },
     });
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar aprobador' }));
     fireEvent.click(screen.getByRole('button', { name: 'Crear política' }));
 
     await waitFor(() => {
@@ -134,7 +135,7 @@ describe('approval-policy pages', () => {
         scopeType: 'company',
         scopeNodeId: null,
         name: 'Company approvals',
-        definition: { steps: ['manager'] },
+        definition: { steps: ['Jefe directo'] },
         isActive: true,
       });
     });
@@ -166,12 +167,6 @@ describe('approval-policy pages', () => {
     fireEvent.change(screen.getByLabelText('Nombre de la política'), {
       target: { value: 'Updated area approvals' },
     });
-    fireEvent.change(screen.getByLabelText('ID del nodo de alcance'), {
-      target: { value: 'area:area-1' },
-    });
-    fireEvent.change(screen.getByLabelText('JSON de definición'), {
-      target: { value: '{"steps":["vp"]}' },
-    });
     fireEvent.click(screen.getByRole('button', { name: 'Actualizar política' }));
 
     await waitFor(() => {
@@ -183,7 +178,7 @@ describe('approval-policy pages', () => {
         scopeType: 'area',
         scopeNodeId: 'area:area-1',
         name: 'Updated area approvals',
-        definition: { steps: ['vp'] },
+        definition: { steps: ['director'] },
         isActive: true,
       });
     });

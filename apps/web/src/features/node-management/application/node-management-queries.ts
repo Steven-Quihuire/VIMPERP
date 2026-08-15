@@ -13,32 +13,35 @@ export const nodeManagementQueryKeys = {
     ['node-management', 'responsibilities', companyId] as const,
   pendingInvitations: (companyId: string) =>
     ['node-management', 'pending-invitations', companyId] as const,
-  invitation: (token: string) => ['node-management', 'invitation', token] as const,
+  invitation: (token: string) =>
+    ['node-management', 'invitation', token] as const,
 };
 
 export const useNodeManagementResponsibilities = (
   companyId: string | undefined,
   apiBaseUrl?: string,
+  enabled = true,
 ) => {
   const api = createNodeManagementApi(apiBaseUrl);
 
   return useQuery({
     queryKey: nodeManagementQueryKeys.responsibilities(companyId ?? ''),
     queryFn: () => api.listResponsibilities(companyId as string),
-    enabled: Boolean(companyId),
+    enabled: Boolean(companyId) && enabled,
   });
 };
 
 export const useNodeManagementPendingInvitations = (
   companyId: string | undefined,
   apiBaseUrl?: string,
+  enabled = true,
 ) => {
   const api = createNodeManagementApi(apiBaseUrl);
 
   return useQuery({
     queryKey: nodeManagementQueryKeys.pendingInvitations(companyId ?? ''),
     queryFn: () => api.listPendingInvitations(companyId as string),
-    enabled: Boolean(companyId),
+    enabled: Boolean(companyId) && enabled,
   });
 };
 
@@ -51,10 +54,14 @@ export const useCreateNodeManagementInvitation = (apiBaseUrl?: string) => {
       api.createInvitation(input),
     onSuccess: async (invitation) => {
       await queryClient.invalidateQueries({
-        queryKey: nodeManagementQueryKeys.pendingInvitations(invitation.companyId),
+        queryKey: nodeManagementQueryKeys.pendingInvitations(
+          invitation.companyId,
+        ),
       });
       await queryClient.invalidateQueries({
-        queryKey: nodeManagementQueryKeys.responsibilities(invitation.companyId),
+        queryKey: nodeManagementQueryKeys.responsibilities(
+          invitation.companyId,
+        ),
       });
     },
   });

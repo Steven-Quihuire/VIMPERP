@@ -111,7 +111,7 @@ describe('App HR routes', () => {
     );
 
     render(<App initialEntries={['/dashboard/hr/employees']} />);
-    expect(await screen.findByRole('heading', { name: 'Empleados de Recursos Humanos' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Empleados' })).toBeInTheDocument();
 
     cleanup();
     render(<App initialEntries={['/dashboard/hr/positions']} />);
