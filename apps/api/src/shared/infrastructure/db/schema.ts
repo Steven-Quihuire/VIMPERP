@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  date,
   foreignKey,
   index,
   integer,
@@ -825,6 +826,121 @@ export const approvalPoliciesTable = pgTable(
       'approval_policies_scope_node_required_chk',
       sql`${table.scopeType} = 'company' OR ${table.scopeNodeId} IS NOT NULL`,
     ),
+  ],
+);
+
+export const timesheetStatusEnum = pgEnum('timesheet_status', [
+  'draft',
+  'submitted',
+  'approved',
+  'rejected',
+]);
+
+export const timesheetPeriodsTable = pgTable(
+  'timesheet_periods',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: 'restrict' }),
+    employeeAssignmentId: text('employee_assignment_id')
+      .notNull()
+      .references(() => employeeAssignmentsTable.id, { onDelete: 'restrict' }),
+    periodStart: date('period_start').notNull(),
+    periodEnd: date('period_end').notNull(),
+    status: timesheetStatusEnum('status').notNull().default('draft'),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }),
+    submittedByUserId: text('submitted_by_user_id').references(() => usersTable.id, {
+      onDelete: 'restrict',
+    }),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    approvedByUserId: text('approved_by_user_id').references(() => usersTable.id, {
+      onDelete: 'restrict',
+    }),
+    rejectionReason: text('rejection_reason'),
+    approvalPolicyId: text('approval_policy_id').references(
+      () => approvalPoliciesTable.id,
+      {
+        onDelete: 'restrict',
+      },
+    ),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('timesheet_periods_id_company_idx').on(table.id, table.companyId),
+    foreignKey({
+      columns: [table.employeeAssignmentId, table.companyId],
+      foreignColumns: [employeeAssignmentsTable.id, employeeAssignmentsTable.companyId],
+      name: 'timesheet_periods_employee_assignment_company_fk',
+    }),
+    foreignKey({
+      columns: [table.approvalPolicyId, table.companyId],
+      foreignColumns: [approvalPoliciesTable.id, approvalPoliciesTable.companyId],
+      name: 'timesheet_periods_approval_policy_company_fk',
+    }),
+    check(
+      'timesheet_periods_end_after_start_chk',
+      sql`${table.periodEnd} >= ${table.periodStart}`,
+    ),
+    check(
+      'timesheet_periods_submission_pair_chk',
+      sql`(${table.submittedAt} IS NULL AND ${table.submittedByUserId} IS NULL) OR (${table.submittedAt} IS NOT NULL AND ${table.submittedByUserId} IS NOT NULL)`,
+    ),
+    check(
+      'timesheet_periods_approval_pair_chk',
+      sql`(${table.approvedAt} IS NULL AND ${table.approvedByUserId} IS NULL) OR (${table.approvedAt} IS NOT NULL AND ${table.approvedByUserId} IS NOT NULL)`,
+    ),
+    index('timesheet_periods_company_idx').on(table.companyId),
+    index('timesheet_periods_assignment_idx').on(table.employeeAssignmentId),
+    index('timesheet_periods_status_idx').on(table.companyId, table.status),
+  ],
+);
+
+export const timeEntriesTable = pgTable(
+  'time_entries',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: 'restrict' }),
+    periodId: uuid('period_id')
+      .notNull()
+      .references(() => timesheetPeriodsTable.id, { onDelete: 'restrict' }),
+    entryDate: date('entry_date').notNull(),
+    hours: numeric('hours', { precision: 5, scale: 2 }).notNull(),
+    projectId: uuid('project_id'),
+    taskLabel: text('task_label').notNull(),
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('time_entries_id_company_idx').on(table.id, table.companyId),
+    foreignKey({
+      columns: [table.periodId, table.companyId],
+      foreignColumns: [timesheetPeriodsTable.id, timesheetPeriodsTable.companyId],
+      name: 'time_entries_period_company_fk',
+    }),
+    check(
+      'time_entries_hours_bounds_chk',
+      sql`${table.hours} > 0 AND ${table.hours} <= 24`,
+    ),
+    uniqueIndex('time_entries_period_date_task_idx').on(
+      table.periodId,
+      table.entryDate,
+      table.taskLabel,
+    ),
+    index('time_entries_company_idx').on(table.companyId),
+    index('time_entries_period_idx').on(table.periodId),
   ],
 );
 

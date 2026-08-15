@@ -37,6 +37,10 @@ export const hrPermissionKeys = [
   'hr.erp_access.revoke',
   'hr.approval_policy.read',
   'hr.approval_policy.write',
+  'hr.timesheets.read',
+  'hr.timesheets.write',
+  'hr.timesheets.submit',
+  'hr.timesheets.approve',
 ] as const;
 
 export const reservedPlatformPermissionKeys = [
