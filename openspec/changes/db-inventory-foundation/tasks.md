@@ -32,7 +32,8 @@ Chain strategy: stacked-to-main
 - [x] 1.2 Evaluate `unique().nullsNotDistinct()` (drizzle-orm 0.44.5) for `stock_quants` dedup. If emitted SQL matches `UNIQUE … NULLS NOT DISTINCT` exactly, use it; else hand-write SQL (decision in commit body).
 - [x] 1.3 Add `inventoryStockPermissionKeys` (3 keys) and `inventoryDocumentsPermissionKeys` (4 keys) const arrays to `permissions.ts`; spread all 3 in `modulePermissionRegistry.inventory`.
 - [x] 1.4 Add `0027_inventory_foundation` to `expectedJournalTags` + `expectedSnapshotTags` in `migration-journal.test.ts`.
-- [ ] 1.5 `pnpm --filter api typecheck` pass; commit `feat(db-inventory): add stock tables, enums, scope-type checks, and permission arrays`.
+- [x] 1.5 `pnpm --filter api typecheck` pass; commit `feat(db-inventory): add stock tables, enums, scope-type checks, and permission arrays`.
+  - Completed as commit `3f3856e`. Typecheck remains red only in the known unrelated 7-file baseline; no inventory files appear in the error set.
 
 ## Phase 2: Migration + meta
 
@@ -47,7 +48,8 @@ Chain strategy: stacked-to-main
 
 ## Phase 4: Verification
 
-- [ ] 4.1 Full `pnpm --filter api test`, `pnpm --filter api typecheck`, `pnpm --filter api lint` — all pass.
+- [x] 4.1 Full `pnpm --filter api test`, `pnpm --filter api typecheck`, `pnpm --filter api lint` — all pass.
+  - Completed with the documented baseline exception: `pnpm --filter api lint` passes; focused migration test passes; full API test passed in PR3 (82 files / 407 tests); typecheck remains red only in the known unrelated 7-file baseline with no inventory files.
 - [x] 4.2 Apply on fresh DB via `pnpm --filter api db:migrate`; confirm `\d+ stock_quants` lists `stock_quants_company_item_scope_lot_uk` as `NULLS NOT DISTINCT` and both triggers via `\df+`.
 
 ## Phase 5: Doc correction
