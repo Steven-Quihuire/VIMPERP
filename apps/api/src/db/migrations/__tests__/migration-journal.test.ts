@@ -34,6 +34,8 @@ type JournalEntry = {
 type SnapshotMeta = {
   id: string;
   prevId: string;
+  tables: Record<string, unknown>;
+  enums: Record<string, unknown>;
 };
 
 const expectedSnapshotTags = [
@@ -114,6 +116,10 @@ describe('migration journal metadata', () => {
     expect(
       expectedJournalTags.map((tag) => entriesByTag.get(tag)?.idx ?? null),
     ).toEqual([13, 14, 15, 16, 22, 23, 24, 25]);
+
+    expect(snapshots[4]?.snapshot.enums).toHaveProperty('public.timesheet_status');
+    expect(snapshots[4]?.snapshot.tables).toHaveProperty('public.timesheet_periods');
+    expect(snapshots[4]?.snapshot.tables).toHaveProperty('public.time_entries');
   });
 
   it('lets drizzle-kit migrate apply cleanly on a fresh local postgres database', async () => {

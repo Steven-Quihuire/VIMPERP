@@ -2749,6 +2749,492 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.timesheet_periods": {
+      "name": "timesheet_periods",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "employee_assignment_id": {
+          "name": "employee_assignment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "period_start": {
+          "name": "period_start",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "period_end": {
+          "name": "period_end",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "timesheet_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "submitted_at": {
+          "name": "submitted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "submitted_by_user_id": {
+          "name": "submitted_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approved_at": {
+          "name": "approved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approved_by_user_id": {
+          "name": "approved_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rejection_reason": {
+          "name": "rejection_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approval_policy_id": {
+          "name": "approval_policy_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "timesheet_periods_id_company_idx": {
+          "name": "timesheet_periods_id_company_idx",
+          "columns": [
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "timesheet_periods_company_idx": {
+          "name": "timesheet_periods_company_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "timesheet_periods_assignment_idx": {
+          "name": "timesheet_periods_assignment_idx",
+          "columns": [
+            {
+              "expression": "employee_assignment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "timesheet_periods_status_idx": {
+          "name": "timesheet_periods_status_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "timesheet_periods_company_id_companies_id_fk": {
+          "name": "timesheet_periods_company_id_companies_id_fk",
+          "tableFrom": "timesheet_periods",
+          "columnsFrom": [
+            "company_id"
+          ],
+          "tableTo": "companies",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "timesheet_periods_employee_assignment_id_employee_assignments_id_fk": {
+          "name": "timesheet_periods_employee_assignment_id_employee_assignments_id_fk",
+          "tableFrom": "timesheet_periods",
+          "columnsFrom": [
+            "employee_assignment_id"
+          ],
+          "tableTo": "employee_assignments",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "timesheet_periods_submitted_by_user_id_users_id_fk": {
+          "name": "timesheet_periods_submitted_by_user_id_users_id_fk",
+          "tableFrom": "timesheet_periods",
+          "columnsFrom": [
+            "submitted_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "timesheet_periods_approved_by_user_id_users_id_fk": {
+          "name": "timesheet_periods_approved_by_user_id_users_id_fk",
+          "tableFrom": "timesheet_periods",
+          "columnsFrom": [
+            "approved_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "timesheet_periods_approval_policy_id_approval_policies_id_fk": {
+          "name": "timesheet_periods_approval_policy_id_approval_policies_id_fk",
+          "tableFrom": "timesheet_periods",
+          "columnsFrom": [
+            "approval_policy_id"
+          ],
+          "tableTo": "approval_policies",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "timesheet_periods_employee_assignment_company_fk": {
+          "name": "timesheet_periods_employee_assignment_company_fk",
+          "tableFrom": "timesheet_periods",
+          "columnsFrom": [
+            "employee_assignment_id",
+            "company_id"
+          ],
+          "tableTo": "employee_assignments",
+          "columnsTo": [
+            "id",
+            "company_id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "timesheet_periods_approval_policy_company_fk": {
+          "name": "timesheet_periods_approval_policy_company_fk",
+          "tableFrom": "timesheet_periods",
+          "columnsFrom": [
+            "approval_policy_id",
+            "company_id"
+          ],
+          "tableTo": "approval_policies",
+          "columnsTo": [
+            "id",
+            "company_id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "timesheet_periods_end_after_start_chk": {
+          "name": "timesheet_periods_end_after_start_chk",
+          "value": "(\"timesheet_periods\".\"period_end\" >= \"timesheet_periods\".\"period_start\")"
+        },
+        "timesheet_periods_submission_pair_chk": {
+          "name": "timesheet_periods_submission_pair_chk",
+          "value": "(((\"timesheet_periods\".\"submitted_at\" IS NULL) AND (\"timesheet_periods\".\"submitted_by_user_id\" IS NULL)) OR ((\"timesheet_periods\".\"submitted_at\" IS NOT NULL) AND (\"timesheet_periods\".\"submitted_by_user_id\" IS NOT NULL)))"
+        },
+        "timesheet_periods_approval_pair_chk": {
+          "name": "timesheet_periods_approval_pair_chk",
+          "value": "(((\"timesheet_periods\".\"approved_at\" IS NULL) AND (\"timesheet_periods\".\"approved_by_user_id\" IS NULL)) OR ((\"timesheet_periods\".\"approved_at\" IS NOT NULL) AND (\"timesheet_periods\".\"approved_by_user_id\" IS NOT NULL)))"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.time_entries": {
+      "name": "time_entries",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "period_id": {
+          "name": "period_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entry_date": {
+          "name": "entry_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hours": {
+          "name": "hours",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "task_label": {
+          "name": "task_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "time_entries_id_company_idx": {
+          "name": "time_entries_id_company_idx",
+          "columns": [
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "time_entries_period_date_task_idx": {
+          "name": "time_entries_period_date_task_idx",
+          "columns": [
+            {
+              "expression": "period_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entry_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "task_label",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "time_entries_company_idx": {
+          "name": "time_entries_company_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "time_entries_period_idx": {
+          "name": "time_entries_period_idx",
+          "columns": [
+            {
+              "expression": "period_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "time_entries_company_id_companies_id_fk": {
+          "name": "time_entries_company_id_companies_id_fk",
+          "tableFrom": "time_entries",
+          "columnsFrom": [
+            "company_id"
+          ],
+          "tableTo": "companies",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "time_entries_period_id_timesheet_periods_id_fk": {
+          "name": "time_entries_period_id_timesheet_periods_id_fk",
+          "tableFrom": "time_entries",
+          "columnsFrom": [
+            "period_id"
+          ],
+          "tableTo": "timesheet_periods",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "time_entries_period_company_fk": {
+          "name": "time_entries_period_company_fk",
+          "tableFrom": "time_entries",
+          "columnsFrom": [
+            "period_id",
+            "company_id"
+          ],
+          "tableTo": "timesheet_periods",
+          "columnsTo": [
+            "id",
+            "company_id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "time_entries_hours_bounds_chk": {
+          "name": "time_entries_hours_bounds_chk",
+          "value": "((\"time_entries\".\"hours\" > (0)::numeric) AND (\"time_entries\".\"hours\" <= (24)::numeric))"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.users": {
       "name": "users",
       "schema": "",
@@ -3094,6 +3580,16 @@
         "area",
         "warehouse",
         "point-of-sale"
+      ]
+    },
+    "public.timesheet_status": {
+      "name": "timesheet_status",
+      "schema": "public",
+      "values": [
+        "draft",
+        "submitted",
+        "approved",
+        "rejected"
       ]
     }
   },
