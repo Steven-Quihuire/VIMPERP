@@ -20,14 +20,15 @@ type WebSessionFields = keyof WebAuthSession;
 type ApiMembershipFields = keyof ApiAuthMembership;
 type WebMembershipFields = keyof WebAuthMembership;
 
-type _SessionCheck = Equal<ApiSessionFields, WebSessionFields>;
-type _MembershipCheck = Equal<ApiMembershipFields, WebMembershipFields>;
+const sessionTypeCheck: Equal<ApiSessionFields, WebSessionFields> = true;
+const membershipTypeCheck: Equal<ApiMembershipFields, WebMembershipFields> = true;
 
 const sessionShapeKeys = Object.keys(authSessionSchema.shape).sort();
 const membershipShapeKeys = Object.keys(authMembershipSchema.shape).sort();
 
 describe('auth session shape lockstep (api zod <-> web type)', () => {
   it('exposes the same session fields as the web AuthSession type', () => {
+    expect(sessionTypeCheck).toBe(true);
     const webSessionFields: (keyof WebAuthSession)[] = [
       'user',
       'memberships',
@@ -41,6 +42,7 @@ describe('auth session shape lockstep (api zod <-> web type)', () => {
   });
 
   it('exposes the same membership fields as the web AuthMembership type', () => {
+    expect(membershipTypeCheck).toBe(true);
     const webMembershipFields: (keyof WebAuthMembership)[] = [
       'companyId',
       'role',

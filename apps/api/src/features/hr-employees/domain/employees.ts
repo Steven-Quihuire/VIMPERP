@@ -1,3 +1,6 @@
+import type { EmployeeAssignment, EmployeeAssignmentHistory } from './employee-assignments';
+import type { Position } from './positions';
+
 export const employmentStatusValues = [
   'active',
   'suspended',
@@ -91,14 +94,12 @@ export type HrEmployeesGateway = {
     reportsToPositionId: string | null;
     headcount: number;
     isActive: boolean;
-  }) => Promise<import('./positions').Position>;
+  }) => Promise<Position>;
   getPositionById: (
     companyId: string,
     positionId: string,
-  ) => Promise<import('./positions').Position | null>;
-  listPositions: (
-    companyId: string,
-  ) => Promise<import('./positions').Position[]>;
+  ) => Promise<Position | null>;
+  listPositions: (companyId: string) => Promise<Position[]>;
   countActivePrimaryAssignmentsForPosition: (
     positionId: string,
   ) => Promise<number>;
@@ -116,23 +117,23 @@ export type HrEmployeesGateway = {
     isPrimary: boolean;
     createdAt: Date;
     id?: string;
-  }) => Promise<import('./employee-assignments').EmployeeAssignment>;
+  }) => Promise<EmployeeAssignment>;
   listAssignmentHistory: (
     companyId: string,
     employeeId: string,
-  ) => Promise<import('./employee-assignments').EmployeeAssignmentHistory[]>;
+  ) => Promise<EmployeeAssignmentHistory[]>;
   getActivePrimaryAssignmentByEmployeeId: (
     companyId: string,
     employeeId: string,
-  ) => Promise<import('./employee-assignments').EmployeeAssignment | null>;
+  ) => Promise<EmployeeAssignment | null>;
   getActivePrimaryAssignmentByPositionId: (
     companyId: string,
     positionId: string,
-  ) => Promise<import('./employee-assignments').EmployeeAssignment | null>;
+  ) => Promise<EmployeeAssignment | null>;
   listDirectReportAssignments: (
     companyId: string,
     managerPositionId: string,
-  ) => Promise<import('./employee-assignments').EmployeeAssignment[]>;
+  ) => Promise<EmployeeAssignment[]>;
 };
 
 export class EmployeeNotFoundError extends Error {

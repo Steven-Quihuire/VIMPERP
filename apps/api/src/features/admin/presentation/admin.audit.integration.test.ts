@@ -20,6 +20,22 @@ const runtimeIds = {
   companyBId: 'runtime-company-b',
 };
 
+type AuditEventResponse = {
+  id: string;
+  companyId: string;
+  type: string;
+  entityType: string;
+  entityId?: string;
+};
+
+type AuditEventsResponseBody = {
+  auditEvents: AuditEventResponse[];
+  nextCursor: string | null;
+};
+
+const auditEventsBody = (response: { body: unknown }): AuditEventsResponseBody =>
+  response.body as AuditEventsResponseBody;
+
 const latestMigrationFile = '0019_org_hierarchy_company_integrity.sql';
 
 const getSessionCookie = (headers: string | string[] | undefined): string => {
@@ -296,9 +312,10 @@ describe('admin audit routes integration', () => {
       .set('Cookie', platformAdminCookie);
 
     expect(companyAEventsResponse.status).toBe(200);
-    expect(companyAEventsResponse.body.nextCursor).toBeNull();
-    expect(companyAEventsResponse.body.auditEvents).toHaveLength(4);
-    expect(companyAEventsResponse.body.auditEvents).toEqual(
+    const companyAEvents = auditEventsBody(companyAEventsResponse);
+    expect(companyAEvents.nextCursor).toBeNull();
+    expect(companyAEvents.auditEvents).toHaveLength(4);
+    expect(companyAEvents.auditEvents).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           companyId: runtimeIds.companyAId,
@@ -326,7 +343,7 @@ describe('admin audit routes integration', () => {
       ]),
     );
     expect(
-      (companyAEventsResponse.body.auditEvents as Array<{ companyId: string; type: string }>).every(
+      companyAEvents.auditEvents.every(
         (event) =>
           event.companyId === runtimeIds.companyAId &&
           event.type.startsWith('org_hierarchy.'),
@@ -339,17 +356,17 @@ describe('admin audit routes integration', () => {
       .set('Cookie', platformAdminCookie);
 
     expect(companyBEventsResponse.status).toBe(200);
-    expect(companyBEventsResponse.body.auditEvents).toHaveLength(1);
-    expect(companyBEventsResponse.body.auditEvents[0]).toMatchObject({
+    const companyBEvents = auditEventsBody(companyBEventsResponse);
+    expect(companyBEvents.auditEvents).toHaveLength(1);
+    expect(companyBEvents.auditEvents[0]).toMatchObject({
       companyId: runtimeIds.companyBId,
       type: orgHierarchyAuditEventTypes.divisionCreated,
       entityType: 'division',
     });
 
-    const areaCreatedEvent = (companyAEventsResponse.body.auditEvents as Array<{
-      id: string;
-      type: string;
-    }>).find((event) => event.type === orgHierarchyAuditEventTypes.areaCreated);
+    const areaCreatedEvent = companyAEvents.auditEvents.find(
+      (event) => event.type === orgHierarchyAuditEventTypes.areaCreated,
+    );
 
     expect(areaCreatedEvent).toBeDefined();
 

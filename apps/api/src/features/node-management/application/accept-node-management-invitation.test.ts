@@ -14,7 +14,6 @@ import {
   NodeManagementInvitationExpiredError,
   NodeManagementInvitationNotFoundError,
   NodeManagementInvitationPasswordRequiredError,
-  nodeManagementAssignmentMode,
   nodeManagementBaseMembershipRole,
   nodeManagementRoleKey,
 } from '../domain/node-management';

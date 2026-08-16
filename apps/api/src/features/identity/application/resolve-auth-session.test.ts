@@ -171,7 +171,7 @@ describe('createResolveAuthSession', () => {
       {
         companyId: 'company-1',
         role: 'company-owner',
-        divisionId: 'local-1' as string | null,
+        divisionId: 'local-1',
         localId: 'local-1',
       },
     ]);

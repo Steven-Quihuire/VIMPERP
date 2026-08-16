@@ -1,4 +1,4 @@
-import { Router, type RequestHandler } from 'express';
+import { Router, type RequestHandler, type Response } from 'express';
 import { z } from 'zod';
 
 import {
@@ -30,7 +30,7 @@ const ensureCompanyAccess = (auth: AuthSession, companyId: string) => {
 };
 
 const setSessionCookie = (
-  response: import('express').Response,
+  response: Response,
   sessionCookieName: string,
   secureCookies: boolean,
   token: string,

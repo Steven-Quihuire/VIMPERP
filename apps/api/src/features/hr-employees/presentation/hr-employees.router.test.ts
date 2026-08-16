@@ -376,18 +376,21 @@ describe('hr employees routes', () => {
       .set('Cookie', sessionCookie)
       .send({ fullName: 'People Manager' });
     expect(createManagerResponse.status).toBe(201);
+    const manager = createManagerResponse.body as { id: string };
 
     const createReportResponse = await request(app)
       .post('/companies/company-1/hr-employees')
       .set('Cookie', sessionCookie)
       .send({ fullName: 'HR Analyst' });
     expect(createReportResponse.status).toBe(201);
+    const report = createReportResponse.body as { id: string };
 
     const createLeadPositionResponse = await request(app)
       .post('/companies/company-1/hr-employees/positions')
       .set('Cookie', sessionCookie)
       .send({ name: 'People Lead', reportsToPositionId: null, headcount: 2, isActive: true });
     expect(createLeadPositionResponse.status).toBe(201);
+    const leadPosition = createLeadPositionResponse.body as { id: string };
     expect(createLeadPositionResponse.body).toMatchObject({
       occupiedHeadcount: 0,
       remainingVacancies: 2,
@@ -398,31 +401,34 @@ describe('hr employees routes', () => {
       .set('Cookie', sessionCookie)
       .send({
         name: 'HR Analyst',
-        reportsToPositionId: createLeadPositionResponse.body.id,
+        reportsToPositionId: leadPosition.id,
         headcount: 2,
         isActive: true,
       });
     expect(createAnalystPositionResponse.status).toBe(201);
+    const analystPosition = createAnalystPositionResponse.body as { id: string };
 
     const managerAssignmentResponse = await request(app)
-      .post(`/companies/company-1/hr-employees/${createManagerResponse.body.id}/assignments`)
+      .post(`/companies/company-1/hr-employees/${manager.id}/assignments`)
       .set('Cookie', sessionCookie)
       .send({
         scopeNodeId: 'company:company-1',
-        positionId: createLeadPositionResponse.body.id,
+        positionId: leadPosition.id,
         startedAt: '2026-08-13T12:00:00.000Z',
       });
     expect(managerAssignmentResponse.status).toBe(201);
+    const managerAssignment = managerAssignmentResponse.body as { id: string };
 
     const reportAssignmentResponse = await request(app)
-      .post(`/companies/company-1/hr-employees/${createReportResponse.body.id}/assignments`)
+      .post(`/companies/company-1/hr-employees/${report.id}/assignments`)
       .set('Cookie', sessionCookie)
       .send({
         scopeNodeId: 'company:company-1',
-        positionId: createAnalystPositionResponse.body.id,
+        positionId: analystPosition.id,
         startedAt: '2026-08-13T12:30:00.000Z',
       });
     expect(reportAssignmentResponse.status).toBe(201);
+    const reportAssignment = reportAssignmentResponse.body as { id: string };
 
     const listedPositionsResponse = await request(app)
       .get('/companies/company-1/hr-employees/positions')
@@ -431,7 +437,7 @@ describe('hr employees routes', () => {
     expect(listedPositionsResponse.body).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: createLeadPositionResponse.body.id,
+          id: leadPosition.id,
           occupiedHeadcount: 1,
           remainingVacancies: 1,
         }),
@@ -443,44 +449,44 @@ describe('hr employees routes', () => {
       .set('Cookie', sessionCookie)
       .send({ name: 'Missing Parent', reportsToPositionId: 'missing-position', headcount: 1, isActive: true });
     expect(missingParentResponse.status).toBe(404);
-    expect(missingParentResponse.body.error.code).toBe('HR_POSITION_PARENT_NOT_FOUND');
+    expect((missingParentResponse.body as { error: { code: string } }).error.code).toBe('HR_POSITION_PARENT_NOT_FOUND');
 
     const crossCompanyParentResponse = await request(app)
       .post('/companies/company-1/hr-employees/positions')
       .set('Cookie', sessionCookie)
       .send({ name: 'Cross Company Child', reportsToPositionId: 'position-company-2', headcount: 1, isActive: true });
     expect(crossCompanyParentResponse.status).toBe(404);
-    expect(crossCompanyParentResponse.body.error.code).toBe('HR_POSITION_PARENT_NOT_FOUND');
+    expect((crossCompanyParentResponse.body as { error: { code: string } }).error.code).toBe('HR_POSITION_PARENT_NOT_FOUND');
 
     const managerResponse = await request(app)
-      .get(`/companies/company-1/hr-employees/${createReportResponse.body.id}/reports/manager`)
+      .get(`/companies/company-1/hr-employees/${report.id}/reports/manager`)
       .set('Cookie', sessionCookie);
     expect(managerResponse.status).toBe(200);
     expect(managerResponse.body).toEqual({
-      employeeId: createManagerResponse.body.id,
-      positionId: createLeadPositionResponse.body.id,
-      assignmentId: managerAssignmentResponse.body.id,
+      employeeId: manager.id,
+      positionId: leadPosition.id,
+      assignmentId: managerAssignment.id,
     });
 
     const directReportsResponse = await request(app)
-      .get(`/companies/company-1/hr-employees/${createManagerResponse.body.id}/reports/direct`)
+      .get(`/companies/company-1/hr-employees/${manager.id}/reports/direct`)
       .set('Cookie', sessionCookie);
     expect(directReportsResponse.status).toBe(200);
     expect(directReportsResponse.body).toEqual([
       {
-        employeeId: createReportResponse.body.id,
-        positionId: createAnalystPositionResponse.body.id,
-        assignmentId: reportAssignmentResponse.body.id,
+        employeeId: report.id,
+        positionId: analystPosition.id,
+        assignmentId: reportAssignment.id,
       },
     ]);
 
     const assignmentHistoryResponse = await request(app)
-      .get(`/companies/company-1/hr-employees/${createReportResponse.body.id}/assignments`)
+      .get(`/companies/company-1/hr-employees/${report.id}/assignments`)
       .set('Cookie', sessionCookie);
     expect(assignmentHistoryResponse.status).toBe(200);
     expect(assignmentHistoryResponse.body).toEqual([
       expect.objectContaining({
-        employeeId: createReportResponse.body.id,
+        employeeId: report.id,
         positionName: 'HR Analyst',
         scopeNodeName: 'Vimcore',
         isPrimary: true,
@@ -489,7 +495,7 @@ describe('hr employees routes', () => {
     ]);
 
     const updateResponse = await request(app)
-      .patch(`/companies/company-1/hr-employees/${createReportResponse.body.id}`)
+      .patch(`/companies/company-1/hr-employees/${report.id}`)
       .set('Cookie', sessionCookie)
       .send({ fullName: 'HR Analyst Updated', employmentStatus: 'suspended' });
 

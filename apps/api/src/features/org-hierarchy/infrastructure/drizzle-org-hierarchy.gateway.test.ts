@@ -153,6 +153,11 @@ const applyReturningWhere = (
   return thenable;
 };
 
+const toDatabaseError = (cause: unknown) =>
+  cause instanceof Error
+    ? cause
+    : Object.assign(new Error('Simulated database error'), { cause });
+
 const createFakeDb = ({
   divisions = [],
   locals = [],
@@ -253,12 +258,12 @@ const createFakeDb = ({
   const db = {
     select,
     transaction: async <T>(callback: (client: typeof db) => Promise<T>) =>
-      await callback(db as typeof db),
+      await callback(db),
     insert: (table: unknown) => ({
       values: (values: unknown) => {
         if (table === divisionsTable) {
           if (divisionCreateError) {
-            return Promise.reject(divisionCreateError);
+            return Promise.reject(toDatabaseError(divisionCreateError));
           }
           writes.push({ kind: 'insert', table, values: clone(values) });
           state.divisions.push(clone(values as DivisionRow));
@@ -380,14 +385,14 @@ const createFakeDb = ({
         const returning = () => {
           if (table === divisionsTable) {
             if (divisionDeleteError) {
-              throw divisionDeleteError;
+              throw toDatabaseError(divisionDeleteError);
             }
             const first = state.divisions.shift();
             return first ? [clone(first)] : [];
           }
           if (table === localsTable) {
             if (localDeleteError) {
-              throw localDeleteError;
+              throw toDatabaseError(localDeleteError);
             }
             const first = state.locals.shift();
             return first ? [clone(first)] : [];

@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type RequestHandler, type Response } from 'express';
 import { z } from 'zod';
 
 import type { AuthSession } from '../../identity/domain/auth';
@@ -55,7 +55,7 @@ export const createHrResponsibilityRouter = ({
   sessionCookieName,
   secureCookies,
 }: {
-  requireAuth: import('express').RequestHandler;
+  requireAuth: RequestHandler;
   getState: (companyId: string) => Promise<{
     companyId: string;
     hasResponsibles: boolean;
@@ -85,7 +85,7 @@ export const createHrResponsibilityRouter = ({
   const router = Router();
 
   const setSessionCookie = (
-    response: import('express').Response,
+    response: Response,
     token: string,
   ) => {
     response.cookie(sessionCookieName, token, {
@@ -205,10 +205,9 @@ export const createHrResponsibilityRouter = ({
     async (request, response, next) => {
       try {
         const { token } = tokenParamsSchema.parse(request.params);
+        const body = (request.body ?? {}) as { password?: unknown };
         const password =
-          typeof request.body?.password === 'string'
-            ? request.body.password
-            : undefined;
+          typeof body.password === 'string' ? body.password : undefined;
         const result = await acceptInvitation({
           token,
           ...(password ? { password } : {}),

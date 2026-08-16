@@ -599,11 +599,15 @@ describe('auth routes', () => {
       });
 
     expect(meResponse.status).toBe(200);
-    expect(meResponse.body.activeScope).toEqual({
+    const sessionBody = meResponse.body as {
+      activeScope: { scopeType: string; scopeId: string } | null;
+      activeLocalId: string | null;
+    };
+    expect(sessionBody.activeScope).toEqual({
       scopeType: 'local',
       scopeId: 'local-1',
     });
-    expect(meResponse.body.activeLocalId).toBe('local-1');
+    expect(sessionBody.activeLocalId).toBe('local-1');
     expect(switchResponse.status).toBe(403);
     expect(switchResponse.body).toEqual({
       error: {

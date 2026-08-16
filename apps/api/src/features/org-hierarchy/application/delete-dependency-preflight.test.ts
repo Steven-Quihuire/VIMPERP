@@ -80,7 +80,7 @@ describe('org hierarchy delete dependency preflight', () => {
         await expect(
           useCase({ ...id, actorUserId: 'user-1', correlationId: 'corr-1' }),
         ).rejects.toMatchObject({
-          code: expect.stringContaining('CONFLICT'),
+          code: expect.stringContaining('CONFLICT') as string,
         });
 
         expect(gateway.getScopeNodeDependencyCounts).toHaveBeenCalledWith({
@@ -179,7 +179,7 @@ describe('org hierarchy delete dependency preflight', () => {
 
       await expect(
         useCase({ ...id, actorUserId: 'user-1', correlationId: 'corr-1' }),
-      ).rejects.toMatchObject({ code: expect.stringContaining('CONFLICT') });
+      ).rejects.toMatchObject({ code: expect.stringContaining('CONFLICT') as string });
 
       expect(gateway[deleteMethod]).not.toHaveBeenCalled();
     },
@@ -220,7 +220,7 @@ describe('org hierarchy delete dependency preflight', () => {
       await expect(
         useCase({ ...id, actorUserId: 'user-1', correlationId: 'corr-1' }),
       ).rejects.toMatchObject({
-        code: expect.stringContaining('CONFLICT'),
+        code: expect.stringContaining('CONFLICT') as string,
       });
       expect(gateway[deleteMethod]).not.toHaveBeenCalled();
     },
@@ -243,7 +243,7 @@ describe('org hierarchy delete dependency preflight', () => {
 
     await expect(
       useCase({ ...id, actorUserId: 'user-1', correlationId: 'corr-1' }),
-    ).rejects.toMatchObject({ code: expect.stringContaining('CONFLICT') });
+    ).rejects.toMatchObject({ code: expect.stringContaining('CONFLICT') as string });
     expect(gateway[deleteMethod]).not.toHaveBeenCalled();
   });
 

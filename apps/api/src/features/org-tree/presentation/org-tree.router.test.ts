@@ -88,8 +88,9 @@ describe('createOrgTreeRouter', () => {
         error: unknown,
         _request: express.Request,
         response: express.Response,
-        _next: express.NextFunction,
+        next: express.NextFunction,
       ) => {
+        void next;
         if (error instanceof ForbiddenError) {
           response.status(403).json({ error: { code: error.code, message: error.message } });
           return;
@@ -127,8 +128,9 @@ describe('createOrgTreeRouter', () => {
         error: unknown,
         _request: express.Request,
         response: express.Response,
-        _next: express.NextFunction,
+        next: express.NextFunction,
       ) => {
+        void next;
         if (error instanceof ForbiddenError) {
           response.status(403).json({ error: { code: error.code, message: error.message } });
           return;

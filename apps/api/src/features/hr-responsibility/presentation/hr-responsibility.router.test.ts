@@ -79,7 +79,7 @@ describe('HR responsibility invitation routes', () => {
       .post('/companies/company-1/hr-responsibility/invitations')
       .send({ inviteeEmail: 'external@example.com' })
       .expect(409);
-    expect(response.body.error.code).toBe(
+    expect((response.body as { error: { code: string } }).error.code).toBe(
       'HR_RESPONSIBILITY_INVITATION_DUPLICATE',
     );
   });

@@ -86,6 +86,7 @@ import { createHrErpAccessRouter } from '../features/hr-erp-access/presentation/
 import { createDrizzleHrResponsibilityGateway } from '../features/hr-responsibility/infrastructure/drizzle-hr-responsibility.gateway';
 import { createAssignHrResponsible } from '../features/hr-responsibility/application/assign-hr-responsible';
 import { createGetHrResponsibilityState } from '../features/hr-responsibility/application/get-hr-responsibility-state';
+import type { HrResponsibilityGateway } from '../features/hr-responsibility/domain/hr-responsibility';
 import { createHrResponsibilityRouter } from '../features/hr-responsibility/presentation/hr-responsibility.router';
 import { createAcceptHrResponsibilityInvitation } from '../features/hr-responsibility/application/accept-hr-responsibility-invitation';
 import { createHrResponsibilityInvitation } from '../features/hr-responsibility/application/create-hr-responsibility-invitation';
@@ -187,7 +188,7 @@ type CreateAppInput = {
   orgHierarchyGateway?: OrgHierarchyGateway;
   hrEmployeesGateway?: HrEmployeesGateway;
   hrErpAccessGateway?: ErpAccessGateway;
-  hrResponsibilityGateway?: import('../features/hr-responsibility/domain/hr-responsibility').HrResponsibilityGateway;
+  hrResponsibilityGateway?: HrResponsibilityGateway;
   approvalPolicyGateway?: ApprovalPolicyGateway;
   nodeManagementGateway?: NodeManagementGateway;
   scopeResolver?: ScopeResolver;
@@ -409,10 +410,11 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     auth: AuthSession;
   }): Promise<PermissionScope | undefined> => {
     const { companyId, employeeId } = parseEmployeeParams(request);
-    if (typeof request.body?.scopeNodeId === 'string') {
+    const body = (request.body ?? {}) as { scopeNodeId?: unknown };
+    if (typeof body.scopeNodeId === 'string') {
       const requestedNode = await hrEmployeesGateway.findScopeNode(
         companyId,
-        request.body.scopeNodeId,
+        body.scopeNodeId,
       );
       if (!requestedNode) {
         throw new ForbiddenError();
@@ -490,9 +492,10 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     auth: AuthSession;
   }): Promise<PermissionScope | undefined> => {
     const companyId = String(request.params.companyId);
+    const body = (request.body ?? {}) as { scopeNodeId?: unknown };
     const scopeNodeId =
-      typeof request.body?.scopeNodeId === 'string'
-        ? request.body.scopeNodeId
+      typeof body.scopeNodeId === 'string'
+        ? body.scopeNodeId
         : request.params.policyId
           ? (
               await approvalPolicyGateway.getApprovalPolicyById(

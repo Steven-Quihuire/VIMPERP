@@ -1,3 +1,5 @@
+import type { ScopeRef } from '../../../shared/infrastructure/scope-hierarchy/scope-hierarchy.port';
+
 export const authRoleValues = [
   'platform-admin',
   'company-owner',
@@ -27,7 +29,7 @@ export type SwitchActiveLocalInput = {
 };
 
 export type SwitchActiveScopeInput = {
-  scope: import('../../../shared/infrastructure/scope-hierarchy/scope-hierarchy.port').ScopeRef | null;
+  scope: ScopeRef | null;
 };
 
 export const companyLifecycleValues = [
@@ -61,7 +63,7 @@ export type AuthSession = {
   user: PublicAuthUser;
   memberships: AuthMembership[];
   activeCompany: ActiveCompany | null;
-  activeScope: import('../../../shared/infrastructure/scope-hierarchy/scope-hierarchy.port').ScopeRef | null;
+  activeScope: ScopeRef | null;
   activeLocalId: string | null;
   capabilities: AuthCapability[];
 };
@@ -149,7 +151,7 @@ export const hasAuthCapability = (
 ) => capabilities.includes(capability);
 
 const uniqueSortedCapabilities = (capabilities: Iterable<AuthCapability>) =>
-  [...new Set(capabilities)].sort() as AuthCapability[];
+  [...new Set(capabilities)].sort();
 
 export const deriveAuthCapabilities = (input: {
   memberships: AuthMembership[];

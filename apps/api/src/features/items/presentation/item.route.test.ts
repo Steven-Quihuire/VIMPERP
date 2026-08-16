@@ -24,6 +24,16 @@ import type {
 } from '../domain/item';
 import { createItemRouter } from './item.router';
 
+type ItemListResponseBody = {
+  items: Array<{ id: string; localId: string | null }>;
+  nextCursor?: string | null;
+};
+
+type CategoryListResponseBody = {
+  categories: Array<{ id: string; localId: string | null }>;
+  nextCursor?: string | null;
+};
+
 class InMemoryAuthGateway implements AuthIdentityGateway {
   private usersById = new Map<string, AuthUser>();
   private usersByIdentifier = new Map<string, AuthUser>();
@@ -1141,8 +1151,9 @@ describe('item routes', () => {
       .set('Cookie', ownerSessionCookie);
 
     expect(response.status).toBe(200);
-    expect(response.body.items).toHaveLength(1);
-    expect(response.body.items[0]).toEqual(
+    const body = response.body as ItemListResponseBody;
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0]).toEqual(
       expect.objectContaining({ id: 'item-local-1', localId: 'local-1' }),
     );
   });
@@ -1192,8 +1203,9 @@ describe('item routes', () => {
       .set('Cookie', ownerSessionCookie);
 
     expect(response.status).toBe(200);
-    expect(response.body.items).toHaveLength(1);
-    expect(response.body.items[0]).toEqual(
+    const body = response.body as ItemListResponseBody;
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0]).toEqual(
       expect.objectContaining({ id: 'item-company', localId: null }),
     );
   });
@@ -1330,8 +1342,9 @@ describe('item routes', () => {
       .get('/items')
       .set('Cookie', ownerSessionCookie);
 
-    expect(companyResponse.body.items).toHaveLength(1);
-    expect(companyResponse.body.items[0]).toEqual(
+    const companyBody = companyResponse.body as ItemListResponseBody;
+    expect(companyBody.items).toHaveLength(1);
+    expect(companyBody.items[0]).toEqual(
       expect.objectContaining({ id: 'item-company', localId: null }),
     );
 
@@ -1342,8 +1355,9 @@ describe('item routes', () => {
       .get('/items')
       .set('Cookie', ownerSessionCookie);
 
-    expect(localResponse.body.items).toHaveLength(1);
-    expect(localResponse.body.items[0]).toEqual(
+    const localBody = localResponse.body as ItemListResponseBody;
+    expect(localBody.items).toHaveLength(1);
+    expect(localBody.items[0]).toEqual(
       expect.objectContaining({ id: 'item-local-1', localId: 'local-1' }),
     );
   });
@@ -1438,8 +1452,9 @@ describe('item routes', () => {
       .set('Cookie', ownerSessionCookie);
 
     expect(response.status).toBe(200);
-    expect(response.body.categories).toHaveLength(1);
-    expect(response.body.categories[0]).toEqual(
+    const body = response.body as CategoryListResponseBody;
+    expect(body.categories).toHaveLength(1);
+    expect(body.categories[0]).toEqual(
       expect.objectContaining({ id: 'cat-local-1', localId: 'local-1' }),
     );
   });

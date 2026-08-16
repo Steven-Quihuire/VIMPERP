@@ -313,9 +313,13 @@ describe('node management routes', () => {
       });
 
     expect(createResponse.status).toBe(201);
+    const invitation = createResponse.body as {
+      invitationId: string;
+      invitationToken: string;
+    };
     expect(createResponse.body).toEqual({
-      invitationId: expect.any(String),
-      invitationToken: expect.any(String),
+      invitationId: expect.any(String) as string,
+      invitationToken: expect.any(String) as string,
       inviteeEmail: 'manager@vimcore.test',
       companyId: 'company-1',
       companyName: 'Vimcore Labs',
@@ -323,14 +327,14 @@ describe('node management routes', () => {
       scopeType: 'local',
       scopeId: 'local-1',
       scopeName: 'Main Local',
-      expiresAt: expect.any(String),
+      expiresAt: expect.any(String) as string,
       delivery: {
         status: 'skipped',
         message: 'Invitation email delivery is not configured.',
       },
     });
 
-    const token = createResponse.body.invitationToken as string;
+    const token = invitation.invitationToken;
     const tokenHash = hashNodeManagementInvitationToken(token);
     expect(nodeManagementGateway.createInvitationInput).toMatchObject({
       companyId: 'company-1',
@@ -342,7 +346,7 @@ describe('node management routes', () => {
       tokenHash,
     });
     nodeManagementGateway.invitation = {
-      id: createResponse.body.invitationId,
+      id: invitation.invitationId,
       companyId: 'company-1',
       scopeNodeId: 'scope-node-1',
       scopeType: 'local',
@@ -386,8 +390,8 @@ describe('node management routes', () => {
     expect(acceptResponse.status).toBe(204);
     expect(acceptResponse.headers['set-cookie']).toBeTruthy();
     expect(nodeManagementGateway.acceptInvitationInput).toMatchObject({
-      invitationId: createResponse.body.invitationId,
-      acceptedByUserId: expect.any(String),
+      invitationId: invitation.invitationId,
+      acceptedByUserId: expect.any(String) as string,
       ensureCompanyUserMembership: true,
       companyId: 'company-1',
       session: { token: 'session-token' },

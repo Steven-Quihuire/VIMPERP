@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type RequestHandler } from 'express';
 import { z } from 'zod';
 
 import {
@@ -33,7 +33,7 @@ export const createOrgTreeRouter = ({
   requireAuth,
   listOrgTree,
 }: {
-  requireAuth: import('express').RequestHandler;
+  requireAuth: RequestHandler;
   listOrgTree: (input: { companyId: string; actorUserId: string }) => Promise<unknown>;
 }): Router => {
   const router = Router();

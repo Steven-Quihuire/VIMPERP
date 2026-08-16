@@ -355,16 +355,20 @@ describe('hr erp access routes', () => {
       .send({ employeeId: 'employee-1', inviteeEmail: 'New.User@Vimcore.Test' });
 
     expect(createResponse.status).toBe(201);
+    const invitation = createResponse.body as {
+      invitationId: string;
+      invitationToken: string;
+    };
     expect(createResponse.body).toEqual({
-      invitationId: expect.any(String),
-      invitationToken: expect.any(String),
+      invitationId: expect.any(String) as string,
+      invitationToken: expect.any(String) as string,
       companyId: 'company-1',
       employeeId: 'employee-1',
       inviteeEmail: 'new.user@vimcore.test',
-      expiresAt: expect.any(String),
+      expiresAt: expect.any(String) as string,
     });
 
-    const token = createResponse.body.invitationToken as string;
+    const token = invitation.invitationToken;
     expect(hrErpAccessGateway.invitations[0]).toMatchObject({
       employeeId: 'employee-1',
       tokenHash: hashErpAccessInvitationToken(token),
@@ -377,12 +381,12 @@ describe('hr erp access routes', () => {
     expect(listResponse.status).toBe(200);
     expect(listResponse.body).toEqual([
       {
-        id: createResponse.body.invitationId,
+        id: invitation.invitationId,
         companyId: 'company-1',
         employeeId: 'employee-1',
         inviteeEmail: 'new.user@vimcore.test',
         createdAt: '2026-08-13T12:00:00.000Z',
-        expiresAt: expect.any(String),
+        expiresAt: expect.any(String) as string,
       },
     ]);
 
@@ -402,7 +406,7 @@ describe('hr erp access routes', () => {
     expect(hrErpAccessGateway.activeLinks).toEqual([
       expect.objectContaining({
         employeeId: 'employee-1',
-        userId: expect.any(String),
+        userId: expect.any(String) as string,
         isActive: false,
       }),
     ]);

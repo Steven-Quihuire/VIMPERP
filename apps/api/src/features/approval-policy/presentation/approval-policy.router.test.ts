@@ -411,14 +411,15 @@ describe('approval policy router', () => {
       });
 
     expect(createResponse.status).toBe(201);
+    const createdPolicy = createResponse.body as { id: string };
 
     const getResponse = await request(app)
-      .get(`/companies/company-a/approval-policies/${createResponse.body.id}`)
+      .get(`/companies/company-a/approval-policies/${createdPolicy.id}`)
       .set('Cookie', ownerSessionCookie);
 
     expect(getResponse.status).toBe(200);
     expect(getResponse.body).toMatchObject({
-      id: createResponse.body.id,
+      id: createdPolicy.id,
       name: 'Groundwork Only',
       definition: { steps: [] },
       isActive: true,

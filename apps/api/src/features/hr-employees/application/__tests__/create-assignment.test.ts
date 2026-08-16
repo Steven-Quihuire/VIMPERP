@@ -68,11 +68,11 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
 
   lastCreateAssignmentInput: Parameters<HrEmployeesGateway['createAssignment']>[0] | null = null;
 
-  createEmployee(_input: { companyId: string }): Promise<Employee> {
+  createEmployee(): Promise<Employee> {
     throw new Error('not implemented');
   }
 
-  updateEmployee(_companyId: string, _employeeId: string): Promise<Employee | null> {
+  updateEmployee(): Promise<Employee | null> {
     throw new Error('not implemented');
   }
 
@@ -88,13 +88,7 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
     return Promise.resolve(this.employees.filter((employee) => employee.companyId === companyId));
   }
 
-  createPosition(_input: {
-    companyId: string;
-    name: string;
-    reportsToPositionId: string | null;
-    headcount: number;
-    isActive: boolean;
-  }): Promise<Position> {
+  createPosition(): Promise<Position> {
     throw new Error('not implemented');
   }
 

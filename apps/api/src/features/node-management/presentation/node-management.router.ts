@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type RequestHandler, type Response } from 'express';
 import { z } from 'zod';
 
 import type { AuthSession } from '../../identity/domain/auth';
@@ -116,7 +116,7 @@ const hasCompanyOwnerMembership = (auth: AuthSession, companyId: string) => {
 };
 
 const setSessionCookie = (
-  response: import('express').Response,
+  response: Response,
   sessionCookieName: string,
   secureCookies: boolean,
   token: string,
@@ -140,7 +140,7 @@ export const createNodeManagementRouter = ({
   sessionCookieName,
   secureCookies,
 }: {
-  requireAuth: import('express').RequestHandler;
+  requireAuth: RequestHandler;
   createInvitation: (input: {
     companyId: string;
     scopeType: NodeManagementScopeType;

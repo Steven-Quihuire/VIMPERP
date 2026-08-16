@@ -1,7 +1,7 @@
-import { Router } from 'express';
+import { Router, type RequestHandler } from 'express';
 import { z } from 'zod';
 
-import { type AuthSession } from '../domain/auth';
+import type { AuthRole, AuthSession } from '../domain/auth';
 import { scopeTypeValues, type ScopeResolver } from '../../../shared/infrastructure/scope-hierarchy/scope-hierarchy.port';
 
 type Login = (input: {
@@ -128,8 +128,8 @@ export const createAuthRouter = ({
   switchActiveScope: SwitchActiveScope;
   scopeResolver: ScopeResolver;
   findLocalCompanyById: FindLocalCompanyById;
-  requireAuth: import('express').RequestHandler;
-  requireRole: (...roles: import('../domain/auth').AuthRole[]) => import('express').RequestHandler;
+  requireAuth: RequestHandler;
+  requireRole: (...roles: AuthRole[]) => RequestHandler;
   sessionCookieName: string;
   secureCookies: boolean;
 }): Router => {

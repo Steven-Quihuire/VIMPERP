@@ -657,6 +657,12 @@ const loginAs = async (
   return getSessionCookie(res.headers['set-cookie']);
 };
 
+const responseId = (response: { body: unknown }): string =>
+  (response.body as { id: string }).id;
+
+const responseList = <T>(response: { body: unknown }): T[] =>
+  response.body as T[];
+
 describe('org-hierarchy routes', () => {
   it('creates and lists divisions as company-owner', async () => {
     const { app } = setupAuthenticatedApp();
@@ -680,8 +686,9 @@ describe('org-hierarchy routes', () => {
       .set('Cookie', cookie);
 
     expect(listResponse.status).toBe(200);
-    expect(listResponse.body).toHaveLength(1);
-    expect(listResponse.body[0]).toMatchObject({
+    const divisions = responseList<{ companyId: string; name: string }>(listResponse);
+    expect(divisions).toHaveLength(1);
+    expect(divisions[0]).toMatchObject({
       companyId: 'company-a',
       name: 'Retail',
     });
@@ -739,7 +746,7 @@ describe('org-hierarchy routes', () => {
       .set('Cookie', cookie)
       .send({ name: 'Retail' });
 
-    const divisionId = createResponse.body.id;
+    const divisionId = responseId(createResponse);
     const updateResponse = await request(app)
       .patch(`/divisions/${divisionId}`)
       .set('Cookie', cookie)
@@ -833,7 +840,7 @@ describe('org-hierarchy routes', () => {
       .post('/companies/company-a/divisions')
       .set('Cookie', cookie)
       .send({ name: 'Retail' });
-    const divisionId = divRes.body.id;
+    const divisionId = responseId(divRes);
 
     await request(app)
       .post('/companies/company-a/locals')
@@ -860,7 +867,7 @@ describe('org-hierarchy routes', () => {
     orgGateway.areas.push({
       id: 'area-1',
       companyId: 'company-a',
-      divisionId: divisionResponse.body.id,
+      divisionId: responseId(divisionResponse),
       localId: null,
       name: 'Operations',
       kind: 'area',
@@ -868,7 +875,7 @@ describe('org-hierarchy routes', () => {
     });
 
     const deleteResponse = await request(app)
-      .delete(`/divisions/${divisionResponse.body.id}`)
+      .delete(`/divisions/${responseId(divisionResponse)}`)
       .set('Cookie', cookie);
 
     expect(deleteResponse.status).toBe(409);
@@ -894,7 +901,7 @@ describe('org-hierarchy routes', () => {
       .post('/companies/company-a/divisions')
       .set('Cookie', cookie)
       .send({ name: 'Retail' });
-    const divisionId = divRes.body.id;
+    const divisionId = responseId(divRes);
 
     const localRes = await request(app)
       .post('/companies/company-a/locals')
@@ -909,13 +916,13 @@ describe('org-hierarchy routes', () => {
     });
 
     const reparentRes = await request(app)
-      .patch(`/locals/${localRes.body.id}`)
+      .patch(`/locals/${responseId(localRes)}`)
       .set('Cookie', cookie)
       .send({ divisionId: null });
 
     expect(reparentRes.status).toBe(200);
     expect(reparentRes.body).toMatchObject({
-      id: localRes.body.id,
+      id: responseId(localRes),
       divisionId: null,
     });
   });
@@ -930,10 +937,11 @@ describe('org-hierarchy routes', () => {
       .set('Cookie', cookie)
       .send({ name: 'Store A' });
 
-    orgGateway.itemCountsByLocalId.set(localRes.body.id, 1);
+    const localId = responseId(localRes);
+    orgGateway.itemCountsByLocalId.set(localId, 1);
 
     const deleteRes = await request(app)
-      .delete(`/locals/${localRes.body.id}`)
+      .delete(`/locals/${localId}`)
       .set('Cookie', cookie);
 
     expect(deleteRes.status).toBe(409);
@@ -949,10 +957,11 @@ describe('org-hierarchy routes', () => {
       .set('Cookie', cookie)
       .send({ name: 'Store A' });
 
-    orgGateway.membershipCountsByLocalId.set(localRes.body.id, 1);
+    const localId = responseId(localRes);
+    orgGateway.membershipCountsByLocalId.set(localId, 1);
 
     const deleteRes = await request(app)
-      .delete(`/locals/${localRes.body.id}`)
+      .delete(`/locals/${localId}`)
       .set('Cookie', cookie);
 
     expect(deleteRes.status).toBe(409);
@@ -975,7 +984,7 @@ describe('org-hierarchy routes', () => {
     const divisionLocalResponse = await request(app)
       .post('/companies/company-a/locals')
       .set('Cookie', cookie)
-      .send({ name: 'Store A', divisionId: divisionResponse.body.id });
+      .send({ name: 'Store A', divisionId: responseId(divisionResponse) });
 
     expect(companyLocalResponse.status).toBe(201);
     expect(divisionLocalResponse.status).toBe(201);
@@ -1014,14 +1023,14 @@ describe('org-hierarchy routes', () => {
       id: 'area-1',
       companyId: 'company-a',
       divisionId: null,
-      localId: localResponse.body.id,
+      localId: responseId(localResponse),
       name: 'Operations',
       kind: 'area',
       createdAt: new Date(),
     });
 
     const deleteResponse = await request(app)
-      .delete(`/locals/${localResponse.body.id}`)
+      .delete(`/locals/${responseId(localResponse)}`)
       .set('Cookie', cookie);
 
     expect(deleteResponse.status).toBe(409);
@@ -1075,7 +1084,7 @@ describe('org-hierarchy routes', () => {
     const createResponse = await request(app)
       .post('/companies/company-a/areas')
       .set('Cookie', cookie)
-      .send({ name: 'Operations', divisionId: divisionResponse.body.id });
+      .send({ name: 'Operations', divisionId: responseId(divisionResponse) });
 
     expect(createResponse.status).toBe(201);
     expect(createResponse.body).toMatchObject({
@@ -1093,20 +1102,20 @@ describe('org-hierarchy routes', () => {
     expect(listResponse.body).toHaveLength(1);
 
     const updateResponse = await request(app)
-      .patch(`/areas/${createResponse.body.id}`)
+      .patch(`/areas/${responseId(createResponse)}`)
       .set('Cookie', cookie)
-      .send({ name: 'Ops', localId: localResponse.body.id });
+      .send({ name: 'Ops', localId: responseId(localResponse) });
 
     expect(updateResponse.status).toBe(200);
     expect(updateResponse.body).toMatchObject({
-      id: createResponse.body.id,
+      id: responseId(createResponse),
       divisionId: null,
       localId: 'local-1',
       name: 'Ops',
     });
 
     const deleteResponse = await request(app)
-      .delete(`/areas/${createResponse.body.id}`)
+      .delete(`/areas/${responseId(createResponse)}`)
       .set('Cookie', cookie);
 
     expect(deleteResponse.status).toBe(204);
@@ -1131,8 +1140,8 @@ describe('org-hierarchy routes', () => {
       .set('Cookie', cookie)
       .send({
         name: 'Operations',
-        divisionId: divisionResponse.body.id,
-        localId: localResponse.body.id,
+        divisionId: responseId(divisionResponse),
+        localId: responseId(localResponse),
       });
 
     expect(response.status).toBe(400);
@@ -1153,12 +1162,12 @@ describe('org-hierarchy routes', () => {
     const areaResponse = await request(app)
       .post('/companies/company-a/areas')
       .set('Cookie', cookie)
-      .send({ name: 'Operations', localId: localResponse.body.id });
+      .send({ name: 'Operations', localId: responseId(localResponse) });
 
     const createResponse = await request(app)
       .post('/companies/company-a/warehouses')
       .set('Cookie', cookie)
-      .send({ name: 'Main Warehouse', localId: localResponse.body.id });
+      .send({ name: 'Main Warehouse', localId: responseId(localResponse) });
 
     expect(createResponse.status).toBe(201);
     expect(createResponse.body).toMatchObject({
@@ -1176,20 +1185,20 @@ describe('org-hierarchy routes', () => {
     expect(listResponse.body).toHaveLength(1);
 
     const updateResponse = await request(app)
-      .patch(`/warehouses/${createResponse.body.id}`)
+      .patch(`/warehouses/${responseId(createResponse)}`)
       .set('Cookie', cookie)
-      .send({ name: 'Warehouse A', areaId: areaResponse.body.id });
+      .send({ name: 'Warehouse A', areaId: responseId(areaResponse) });
 
     expect(updateResponse.status).toBe(200);
     expect(updateResponse.body).toMatchObject({
-      id: createResponse.body.id,
+      id: responseId(createResponse),
       localId: null,
       areaId: 'area-1',
       name: 'Warehouse A',
     });
 
     const deleteResponse = await request(app)
-      .delete(`/warehouses/${createResponse.body.id}`)
+      .delete(`/warehouses/${responseId(createResponse)}`)
       .set('Cookie', cookie);
 
     expect(deleteResponse.status).toBe(204);
@@ -1207,15 +1216,15 @@ describe('org-hierarchy routes', () => {
     const areaResponse = await request(app)
       .post('/companies/company-a/areas')
       .set('Cookie', cookie)
-      .send({ name: 'Operations', localId: localResponse.body.id });
+      .send({ name: 'Operations', localId: responseId(localResponse) });
 
     const response = await request(app)
       .post('/companies/company-a/warehouses')
       .set('Cookie', cookie)
       .send({
         name: 'Main Warehouse',
-        areaId: areaResponse.body.id,
-        localId: localResponse.body.id,
+        areaId: responseId(areaResponse),
+        localId: responseId(localResponse),
       });
 
     expect(response.status).toBe(400);
@@ -1273,12 +1282,12 @@ describe('org-hierarchy routes', () => {
     const areaResponse = await request(app)
       .post('/companies/company-a/areas')
       .set('Cookie', cookie)
-      .send({ name: 'Operations', localId: localResponse.body.id });
+      .send({ name: 'Operations', localId: responseId(localResponse) });
 
     const createResponse = await request(app)
       .post('/companies/company-a/points-of-sale')
       .set('Cookie', cookie)
-      .send({ name: 'POS 01', localId: localResponse.body.id });
+      .send({ name: 'POS 01', localId: responseId(localResponse) });
 
     expect(createResponse.status).toBe(201);
     expect(createResponse.body).toMatchObject({
@@ -1296,20 +1305,20 @@ describe('org-hierarchy routes', () => {
     expect(listResponse.body).toHaveLength(1);
 
     const updateResponse = await request(app)
-      .patch(`/points-of-sale/${createResponse.body.id}`)
+      .patch(`/points-of-sale/${responseId(createResponse)}`)
       .set('Cookie', cookie)
-      .send({ name: 'POS A', areaId: areaResponse.body.id });
+      .send({ name: 'POS A', areaId: responseId(areaResponse) });
 
     expect(updateResponse.status).toBe(200);
     expect(updateResponse.body).toMatchObject({
-      id: createResponse.body.id,
+      id: responseId(createResponse),
       localId: null,
       areaId: 'area-1',
       name: 'POS A',
     });
 
     const deleteResponse = await request(app)
-      .delete(`/points-of-sale/${createResponse.body.id}`)
+      .delete(`/points-of-sale/${responseId(createResponse)}`)
       .set('Cookie', cookie);
 
     expect(deleteResponse.status).toBe(204);
@@ -1327,15 +1336,15 @@ describe('org-hierarchy routes', () => {
     const areaResponse = await request(app)
       .post('/companies/company-a/areas')
       .set('Cookie', cookie)
-      .send({ name: 'Operations', localId: localResponse.body.id });
+      .send({ name: 'Operations', localId: responseId(localResponse) });
 
     const response = await request(app)
       .post('/companies/company-a/points-of-sale')
       .set('Cookie', cookie)
       .send({
         name: 'POS 01',
-        areaId: areaResponse.body.id,
-        localId: localResponse.body.id,
+        areaId: responseId(areaResponse),
+        localId: responseId(localResponse),
       });
 
     expect(response.status).toBe(400);
