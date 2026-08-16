@@ -42,14 +42,14 @@ Chain strategy: stacked-to-main
 
 ## Phase 3: Per-migration test (strict TDD)
 
-- [ ] 3.1 Create `migration-0027-inventory-foundation.test.ts`: (a) `applyMigrationsThrough(0026) → applyMigrationFile(0027)` asserts columns/FKs/enums; (b) seed company+users+items+scope_nodes (warehouse, POS, division) and assert type-shape CHECKs, NULLS-NOT-DISTINCT, quantity bounds, lot uniqueness, reversal confirmed-only, scope-type trigger.
-- [ ] 3.2 `pnpm --filter api test migration-0027-inventory-foundation` pass; commit `test(db-inventory): cover 0027 constraints, NULLS NOT DISTINCT, and scope triggers`.
+- [x] 3.1 Create `migration-0027-inventory-foundation.test.ts`: (a) `applyMigrationsThrough(0026) → applyMigrationFile(0027)` asserts columns/FKs/enums; (b) seed company+users+items+scope_nodes (warehouse, POS, division) and assert type-shape CHECKs, NULLS-NOT-DISTINCT, quantity bounds, lot uniqueness, reversal confirmed-only, scope-type trigger.
+- [x] 3.2 `pnpm --filter api test migration-0027-inventory-foundation` pass; commit `test(db-inventory): cover 0027 constraints, NULLS NOT DISTINCT, and scope triggers`.
 
 ## Phase 4: Verification
 
 - [ ] 4.1 Full `pnpm --filter api test`, `pnpm --filter api typecheck`, `pnpm --filter api lint` — all pass.
-- [ ] 4.2 Apply on fresh DB via `pnpm --filter api db:migrate`; confirm `\d+ stock_quants` lists `stock_quants_company_item_scope_lot_uk` as `NULLS NOT DISTINCT` and both triggers via `\df+`.
+- [x] 4.2 Apply on fresh DB via `pnpm --filter api db:migrate`; confirm `\d+ stock_quants` lists `stock_quants_company_item_scope_lot_uk` as `NULLS NOT DISTINCT` and both triggers via `\df+`.
 
 ## Phase 5: Doc correction
 
-- [ ] 5.1 In design.md Architecture Decisions (`UNIQUE NULLS NOT DISTINCT` for quant), replace stale "Drizzle cannot emit `NULLS NOT DISTINCT`" with Phase 1.2 evaluation result.
+- [x] 5.1 In design.md Architecture Decisions (`UNIQUE NULLS NOT DISTINCT` for quant), replace stale "Drizzle cannot emit `NULLS NOT DISTINCT`" with Phase 1.2 evaluation result.
