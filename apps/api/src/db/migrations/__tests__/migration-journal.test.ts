@@ -41,13 +41,18 @@ const expectedSnapshotTags = [
   '0014_roles_management',
   '0016_canonical_scope_nodes',
   '0017_role_assignment_scope_fk',
+  '0026_timesheets',
 ] as const;
 
 const expectedJournalTags = [
-  ...expectedSnapshotTags,
+  '0013_daily_clint_barton',
+  '0014_roles_management',
+  '0016_canonical_scope_nodes',
+  '0017_role_assignment_scope_fk',
   '0023_employee_master',
   '0024_hr_reporting_line_integrity',
   '0025_hr_responsibility_invitations',
+  '0026_timesheets',
 ] as const;
 
 describe('migration journal metadata', () => {
@@ -82,14 +87,16 @@ describe('migration journal metadata', () => {
       true,
       true,
       true,
+      true,
     ]);
 
     expect(snapshots.map(({ entry }) => entry?.tag ?? null)).toEqual([
       ...expectedSnapshotTags,
     ]);
-    expect(snapshots.map(({ entry }) => entry?.idx ?? null)).toEqual([13, 14, 15, 16]);
-    expect(snapshots.map(({ entry }) => entry?.version ?? null)).toEqual(['7', '7', '7', '7']);
+    expect(snapshots.map(({ entry }) => entry?.idx ?? null)).toEqual([13, 14, 15, 16, 25]);
+    expect(snapshots.map(({ entry }) => entry?.version ?? null)).toEqual(['7', '7', '7', '7', '7']);
     expect(snapshots.map(({ entry }) => entry?.breakpoints ?? null)).toEqual([
+      true,
       true,
       true,
       true,
@@ -99,13 +106,14 @@ describe('migration journal metadata', () => {
     expect(snapshots[1]?.snapshot.prevId).toBe(snapshots[0]?.snapshot.id);
     expect(snapshots[2]?.snapshot.prevId).toBe(snapshots[1]?.snapshot.id);
     expect(snapshots[3]?.snapshot.prevId).toBe(snapshots[2]?.snapshot.id);
+    expect(snapshots[4]?.snapshot.prevId).toBe(snapshots[3]?.snapshot.id);
 
     expect(
       expectedJournalTags.map((tag) => entriesByTag.get(tag)?.tag ?? null),
     ).toEqual([...expectedJournalTags]);
     expect(
       expectedJournalTags.map((tag) => entriesByTag.get(tag)?.idx ?? null),
-    ).toEqual([13, 14, 15, 16, 22, 23, 24]);
+    ).toEqual([13, 14, 15, 16, 22, 23, 24, 25]);
   });
 
   it('lets drizzle-kit migrate apply cleanly on a fresh local postgres database', async () => {
