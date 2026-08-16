@@ -99,8 +99,9 @@ export const createNoopNodeManagementInvitationEmailSender = ({
 }: {
   reason?: string;
 } = {}): NodeManagementInvitationEmailSender => ({
-  sendInvitationEmail: async () => ({
-    status: 'skipped',
-    message: reason,
-  }),
+  sendInvitationEmail: () =>
+    Promise.resolve({
+      status: 'skipped',
+      message: reason,
+    }),
 });

@@ -68,27 +68,27 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
 
   lastCreateAssignmentInput: Parameters<HrEmployeesGateway['createAssignment']>[0] | null = null;
 
-  async createEmployee(_input: { companyId: string }): Promise<Employee> {
+  createEmployee(_input: { companyId: string }): Promise<Employee> {
     throw new Error('not implemented');
   }
 
-  async updateEmployee(_companyId: string, _employeeId: string): Promise<Employee | null> {
+  updateEmployee(_companyId: string, _employeeId: string): Promise<Employee | null> {
     throw new Error('not implemented');
   }
 
-  async getEmployeeById(companyId: string, employeeId: string) {
-    return (
+  getEmployeeById(companyId: string, employeeId: string) {
+    return Promise.resolve(
       this.employees.find(
         (employee) => employee.companyId === companyId && employee.id === employeeId,
       ) ?? null
     );
   }
 
-  async listEmployees(companyId: string) {
-    return this.employees.filter((employee) => employee.companyId === companyId);
+  listEmployees(companyId: string) {
+    return Promise.resolve(this.employees.filter((employee) => employee.companyId === companyId));
   }
 
-  async createPosition(_input: {
+  createPosition(_input: {
     companyId: string;
     name: string;
     reportsToPositionId: string | null;
@@ -98,33 +98,33 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
     throw new Error('not implemented');
   }
 
-  async getPositionById(companyId: string, positionId: string) {
-    return (
+  getPositionById(companyId: string, positionId: string) {
+    return Promise.resolve(
       this.positions.find(
         (position) => position.companyId === companyId && position.id === positionId,
       ) ?? null
     );
   }
 
-  async listPositions(companyId: string) {
-    return this.positions.filter((position) => position.companyId === companyId);
+  listPositions(companyId: string) {
+    return Promise.resolve(this.positions.filter((position) => position.companyId === companyId));
   }
 
-  async countActivePrimaryAssignmentsForPosition(positionId: string) {
-    return this.assignments.filter(
+  countActivePrimaryAssignmentsForPosition(positionId: string) {
+    return Promise.resolve(this.assignments.filter(
       (assignment) => assignment.positionId === positionId && assignment.isPrimary && assignment.endedAt === null,
-    ).length;
+    ).length);
   }
 
-  async findScopeNode(companyId: string, scopeNodeId: string) {
-    return (
+  findScopeNode(companyId: string, scopeNodeId: string) {
+    return Promise.resolve(
       this.scopeNodes.find(
         (scopeNode) => scopeNode.companyId === companyId && scopeNode.id === scopeNodeId,
       ) ?? null
     );
   }
 
-  async createAssignment(input: Parameters<HrEmployeesGateway['createAssignment']>[0]) {
+  createAssignment(input: Parameters<HrEmployeesGateway['createAssignment']>[0]) {
     this.lastCreateAssignmentInput = input;
 
     const existingActivePrimary = this.assignments.find(
@@ -160,21 +160,21 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
     };
 
     this.assignments.push(created);
-    return created;
+    return Promise.resolve(created);
   }
 
-  async listAssignmentHistory(companyId: string, employeeId: string) {
-    return this.assignments
+  listAssignmentHistory(companyId: string, employeeId: string) {
+    return Promise.resolve(this.assignments
       .filter((assignment) => assignment.companyId === companyId && assignment.employeeId === employeeId)
       .map((assignment) => ({
         ...assignment,
         positionName: this.positions.find((position) => position.id === assignment.positionId)?.name ?? '',
         scopeNodeName: this.scopeNodes.find((node) => node.id === assignment.scopeNodeId)?.name ?? '',
-      }));
+      })));
   }
 
-  async getActivePrimaryAssignmentByEmployeeId(companyId: string, employeeId: string) {
-    return (
+  getActivePrimaryAssignmentByEmployeeId(companyId: string, employeeId: string) {
+    return Promise.resolve(
       this.assignments.find(
         (assignment) =>
           assignment.companyId === companyId &&
@@ -185,8 +185,8 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
     );
   }
 
-  async getActivePrimaryAssignmentByPositionId(companyId: string, positionId: string) {
-    return (
+  getActivePrimaryAssignmentByPositionId(companyId: string, positionId: string) {
+    return Promise.resolve(
       this.assignments.find(
         (assignment) =>
           assignment.companyId === companyId &&
@@ -197,7 +197,7 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
     );
   }
 
-  async listDirectReportAssignments(companyId: string, managerPositionId: string) {
+  listDirectReportAssignments(companyId: string, managerPositionId: string) {
     const directReportPositionIds = this.positions
       .filter(
         (position) =>
@@ -205,13 +205,13 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
       )
       .map((position) => position.id);
 
-    return this.assignments.filter(
+    return Promise.resolve(this.assignments.filter(
       (assignment) =>
         assignment.companyId === companyId &&
         assignment.isPrimary &&
         assignment.endedAt === null &&
         directReportPositionIds.includes(assignment.positionId),
-    );
+    ));
   }
 }
 

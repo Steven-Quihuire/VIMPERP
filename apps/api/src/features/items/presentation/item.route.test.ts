@@ -1199,14 +1199,14 @@ describe('item routes', () => {
   });
 
   it('derives localId from activeScope only when the active scope is local', async () => {
-    const listItems = async (input: {
+    const listItems = (input: {
       companyId: string;
       localId: string | null;
       capabilities: ('catalog.read' | 'catalog.write' | 'catalog.delete')[];
       companyStatus: 'active' | 'suspended' | 'provisioning_failed';
       limit: number;
       cursor?: string;
-    }) => ({ items: [{ id: input.localId ?? 'company-scope' }], nextCursor: null });
+    }) => Promise.resolve({ items: [{ id: input.localId ?? 'company-scope' }], nextCursor: null });
 
     const app = express();
     app.use(express.json());
@@ -1230,13 +1230,13 @@ describe('item routes', () => {
           };
           next();
         },
-        createItem: async () => ({ itemId: 'item-1' }),
-        updateItem: async () => ({ itemId: 'item-1' }),
-        softDeleteItem: async () => undefined,
-        getItem: async () => null,
+        createItem: () => Promise.resolve({ itemId: 'item-1' }),
+        updateItem: () => Promise.resolve({ itemId: 'item-1' }),
+        softDeleteItem: () => Promise.resolve(undefined),
+        getItem: () => Promise.resolve(null),
         listItems,
-        createCategory: async () => ({ categoryId: 'category-1' }),
-        updateCategory: async () => ({ categoryId: 'category-1' }),
+        createCategory: () => Promise.resolve({ categoryId: 'category-1' }),
+        updateCategory: () => Promise.resolve({ categoryId: 'category-1' }),
       }),
     );
 
@@ -1367,16 +1367,16 @@ describe('item routes', () => {
 
   it('honors scoped role permissions from the active scope in session resolution', async () => {
     const { app, authGateway, ownerSessionCookie, itemGateway } = await createAuthenticatedApp({
-      computeEffectivePermissions: async ({ userId, currentContext }) => {
+      computeEffectivePermissions: ({ userId, currentContext }) => {
         if (
           userId === 'owner-user' &&
           currentContext.scopeType === 'warehouse' &&
           currentContext.scopeId === 'warehouse-1'
         ) {
-          return ['catalog.delete'];
+          return Promise.resolve(['catalog.delete']);
         }
 
-        return [];
+        return Promise.resolve([]);
       },
     });
     itemGateway.items.push({

@@ -53,22 +53,26 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
   async findUserById(userId: string) {
     return await Promise.resolve(this.usersById.get(userId) ?? null);
   }
-  async createUser(user: AuthUser) {
+  createUser(user: AuthUser) {
     this.addUser(user);
-  }
-  async createUserWithSession(user: AuthUser, session: AuthSessionRecord) {
+  
+    return Promise.resolve();}
+  createUserWithSession(user: AuthUser, session: AuthSessionRecord) {
     this.addUser(user);
     this.sessions.set(session.token, session);
-  }
-  async createSession(session: AuthSessionRecord) {
+  
+    return Promise.resolve();}
+  createSession(session: AuthSessionRecord) {
     this.sessions.set(session.token, session);
-  }
+  
+    return Promise.resolve();}
   async findSession(token: string) {
     return await Promise.resolve(this.sessions.get(token) ?? null);
   }
-  async deleteSession(token: string) {
+  deleteSession(token: string) {
     this.sessions.delete(token);
-  }
+  
+    return Promise.resolve();}
   async listMemberships(userId: string) {
     return await Promise.resolve(this.membershipsByUserId.get(userId) ?? []);
   }
@@ -78,15 +82,17 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
   async findCompanyStatus() {
     return await Promise.resolve('active' as const);
   }
-  async setActiveCompanyId(userId: string, companyId: string) {
+  setActiveCompanyId(userId: string, companyId: string) {
     this.activeCompanyByUserId.set(userId, companyId);
-  }
+  
+    return Promise.resolve();}
   async findActiveScopeNodeId(userId: string) {
     return await Promise.resolve(this.activeScopeNodeIdByUserId.get(userId) ?? null);
   }
-  async setActiveScopeNodeId(userId: string, scopeNodeId: string | null) {
+  setActiveScopeNodeId(userId: string, scopeNodeId: string | null) {
     this.activeScopeNodeIdByUserId.set(userId, scopeNodeId);
-  }
+  
+    return Promise.resolve();}
   async findActiveLocalId() {
     return await Promise.resolve(null);
   }
@@ -197,8 +203,8 @@ class InMemoryApprovalPolicyGateway implements ApprovalPolicyGateway {
 }
 
 const passwordHasher: PasswordHasher = {
-  hash: async (value) => `hashed:${value}`,
-  verify: async (hash, value) => hash === `hashed:${value}`,
+  hash: (value) => Promise.resolve(`hashed:${value}`),
+  verify: (hash, value) => Promise.resolve(hash === `hashed:${value}`),
 };
 
 const createSessionTokenService = (): SessionTokenService => {
@@ -228,10 +234,10 @@ const getSessionCookie = (headers: string | string[] | undefined) => {
 
 const createAuthenticatedApp = async ({
   approvalPolicyGateway = new InMemoryApprovalPolicyGateway(),
-  computeEffectivePermissions = async () => [
+  computeEffectivePermissions = () => Promise.resolve([
     'hr.approval_policy.read',
     'hr.approval_policy.write',
-  ],
+  ]),
 }: {
   approvalPolicyGateway?: InMemoryApprovalPolicyGateway;
   computeEffectivePermissions?: (input: {
@@ -371,7 +377,7 @@ describe('approval policy router', () => {
 
   it('returns 403 when the session lacks hr approval-policy permissions', async () => {
     const { app, ownerSessionCookie } = await createAuthenticatedApp({
-      computeEffectivePermissions: async () => [],
+      computeEffectivePermissions: () => Promise.resolve([]),
     });
 
     const response = await request(app)

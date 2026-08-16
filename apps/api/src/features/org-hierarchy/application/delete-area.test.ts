@@ -4,60 +4,60 @@ import { AreaConflictError, type OrgHierarchyGateway } from '../domain/org-hiera
 import { createDeleteAreaUseCase } from './delete-area';
 
 const createGateway = (): OrgHierarchyGateway => ({
-  createDivision: async () => {
+  createDivision: () => {
     throw new Error('not implemented');
   },
-  listDivisions: async () => [],
-  findDivisionById: async () => null,
-  updateDivision: async () => {
+  listDivisions: () => Promise.resolve([]),
+  findDivisionById: () => Promise.resolve(null),
+  updateDivision: () => {
     throw new Error('not implemented');
   },
   deleteDivision: async () => {},
-  countLocalsInDivision: async () => 0,
-  createLocal: async () => {
+  countLocalsInDivision: () => Promise.resolve(0),
+  createLocal: () => {
     throw new Error('not implemented');
   },
-  listLocals: async () => [],
-  findLocalById: async () => null,
-  updateLocal: async () => {
+  listLocals: () => Promise.resolve([]),
+  findLocalById: () => Promise.resolve(null),
+  updateLocal: () => {
     throw new Error('not implemented');
   },
   deleteLocal: async () => {},
-  countItemsInLocal: async () => 0,
-  countMembershipsInLocal: async () => 0,
-  countAreasInDivision: async () => 0,
-  countAreasInLocal: async () => 0,
-  createArea: async () => {
+  countItemsInLocal: () => Promise.resolve(0),
+  countMembershipsInLocal: () => Promise.resolve(0),
+  countAreasInDivision: () => Promise.resolve(0),
+  countAreasInLocal: () => Promise.resolve(0),
+  createArea: () => {
     throw new Error('not implemented');
   },
-  listAreas: async () => [],
-  findAreaById: async () => null,
-  updateArea: async () => {
+  listAreas: () => Promise.resolve([]),
+  findAreaById: () => Promise.resolve(null),
+  updateArea: () => {
     throw new Error('not implemented');
   },
   deleteArea: async () => {},
-  countWarehousesInArea: async () => 0,
-  countPointsOfSaleInArea: async () => 0,
-  countEmployeesInArea: async () => 1,
-  createWarehouse: async () => {
+  countWarehousesInArea: () => Promise.resolve(0),
+  countPointsOfSaleInArea: () => Promise.resolve(0),
+  countEmployeesInArea: () => Promise.resolve(1),
+  createWarehouse: () => {
     throw new Error('not implemented');
   },
-  listWarehouses: async () => [],
-  findWarehouseById: async () => null,
-  updateWarehouse: async () => {
+  listWarehouses: () => Promise.resolve([]),
+  findWarehouseById: () => Promise.resolve(null),
+  updateWarehouse: () => {
     throw new Error('not implemented');
   },
   deleteWarehouse: async () => {},
-  createPointOfSale: async () => {
+  createPointOfSale: () => {
     throw new Error('not implemented');
   },
-  listPointsOfSale: async () => [],
-  findPointOfSaleById: async () => null,
-  updatePointOfSale: async () => {
+  listPointsOfSale: () => Promise.resolve([]),
+  findPointOfSaleById: () => Promise.resolve(null),
+  updatePointOfSale: () => {
     throw new Error('not implemented');
   },
   deletePointOfSale: async () => {},
-  getScopeNodeDependencyCounts: async () => ({
+  getScopeNodeDependencyCounts: () => Promise.resolve({
     roleAssignments: 0,
     responsibilities: 0,
     managementInvitations: 0,

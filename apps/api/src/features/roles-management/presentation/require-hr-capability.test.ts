@@ -26,7 +26,7 @@ describe('createRequireHrCapability', () => {
   it('allows the request when the required hr permission is present', async () => {
     const next = vi.fn();
     const requireHrCapability = createRequireHrCapability({
-      computeEffectivePermissions: async () => ['hr.approval_policy.read'],
+      computeEffectivePermissions: () => Promise.resolve(['hr.approval_policy.read']),
     });
 
     await requireHrCapability('hr.approval_policy.read')(
@@ -41,7 +41,7 @@ describe('createRequireHrCapability', () => {
   it('returns forbidden when the permission is missing', async () => {
     const next = vi.fn();
     const requireHrCapability = createRequireHrCapability({
-      computeEffectivePermissions: async () => [],
+      computeEffectivePermissions: () => Promise.resolve([]),
     });
 
     await requireHrCapability('hr.approval_policy.write')(
@@ -55,12 +55,12 @@ describe('createRequireHrCapability', () => {
 
   it('forwards a custom permission scope into permission evaluation', async () => {
     const next = vi.fn();
-    const computeEffectivePermissions = vi.fn(async () => ['hr.employees.read']);
+    const computeEffectivePermissions = vi.fn(() => Promise.resolve(['hr.employees.read']));
     const requireHrCapability = createRequireHrCapability({
       computeEffectivePermissions,
     });
 
-    await requireHrCapability('hr.employees.read', async () => ({
+    await requireHrCapability('hr.employees.read', () => ({
       kind: 'direct_reports',
     }))(
       {} as never,

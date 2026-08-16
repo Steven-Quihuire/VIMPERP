@@ -5,22 +5,22 @@ import type { ErpAccessGateway } from '../../hr-erp-access/domain/erp-access-inv
 import { createEvaluateReportingLineScopes } from './evaluate-reporting-line-scopes';
 
 const createHrEmployeesGateway = (): HrEmployeesGateway => ({
-  createEmployee: async () => ({
+  createEmployee: () => Promise.resolve({
     id: 'employee-1',
     companyId: 'company-1',
     createdAt: new Date('2026-08-13T10:00:00.000Z'),
   }),
-  updateEmployee: async () => null,
-  getEmployeeById: async (_companyId, employeeId) =>
-    ['employee-1', 'employee-2', 'employee-3'].includes(employeeId)
+  updateEmployee: () => Promise.resolve(null),
+  getEmployeeById: (_companyId, employeeId) =>
+    Promise.resolve(['employee-1', 'employee-2', 'employee-3'].includes(employeeId)
       ? {
           id: employeeId,
           companyId: 'company-1',
           createdAt: new Date('2026-08-13T10:00:00.000Z'),
         }
-      : null,
-  listEmployees: async () => [],
-  createPosition: async () => ({
+      : null),
+  listEmployees: () => Promise.resolve([]),
+  createPosition: () => Promise.resolve({
     id: 'position-1',
     companyId: 'company-1',
     name: 'Lead',
@@ -31,11 +31,11 @@ const createHrEmployeesGateway = (): HrEmployeesGateway => ({
     isActive: true,
     createdAt: new Date('2026-08-13T10:00:00.000Z'),
   }),
-  getPositionById: async () => null,
-  listPositions: async () => [],
-  countActivePrimaryAssignmentsForPosition: async () => 0,
-  findScopeNode: async () => null,
-  createAssignment: async () => ({
+  getPositionById: () => Promise.resolve(null),
+  listPositions: () => Promise.resolve([]),
+  countActivePrimaryAssignmentsForPosition: () => Promise.resolve(0),
+  findScopeNode: () => Promise.resolve(null),
+  createAssignment: () => Promise.resolve({
     id: 'assignment-1',
     companyId: 'company-1',
     employeeId: 'employee-1',
@@ -46,9 +46,9 @@ const createHrEmployeesGateway = (): HrEmployeesGateway => ({
     isPrimary: true,
     createdAt: new Date('2026-08-13T10:00:00.000Z'),
   }),
-  listAssignmentHistory: async () => [],
-  getActivePrimaryAssignmentByEmployeeId: async (_companyId, employeeId) =>
-    employeeId === 'employee-1'
+  listAssignmentHistory: () => Promise.resolve([]),
+  getActivePrimaryAssignmentByEmployeeId: (_companyId, employeeId) =>
+    Promise.resolve(employeeId === 'employee-1'
       ? {
           id: 'assignment-actor',
           companyId: 'company-1',
@@ -60,9 +60,9 @@ const createHrEmployeesGateway = (): HrEmployeesGateway => ({
           isPrimary: true,
           createdAt: new Date('2026-08-13T10:00:00.000Z'),
         }
-      : null,
-  getActivePrimaryAssignmentByPositionId: async () => null,
-  listDirectReportAssignments: async () => [
+      : null),
+  getActivePrimaryAssignmentByPositionId: () => Promise.resolve(null),
+  listDirectReportAssignments: () => Promise.resolve([
     {
       id: 'assignment-direct-1',
       companyId: 'company-1',
@@ -85,22 +85,22 @@ const createHrEmployeesGateway = (): HrEmployeesGateway => ({
       isPrimary: true,
       createdAt: new Date('2026-08-13T10:00:00.000Z'),
     },
-  ],
+  ]),
 });
 
 const createErpAccessGateway = (): ErpAccessGateway => ({
-  getEmployeeById: async () => null,
-  createInvitation: async () => {
+  getEmployeeById: () => Promise.resolve(null),
+  createInvitation: () => {
     throw new Error('not implemented');
   },
-  listPendingInvitationsByCompany: async () => [],
-  findInvitationByTokenHash: async () => null,
-  findUserByEmail: async () => null,
-  findUserByIdentifier: async () => null,
-  findUserMemberships: async () => [],
-  getActiveLinkByEmployeeId: async () => null,
-  getActiveLinkByUserId: async (_companyId, userId) =>
-    userId === 'user-1'
+  listPendingInvitationsByCompany: () => Promise.resolve([]),
+  findInvitationByTokenHash: () => Promise.resolve(null),
+  findUserByEmail: () => Promise.resolve(null),
+  findUserByIdentifier: () => Promise.resolve(null),
+  findUserMemberships: () => Promise.resolve([]),
+  getActiveLinkByEmployeeId: () => Promise.resolve(null),
+  getActiveLinkByUserId: (_companyId, userId) =>
+    Promise.resolve(userId === 'user-1'
       ? {
           id: 'link-1',
           companyId: 'company-1',
@@ -110,7 +110,7 @@ const createErpAccessGateway = (): ErpAccessGateway => ({
           createdAt: new Date('2026-08-13T10:00:00.000Z'),
           revokedAt: null,
         }
-      : null,
+      : null),
   acceptInvitation: async () => {},
   revokeAccess: async () => {},
 });

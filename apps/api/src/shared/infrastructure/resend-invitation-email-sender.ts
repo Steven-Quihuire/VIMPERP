@@ -61,5 +61,5 @@ export const createResendInvitationEmailSender = ({
 export const createNoopInvitationEmailSender = ({
   reason = 'Invitation email delivery is not configured.',
 }: { reason?: string } = {}): InvitationEmailSender => ({
-  sendInvitationEmail: async () => ({ status: 'skipped', message: reason }),
+  sendInvitationEmail: () => Promise.resolve({ status: 'skipped', message: reason }),
 });

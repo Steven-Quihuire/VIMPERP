@@ -31,22 +31,22 @@ const createTestApp = (
         };
         next();
       },
-      getState: async (companyId) => ({
+      getState: (companyId) => Promise.resolve({
         companyId,
         hasResponsibles: false,
         responsibles: [],
         availableUsers: [],
         pendingInvitations: [],
       }),
-      assign: async () => ({
+      assign: () => Promise.resolve({
         userId: 'user-1',
         email: 'user@example.com',
         username: 'user',
       }),
-      listPendingInvitations: async () => [],
-      createInvitation: async () => ({ invitationId: 'inv-1' }),
-      getInvitation: async () => ({ id: 'inv-1' }),
-      acceptInvitation: async () => ({ token: 'session-1' }),
+      listPendingInvitations: () => Promise.resolve([]),
+      createInvitation: () => Promise.resolve({ invitationId: 'inv-1' }),
+      getInvitation: () => Promise.resolve({ id: 'inv-1' }),
+      acceptInvitation: () => Promise.resolve({ token: 'session-1' }),
       sessionCookieName: 'vimcore_session',
       secureCookies: false,
       ...overrides,
@@ -71,7 +71,7 @@ describe('HR responsibility invitation routes', () => {
 
   it('maps an active duplicate to a conflict without creating permissions', async () => {
     const app = createTestApp({
-      createInvitation: async () => {
+      createInvitation: () => {
         throw new HrResponsibilityInvitationDuplicateError();
       },
     });

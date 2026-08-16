@@ -130,10 +130,10 @@ describe('createDrizzleHrResponsibilityGateway', () => {
       rolesGateway: createDrizzleRolesGateway(db),
       assignmentsGateway: createDrizzleAssignmentsGateway(db),
       scopeHierarchyGateway: {
-        assertScopeRefBelongsToCompany: async () => undefined,
-        getScopeLineage: async () => [
+        assertScopeRefBelongsToCompany: () => Promise.resolve(undefined),
+        getScopeLineage: () => Promise.resolve([
           { scopeType: 'company', scopeId: 'company-1' },
-        ],
+        ]),
       },
     });
 

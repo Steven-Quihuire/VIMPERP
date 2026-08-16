@@ -13,12 +13,12 @@ const createGateway = (): NodeManagementGateway => ({
   listResponsibilitiesByCompany: vi.fn(),
   listPendingInvitationsByCompany: vi.fn(),
   getResponsibilityState: vi.fn(),
-  findScopeNode: vi.fn(async () => ({
+  findScopeNode: vi.fn(() => Promise.resolve({
     scopeNodeId: 'scope-node-1',
     scopeName: 'Main Local',
     companyName: 'Vimcore Labs',
   })),
-  createInvitation: vi.fn(async (input) => ({
+  createInvitation: vi.fn((input) => Promise.resolve({
     ...input,
     managedRoleKey: nodeManagementRoleKey,
     baseMembershipRole: nodeManagementBaseMembershipRole,
@@ -38,7 +38,7 @@ describe('createCreateNodeManagementInvitationUseCase', () => {
   it('creates the invitation and reports sent delivery metadata', async () => {
     const gateway = createGateway();
     const emailSender: NodeManagementInvitationEmailSender = {
-      sendInvitationEmail: vi.fn(async () => ({ status: 'sent' as const })),
+      sendInvitationEmail: vi.fn(() => Promise.resolve({ status: 'sent' as const })),
     };
     const useCase = createCreateNodeManagementInvitationUseCase({
       gateway,
@@ -78,7 +78,7 @@ describe('createCreateNodeManagementInvitationUseCase', () => {
     const gateway = createGateway();
     const onEmailDeliveryFailure = vi.fn();
     const emailSender: NodeManagementInvitationEmailSender = {
-      sendInvitationEmail: vi.fn(async () => ({
+      sendInvitationEmail: vi.fn(() => Promise.resolve({
         status: 'failed' as const,
         message: 'upstream timeout',
       })),

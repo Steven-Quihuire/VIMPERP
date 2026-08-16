@@ -64,22 +64,26 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
   async findUserById(userId: string) {
     return Promise.resolve(this.usersById.get(userId) ?? null);
   }
-  async createUser(user: AuthUser) {
+  createUser(user: AuthUser) {
     this.addUser(user);
-  }
-  async createUserWithSession(user: AuthUser, session: AuthSessionRecord) {
+  
+    return Promise.resolve();}
+  createUserWithSession(user: AuthUser, session: AuthSessionRecord) {
     this.addUser(user);
     this.sessions.set(session.token, session);
-  }
-  async createSession(session: AuthSessionRecord) {
+  
+    return Promise.resolve();}
+  createSession(session: AuthSessionRecord) {
     this.sessions.set(session.token, session);
-  }
+  
+    return Promise.resolve();}
   async findSession(token: string) {
     return Promise.resolve(this.sessions.get(token) ?? null);
   }
-  async deleteSession(token: string) {
+  deleteSession(token: string) {
     this.sessions.delete(token);
-  }
+  
+    return Promise.resolve();}
   async listMemberships(userId: string) {
     return Promise.resolve(this.membershipsByUserId.get(userId) ?? []);
   }
@@ -91,9 +95,10 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
       this.companyStatusByCompanyId.get(companyId) ?? 'active',
     );
   }
-  async setActiveCompanyId(userId: string, companyId: string) {
+  setActiveCompanyId(userId: string, companyId: string) {
     this.activeCompanyByUserId.set(userId, companyId);
-  }
+  
+    return Promise.resolve();}
   async findActiveScopeNodeId() {
     return Promise.resolve(null);
   }
@@ -103,9 +108,10 @@ class InMemoryAuthGateway implements AuthIdentityGateway {
   async findActiveLocalId(userId: string) {
     return Promise.resolve(this.activeLocalByUserId.get(userId) ?? null);
   }
-  async setActiveLocalId(userId: string, localId: string | null) {
+  setActiveLocalId(userId: string, localId: string | null) {
     this.activeLocalByUserId.set(userId, localId);
-  }
+  
+    return Promise.resolve();}
   async findLocalCompanyById(localId: string) {
     return Promise.resolve(this.localCompanyByLocalId.get(localId) ?? null);
   }
@@ -157,17 +163,17 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
   itemCountsByLocalId = new Map<string, number>();
   membershipCountsByLocalId = new Map<string, number>();
 
-  async getScopeNodeDependencyCounts() {
-    return {
+  getScopeNodeDependencyCounts() {
+    return Promise.resolve({
       roleAssignments: 0,
       responsibilities: 0,
       managementInvitations: 0,
       activeScopePreferences: 0,
       employeeAssignments: 0,
-    };
+    });
   }
 
-  async createDivision(input: { companyId: string; name: string }) {
+  createDivision(input: { companyId: string; name: string }) {
     const existing = this.divisions.find(
       (d) => d.companyId === input.companyId && d.name === input.name,
     );
@@ -187,15 +193,15 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
       createdAt: new Date(),
     };
     this.divisions.push(division);
-    return division;
+    return Promise.resolve(division);
   }
-  async listDivisions(companyId: string) {
-    return this.divisions.filter((d) => d.companyId === companyId);
+  listDivisions(companyId: string) {
+    return Promise.resolve(this.divisions.filter((d) => d.companyId === companyId));
   }
-  async findDivisionById(divisionId: string) {
-    return this.divisions.find((d) => d.id === divisionId) ?? null;
+  findDivisionById(divisionId: string) {
+    return Promise.resolve(this.divisions.find((d) => d.id === divisionId) ?? null);
   }
-  async updateDivision(input: { divisionId: string; name: string }) {
+  updateDivision(input: { divisionId: string; name: string }) {
     const division = this.divisions.find((d) => d.id === input.divisionId);
     if (!division) {
       throw new (class extends Error {
@@ -207,9 +213,9 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
       })();
     }
     division.name = input.name;
-    return division;
+    return Promise.resolve(division);
   }
-  async deleteDivision(input: string | { divisionId: string }) {
+  deleteDivision(input: string | { divisionId: string }) {
     const divisionId = typeof input === 'string' ? input : input.divisionId;
     const idx = this.divisions.findIndex((d) => d.id === divisionId);
     if (idx === -1) {
@@ -222,11 +228,12 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
       })();
     }
     this.divisions.splice(idx, 1);
+  
+    return Promise.resolve();}
+  countLocalsInDivision(divisionId: string) {
+    return Promise.resolve(this.locals.filter((l) => l.divisionId === divisionId).length);
   }
-  async countLocalsInDivision(divisionId: string) {
-    return this.locals.filter((l) => l.divisionId === divisionId).length;
-  }
-  async createLocal(input: {
+  createLocal(input: {
     companyId: string;
     name: string;
     divisionId?: string | null;
@@ -258,12 +265,12 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
       locale: null,
     };
     this.locals.push(local);
-    return local;
+    return Promise.resolve(local);
   }
-  async listLocals(companyId: string) {
-    return this.locals.filter((l) => l.companyId === companyId);
+  listLocals(companyId: string) {
+    return Promise.resolve(this.locals.filter((l) => l.companyId === companyId));
   }
-  async updateLocal(input: {
+  updateLocal(input: {
     localId: string;
     name?: string;
     divisionId?: string | null;
@@ -280,9 +287,9 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
     }
     if (input.name !== undefined) local.name = input.name;
     if (input.divisionId !== undefined) local.divisionId = input.divisionId;
-    return local;
+    return Promise.resolve(local);
   }
-  async deleteLocal(input: string | { localId: string }) {
+  deleteLocal(input: string | { localId: string }) {
     const localId = typeof input === 'string' ? input : input.localId;
     const idx = this.locals.findIndex((l) => l.id === localId);
     if (idx === -1) {
@@ -295,31 +302,32 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
       })();
     }
     this.locals.splice(idx, 1);
+  
+    return Promise.resolve();}
+  countItemsInLocal(localId: string) {
+    return Promise.resolve(this.itemCountsByLocalId.get(localId) ?? 0);
   }
-  async countItemsInLocal(localId: string) {
-    return this.itemCountsByLocalId.get(localId) ?? 0;
+  countMembershipsInLocal(localId: string) {
+    return Promise.resolve(this.membershipCountsByLocalId.get(localId) ?? 0);
   }
-  async countMembershipsInLocal(localId: string) {
-    return this.membershipCountsByLocalId.get(localId) ?? 0;
+  findLocalById(localId: string) {
+    return Promise.resolve(this.locals.find((l) => l.id === localId) ?? null);
   }
-  async findLocalById(localId: string) {
-    return this.locals.find((l) => l.id === localId) ?? null;
+  countAreasInDivision(divisionId: string) {
+    return Promise.resolve(this.areas.filter((area) => area.divisionId === divisionId).length);
   }
-  async countAreasInDivision(divisionId: string) {
-    return this.areas.filter((area) => area.divisionId === divisionId).length;
+  countAreasInLocal(localId: string) {
+    return Promise.resolve(this.areas.filter((area) => area.localId === localId).length);
   }
-  async countAreasInLocal(localId: string) {
-    return this.areas.filter((area) => area.localId === localId).length;
+  countWarehousesInLocal(localId: string) {
+    return Promise.resolve(this.warehouses.filter((warehouse) => warehouse.localId === localId)
+      .length);
   }
-  async countWarehousesInLocal(localId: string) {
-    return this.warehouses.filter((warehouse) => warehouse.localId === localId)
-      .length;
+  countPointsOfSaleInLocal(localId: string) {
+    return Promise.resolve(this.pointsOfSale.filter((point) => point.localId === localId)
+      .length);
   }
-  async countPointsOfSaleInLocal(localId: string) {
-    return this.pointsOfSale.filter((point) => point.localId === localId)
-      .length;
-  }
-  async createArea(input: {
+  createArea(input: {
     companyId: string;
     name: string;
     divisionId?: string | null;
@@ -335,15 +343,15 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
       createdAt: new Date(),
     };
     this.areas.push(area);
-    return area;
+    return Promise.resolve(area);
   }
-  async listAreas(companyId: string) {
-    return this.areas.filter((area) => area.companyId === companyId);
+  listAreas(companyId: string) {
+    return Promise.resolve(this.areas.filter((area) => area.companyId === companyId));
   }
-  async findAreaById(areaId: string) {
-    return this.areas.find((area) => area.id === areaId) ?? null;
+  findAreaById(areaId: string) {
+    return Promise.resolve(this.areas.find((area) => area.id === areaId) ?? null);
   }
-  async updateArea(input: {
+  updateArea(input: {
     areaId: string;
     name?: string | undefined;
     divisionId?: string | null;
@@ -368,9 +376,9 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
       area.localId = input.localId;
       area.divisionId = null;
     }
-    return area;
+    return Promise.resolve(area);
   }
-  async deleteArea(input: string | { areaId: string }) {
+  deleteArea(input: string | { areaId: string }) {
     const areaId = typeof input === 'string' ? input : input.areaId;
     const idx = this.areas.findIndex((area) => area.id === areaId);
     if (idx === -1) {
@@ -383,18 +391,19 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
       })();
     }
     this.areas.splice(idx, 1);
+  
+    return Promise.resolve();}
+  countWarehousesInArea(areaId: string) {
+    return Promise.resolve(this.warehouses.filter((warehouse) => warehouse.areaId === areaId)
+      .length);
   }
-  async countWarehousesInArea(areaId: string) {
-    return this.warehouses.filter((warehouse) => warehouse.areaId === areaId)
-      .length;
+  countPointsOfSaleInArea(areaId: string) {
+    return Promise.resolve(this.pointsOfSale.filter((point) => point.areaId === areaId).length);
   }
-  async countPointsOfSaleInArea(areaId: string) {
-    return this.pointsOfSale.filter((point) => point.areaId === areaId).length;
+  countEmployeesInArea() {
+    return Promise.resolve(0);
   }
-  async countEmployeesInArea() {
-    return 0;
-  }
-  async createWarehouse(input: {
+  createWarehouse(input: {
     companyId: string;
     name: string;
     areaId?: string | null;
@@ -409,19 +418,19 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
       createdAt: new Date(),
     };
     this.warehouses.push(warehouse);
-    return warehouse;
+    return Promise.resolve(warehouse);
   }
-  async listWarehouses(companyId: string) {
-    return this.warehouses.filter(
+  listWarehouses(companyId: string) {
+    return Promise.resolve(this.warehouses.filter(
       (warehouse) => warehouse.companyId === companyId,
-    );
+    ));
   }
-  async findWarehouseById(warehouseId: string) {
-    return (
+  findWarehouseById(warehouseId: string) {
+    return Promise.resolve(
       this.warehouses.find((warehouse) => warehouse.id === warehouseId) ?? null
     );
   }
-  async updateWarehouse(input: {
+  updateWarehouse(input: {
     warehouseId: string;
     name?: string | undefined;
     areaId?: string | null;
@@ -448,9 +457,9 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
       warehouse.localId = input.localId;
       warehouse.areaId = null;
     }
-    return warehouse;
+    return Promise.resolve(warehouse);
   }
-  async deleteWarehouse(input: string | { warehouseId: string }) {
+  deleteWarehouse(input: string | { warehouseId: string }) {
     const warehouseId = typeof input === 'string' ? input : input.warehouseId;
     const idx = this.warehouses.findIndex(
       (warehouse) => warehouse.id === warehouseId,
@@ -465,8 +474,9 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
       })();
     }
     this.warehouses.splice(idx, 1);
-  }
-  async createPointOfSale(input: {
+  
+    return Promise.resolve();}
+  createPointOfSale(input: {
     companyId: string;
     name: string;
     areaId?: string | null;
@@ -481,17 +491,17 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
       createdAt: new Date(),
     };
     this.pointsOfSale.push(pointOfSale);
-    return pointOfSale;
+    return Promise.resolve(pointOfSale);
   }
-  async listPointsOfSale(companyId: string) {
-    return this.pointsOfSale.filter((point) => point.companyId === companyId);
+  listPointsOfSale(companyId: string) {
+    return Promise.resolve(this.pointsOfSale.filter((point) => point.companyId === companyId));
   }
-  async findPointOfSaleById(pointOfSaleId: string) {
-    return (
+  findPointOfSaleById(pointOfSaleId: string) {
+    return Promise.resolve(
       this.pointsOfSale.find((point) => point.id === pointOfSaleId) ?? null
     );
   }
-  async updatePointOfSale(input: {
+  updatePointOfSale(input: {
     pointOfSaleId: string;
     name?: string | undefined;
     areaId?: string | null;
@@ -518,9 +528,9 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
       pointOfSale.localId = input.localId;
       pointOfSale.areaId = null;
     }
-    return pointOfSale;
+    return Promise.resolve(pointOfSale);
   }
-  async deletePointOfSale(input: string | { pointOfSaleId: string }) {
+  deletePointOfSale(input: string | { pointOfSaleId: string }) {
     const pointOfSaleId =
       typeof input === 'string' ? input : input.pointOfSaleId;
     const idx = this.pointsOfSale.findIndex(
@@ -536,12 +546,13 @@ class InMemoryOrgHierarchyGateway implements OrgHierarchyGateway {
       })();
     }
     this.pointsOfSale.splice(idx, 1);
-  }
+  
+    return Promise.resolve();}
 }
 
 const passwordHasher: PasswordHasher = {
-  hash: async (value) => `hashed:${value}`,
-  verify: async (hash, value) => hash === `hashed:${value}`,
+  hash: (value) => Promise.resolve(`hashed:${value}`),
+  verify: (hash, value) => Promise.resolve(hash === `hashed:${value}`),
 };
 
 const createSessionTokenService = (): SessionTokenService => {

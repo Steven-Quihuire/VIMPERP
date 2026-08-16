@@ -6,38 +6,38 @@ import type { RoleAssignmentsGateway } from '../domain/assignments';
 import type { RolesGateway } from '../domain/roles';
 
 const rolesGateway: RolesGateway = {
-  createRole: async () => {
+  createRole: () => {
     throw new Error('not implemented');
   },
-  updateRole: async () => {
+  updateRole: () => {
     throw new Error('not implemented');
   },
-  deleteRole: async () => {
+  deleteRole: () => {
     throw new Error('not implemented');
   },
-  listRoles: async () => [],
-  findRoleById: async () => null,
-  findRoleWithPermissions: async () => null,
-  listRolePermissionRows: async (roleIds) =>
-    [
+  listRoles: () => Promise.resolve([]),
+  findRoleById: () => Promise.resolve(null),
+  findRoleWithPermissions: () => Promise.resolve(null),
+  listRolePermissionRows: (roleIds) =>
+    Promise.resolve([
       { roleId: 'role-subtree', permissionKey: 'catalog.read' },
       { roleId: 'role-exact', permissionKey: 'catalog.write' },
-    ].filter((row) => roleIds.includes(row.roleId)),
-  replaceRolePermissions: async () => {
+    ].filter((row) => roleIds.includes(row.roleId))),
+  replaceRolePermissions: () => {
     throw new Error('not implemented');
   },
-  countAssignmentsForRole: async () => 0,
+  countAssignmentsForRole: () => Promise.resolve(0),
 };
 
 const assignmentsGateway: RoleAssignmentsGateway = {
-  createAssignment: async () => {
+  createAssignment: () => {
     throw new Error('not implemented');
   },
-  deleteAssignment: async () => {
+  deleteAssignment: () => {
     throw new Error('not implemented');
   },
-  findAssignmentById: async () => null,
-  listAssignmentsForUser: async () => [
+  findAssignmentById: () => Promise.resolve(null),
+  listAssignmentsForUser: () => Promise.resolve([
     {
       id: 'assignment-subtree',
       companyId: 'company-a',
@@ -58,8 +58,8 @@ const assignmentsGateway: RoleAssignmentsGateway = {
       scopeId: 'warehouse-1',
       createdAt: new Date('2026-08-11T15:00:00.000Z'),
     },
-  ],
-  countAssignmentsForRole: async () => 0,
+  ]),
+  countAssignmentsForRole: () => Promise.resolve(0),
 };
 
 const scopeResolver = createInMemoryScopeResolver({
@@ -110,7 +110,7 @@ describe('createComputeEffectivePermissionsUseCase', () => {
       rolesGateway,
       assignmentsGateway,
       scopeHierarchyGateway: {
-        assertScopeRefBelongsToCompany: async () => undefined,
+        assertScopeRefBelongsToCompany: () => Promise.resolve(undefined),
         getScopeLineage: scopeResolver.getLineage,
       },
     });
@@ -132,7 +132,7 @@ describe('createComputeEffectivePermissionsUseCase', () => {
       rolesGateway,
       assignmentsGateway,
       scopeHierarchyGateway: {
-        assertScopeRefBelongsToCompany: async () => undefined,
+        assertScopeRefBelongsToCompany: () => Promise.resolve(undefined),
         getScopeLineage: scopeResolver.getLineage,
       },
     });
@@ -154,7 +154,7 @@ describe('createComputeEffectivePermissionsUseCase', () => {
       rolesGateway,
       assignmentsGateway,
       scopeHierarchyGateway: {
-        assertScopeRefBelongsToCompany: async () => undefined,
+        assertScopeRefBelongsToCompany: () => Promise.resolve(undefined),
         getScopeLineage: scopeResolver.getLineage,
       },
     });
@@ -189,10 +189,10 @@ describe('createComputeEffectivePermissionsUseCase', () => {
       rolesGateway,
       assignmentsGateway,
       scopeHierarchyGateway: {
-        assertScopeRefBelongsToCompany: async () => undefined,
+        assertScopeRefBelongsToCompany: () => Promise.resolve(undefined),
         getScopeLineage: scopeResolver.getLineage,
       },
-      evaluateReportingLineScopes: async () => ({
+      evaluateReportingLineScopes: () => Promise.resolve({
         employeeIds: ['employee-2'],
         permissionKeys: ['hr.employees.read'],
       }),

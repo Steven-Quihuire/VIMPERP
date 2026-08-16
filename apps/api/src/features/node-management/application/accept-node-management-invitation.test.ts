@@ -55,7 +55,7 @@ class InMemoryNodeManagementGateway implements NodeManagementGateway {
     return await Promise.resolve(null);
   }
 
-  async createInvitation(input: {
+  createInvitation(input: {
     id: string;
     companyId: string;
     scopeNodeId: string;

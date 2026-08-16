@@ -13,77 +13,77 @@ import { createUpdatePointOfSaleUseCase } from './update-point-of-sale';
 import { createUpdateWarehouseUseCase } from './update-warehouse';
 
 const baseGateway = (): OrgHierarchyGateway => ({
-  getScopeNodeDependencyCounts: async () => ({
+  getScopeNodeDependencyCounts: () => Promise.resolve({
     roleAssignments: 0,
     responsibilities: 0,
     managementInvitations: 0,
     activeScopePreferences: 0,
     employeeAssignments: 0,
   }),
-  createDivision: async () => {
+  createDivision: () => {
     throw new Error('not implemented');
   },
-  listDivisions: async () => [],
-  updateDivision: async () => {
+  listDivisions: () => Promise.resolve([]),
+  updateDivision: () => {
     throw new Error('not implemented');
   },
   deleteDivision: async () => {},
-  countLocalsInDivision: async () => 0,
-  createLocal: async () => {
+  countLocalsInDivision: () => Promise.resolve(0),
+  createLocal: () => {
     throw new Error('not implemented');
   },
-  listLocals: async () => [],
-  updateLocal: async () => {
+  listLocals: () => Promise.resolve([]),
+  updateLocal: () => {
     throw new Error('not implemented');
   },
   deleteLocal: async () => {},
-  countItemsInLocal: async () => 0,
-  countMembershipsInLocal: async () => 0,
-  countAreasInDivision: async () => 0,
-  countAreasInLocal: async () => 0,
-  countWarehousesInLocal: async () => 0,
-  countPointsOfSaleInLocal: async () => 0,
-  findLocalById: async (localId) => ({
+  countItemsInLocal: () => Promise.resolve(0),
+  countMembershipsInLocal: () => Promise.resolve(0),
+  countAreasInDivision: () => Promise.resolve(0),
+  countAreasInLocal: () => Promise.resolve(0),
+  countWarehousesInLocal: () => Promise.resolve(0),
+  countPointsOfSaleInLocal: () => Promise.resolve(0),
+  findLocalById: (localId) => Promise.resolve({
     id: localId,
     companyId: 'company-a',
     divisionId: null,
     name: 'Local',
     locale: null,
   }),
-  findDivisionById: async (divisionId) => ({
+  findDivisionById: (divisionId) => Promise.resolve({
     id: divisionId,
     companyId: 'company-a',
     name: 'Division',
     createdAt: new Date(),
   }),
-  createArea: async () => {
+  createArea: () => {
     throw new Error('not implemented');
   },
-  listAreas: async () => [],
-  updateArea: async () => {
+  listAreas: () => Promise.resolve([]),
+  updateArea: () => {
     throw new Error('not implemented');
   },
   deleteArea: async () => {},
-  countWarehousesInArea: async () => 0,
-  countPointsOfSaleInArea: async () => 0,
-  countEmployeesInArea: async () => 0,
-  createWarehouse: async () => {
+  countWarehousesInArea: () => Promise.resolve(0),
+  countPointsOfSaleInArea: () => Promise.resolve(0),
+  countEmployeesInArea: () => Promise.resolve(0),
+  createWarehouse: () => {
     throw new Error('not implemented');
   },
-  listWarehouses: async () => [],
-  updateWarehouse: async () => {
+  listWarehouses: () => Promise.resolve([]),
+  updateWarehouse: () => {
     throw new Error('not implemented');
   },
   deleteWarehouse: async () => {},
-  createPointOfSale: async () => {
+  createPointOfSale: () => {
     throw new Error('not implemented');
   },
-  listPointsOfSale: async () => [],
-  updatePointOfSale: async () => {
+  listPointsOfSale: () => Promise.resolve([]),
+  updatePointOfSale: () => {
     throw new Error('not implemented');
   },
   deletePointOfSale: async () => {},
-  findAreaById: async (areaId) => ({
+  findAreaById: (areaId) => Promise.resolve({
     id: areaId,
     companyId: 'company-a',
     divisionId: null,
@@ -92,7 +92,7 @@ const baseGateway = (): OrgHierarchyGateway => ({
     kind: 'area',
     createdAt: new Date(),
   }),
-  findWarehouseById: async (warehouseId) => ({
+  findWarehouseById: (warehouseId) => Promise.resolve({
     id: warehouseId,
     companyId: 'company-a',
     areaId: null,
@@ -100,7 +100,7 @@ const baseGateway = (): OrgHierarchyGateway => ({
     name: 'Warehouse',
     createdAt: new Date(),
   }),
-  findPointOfSaleById: async (pointOfSaleId) => ({
+  findPointOfSaleById: (pointOfSaleId) => Promise.resolve({
     id: pointOfSaleId,
     companyId: 'company-a',
     areaId: null,
@@ -129,7 +129,7 @@ describe('org hierarchy parent invariants', () => {
     const useCase = createUpdateAreaUseCase({
       gateway: {
         ...gateway,
-        updateArea: async (input) => ({
+        updateArea: (input) => Promise.resolve({
           id: input.areaId,
           companyId: 'company-a',
           divisionId: null,
@@ -164,7 +164,7 @@ describe('org hierarchy parent invariants', () => {
     const useCase = createUpdateAreaUseCase({
       gateway: {
         ...baseGateway(),
-        findDivisionById: async (divisionId) => ({
+        findDivisionById: (divisionId) => Promise.resolve({
           id: divisionId,
           companyId: 'company-b',
           name: 'Foreign Division',
@@ -218,7 +218,7 @@ describe('org hierarchy parent invariants', () => {
     const useCase = createUpdateWarehouseUseCase({
       gateway: {
         ...baseGateway(),
-        findAreaById: async (areaId) => ({
+        findAreaById: (areaId) => Promise.resolve({
           id: areaId,
           companyId: 'company-b',
           divisionId: null,
@@ -275,7 +275,7 @@ describe('org hierarchy parent invariants', () => {
     const useCase = createUpdatePointOfSaleUseCase({
       gateway: {
         ...baseGateway(),
-        findLocalById: async (localId) => ({
+        findLocalById: (localId) => Promise.resolve({
           id: localId,
           companyId: 'company-b',
           divisionId: null,

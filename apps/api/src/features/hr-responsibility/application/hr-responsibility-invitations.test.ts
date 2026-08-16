@@ -38,25 +38,25 @@ const user = (id = 'user-1'): HrResponsibleUser => ({
 
 const createGateway = (overrides: Partial<HrResponsibilityGateway> = {}) =>
   ({
-    listCompanyUsers: async () => [],
-    listResponsibilities: async () => [],
-    assignResponsibility: async () => user(),
-    findCompany: async () => ({ id: 'company-1', name: 'Acme' }),
-    findActiveInvitation: async () => null,
-    createInvitation: async () => invitation,
-    listPendingInvitations: async () => [],
-    findInvitationByTokenHash: async () => invitation,
-    getInvitationDetailsByTokenHash: async () => null,
-    findUserByEmail: async () => null,
-    findUserByIdentifier: async () => null,
-    findUserMemberships: async () => [],
-    acceptInvitation: async () => undefined,
+    listCompanyUsers: () => [],
+    listResponsibilities: () => [],
+    assignResponsibility: () => user(),
+    findCompany: () => ({ id: 'company-1', name: 'Acme' }),
+    findActiveInvitation: () => null,
+    createInvitation: () => invitation,
+    listPendingInvitations: () => [],
+    findInvitationByTokenHash: () => invitation,
+    getInvitationDetailsByTokenHash: () => null,
+    findUserByEmail: () => null,
+    findUserByIdentifier: () => null,
+    findUserMemberships: () => [],
+    acceptInvitation: () => Promise.resolve(undefined),
     ...overrides,
   }) as HrResponsibilityGateway;
 
 const passwordHasher: PasswordHasher = {
-  hash: async (value) => `hashed:${value}`,
-  verify: async () => true,
+  hash: (value) => Promise.resolve(`hashed:${value}`),
+  verify: () => Promise.resolve(true),
 };
 
 const sessionTokenService: SessionTokenService = { create: () => 'session-1' };
@@ -66,18 +66,18 @@ describe('HR responsibility invitations', () => {
     let createdInput: Record<string, unknown> | undefined;
     let emailInput: Record<string, unknown> | undefined;
     const gateway = createGateway({
-      createInvitation: async (input) => {
+      createInvitation: (input) => {
         createdInput = input;
-        return invitation;
+        return Promise.resolve(invitation);
       },
     });
     const useCase = createHrResponsibilityInvitation({
       gateway,
       createToken: () => 'token-1',
       emailSender: {
-        sendInvitationEmail: async (input) => {
+        sendInvitationEmail: (input) => {
           emailInput = input;
-          return { status: 'sent' };
+          return Promise.resolve({ status: 'sent' });
         },
       },
       buildInvitationLink: (token) =>
@@ -109,9 +109,9 @@ describe('HR responsibility invitations', () => {
     await expect(
       createHrResponsibilityInvitation({
         gateway: createGateway({
-          findActiveInvitation: async () => invitation,
+          findActiveInvitation: () => Promise.resolve(invitation),
         }),
-        emailSender: { sendInvitationEmail: async () => ({ status: 'sent' }) },
+        emailSender: { sendInvitationEmail: () => Promise.resolve({ status: 'sent' }) },
         buildInvitationLink: (token) => token,
       })({
         companyId: 'company-1',
@@ -123,15 +123,15 @@ describe('HR responsibility invitations', () => {
     await expect(
       createHrResponsibilityInvitation({
         gateway: createGateway({
-          findUserByEmail: async () => ({
+          findUserByEmail: () => Promise.resolve({
             id: 'user-1',
             email: invitation.inviteeEmail,
             username: 'external',
             passwordHash: 'hash',
           }),
-          listResponsibilities: async () => [user()],
+          listResponsibilities: () => Promise.resolve([user()]),
         }),
-        emailSender: { sendInvitationEmail: async () => ({ status: 'sent' }) },
+        emailSender: { sendInvitationEmail: () => Promise.resolve({ status: 'sent' }) },
         buildInvitationLink: (token) => token,
       })({
         companyId: 'company-1',
@@ -145,9 +145,10 @@ describe('HR responsibility invitations', () => {
     let acceptedInput: Record<string, unknown> | undefined;
     const useCase = createAcceptHrResponsibilityInvitation({
       gateway: createGateway({
-        acceptInvitation: async (input) => {
+        acceptInvitation: (input) => {
           acceptedInput = input;
-        },
+        
+    return Promise.resolve();},
       }),
       passwordHasher,
       sessionTokenService,

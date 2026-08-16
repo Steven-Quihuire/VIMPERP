@@ -114,14 +114,14 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
     },
   ];
 
-  async createEmployee(input: { companyId: string }) {
+  createEmployee(input: { companyId: string }) {
     const employee: Employee = {
       id: `employee-${this.employees.length + 1}`,
       companyId: input.companyId,
       createdAt: new Date('2026-08-13T12:00:00.000Z'),
     };
     this.employees.push(employee);
-    return employee;
+    return Promise.resolve(employee);
   }
   async updateEmployee(
     companyId: string,
@@ -134,17 +134,17 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
     }
     return employee;
   }
-  async getEmployeeById(companyId: string, employeeId: string) {
-    return (
+  getEmployeeById(companyId: string, employeeId: string) {
+    return Promise.resolve(
       this.employees.find(
         (employee) => employee.companyId === companyId && employee.id === employeeId,
       ) ?? null
     );
   }
-  async listEmployees(companyId: string) {
-    return this.employees.filter((employee) => employee.companyId === companyId);
+  listEmployees(companyId: string) {
+    return Promise.resolve(this.employees.filter((employee) => employee.companyId === companyId));
   }
-  async createPosition(input: {
+  createPosition(input: {
     companyId: string;
     name: string;
     reportsToPositionId: string | null;
@@ -163,10 +163,10 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
       createdAt: new Date('2026-08-13T12:00:00.000Z'),
     };
     this.positions.push(position);
-    return position;
+    return Promise.resolve(position);
   }
-  async getPositionById(companyId: string, positionId: string) {
-    return (
+  getPositionById(companyId: string, positionId: string) {
+    return Promise.resolve(
       this.positions.find(
         (position) => position.companyId === companyId && position.id === positionId,
       ) ?? null
@@ -186,19 +186,19 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
         }),
     );
   }
-  async countActivePrimaryAssignmentsForPosition(positionId: string) {
-    return this.assignments.filter(
+  countActivePrimaryAssignmentsForPosition(positionId: string) {
+    return Promise.resolve(this.assignments.filter(
       (assignment) => assignment.positionId === positionId && assignment.isPrimary && assignment.endedAt === null,
-    ).length;
+    ).length);
   }
-  async findScopeNode(companyId: string, scopeNodeId: string) {
-    return (
+  findScopeNode(companyId: string, scopeNodeId: string) {
+    return Promise.resolve(
       this.scopeNodes.find(
         (scopeNode) => scopeNode.companyId === companyId && scopeNode.id === scopeNodeId,
       ) ?? null
     );
   }
-  async createAssignment(input: Parameters<HrEmployeesGateway['createAssignment']>[0]) {
+  createAssignment(input: Parameters<HrEmployeesGateway['createAssignment']>[0]) {
     const activePrimary = this.assignments.find(
       (assignment) =>
         assignment.companyId === input.companyId &&
@@ -221,20 +221,20 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
       createdAt: input.createdAt,
     };
     this.assignments.push(assignment);
-    return assignment;
+    return Promise.resolve(assignment);
   }
 
-  async listAssignmentHistory(companyId: string, employeeId: string) {
-    return this.assignments
+  listAssignmentHistory(companyId: string, employeeId: string) {
+    return Promise.resolve(this.assignments
       .filter((assignment) => assignment.companyId === companyId && assignment.employeeId === employeeId)
       .map((assignment) => ({
         ...assignment,
         positionName: this.positions.find((position) => position.id === assignment.positionId)?.name ?? '',
         scopeNodeName: this.scopeNodes.find((node) => node.id === assignment.scopeNodeId)?.name ?? '',
-      }));
+      })));
   }
-  async getActivePrimaryAssignmentByEmployeeId(companyId: string, employeeId: string) {
-    return (
+  getActivePrimaryAssignmentByEmployeeId(companyId: string, employeeId: string) {
+    return Promise.resolve(
       this.assignments.find(
         (assignment) =>
           assignment.companyId === companyId &&
@@ -244,8 +244,8 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
       ) ?? null
     );
   }
-  async getActivePrimaryAssignmentByPositionId(companyId: string, positionId: string) {
-    return (
+  getActivePrimaryAssignmentByPositionId(companyId: string, positionId: string) {
+    return Promise.resolve(
       this.assignments.find(
         (assignment) =>
           assignment.companyId === companyId &&
@@ -255,7 +255,7 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
       ) ?? null
     );
   }
-  async listDirectReportAssignments(companyId: string, managerPositionId: string) {
+  listDirectReportAssignments(companyId: string, managerPositionId: string) {
     const directReportPositionIds = this.positions
       .filter(
         (position) =>
@@ -263,13 +263,13 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
       )
       .map((position) => position.id);
 
-    return this.assignments.filter(
+    return Promise.resolve(this.assignments.filter(
       (assignment) =>
         assignment.companyId === companyId &&
         assignment.isPrimary &&
         assignment.endedAt === null &&
         directReportPositionIds.includes(assignment.positionId),
-    );
+    ));
   }
 }
 
@@ -315,7 +315,7 @@ describe('hr employees routes', () => {
     authGateway.setMemberships('owner-1', [
       { companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null },
     ]);
-    authGateway.setActiveCompanyId('owner-1', 'company-1');
+    await authGateway.setActiveCompanyId('owner-1', 'company-1');
 
     const hrEmployeesGateway = new InMemoryHrEmployeesGateway();
     hrEmployeesGateway.positions.push({
@@ -333,13 +333,13 @@ describe('hr employees routes', () => {
     const app = createApp({
       adminGateway,
       authIdentityGateway: authGateway,
-      computeEffectivePermissions: async () => [
+      computeEffectivePermissions: () => Promise.resolve([
         'hr.employees.read',
         'hr.employees.write',
         'hr.employees.assign',
         'hr.positions.read',
         'hr.positions.write',
-      ],
+      ]),
       hrEmployeesGateway,
       passwordHasher,
       sessionTokenService,
@@ -516,12 +516,12 @@ describe('hr employees routes', () => {
     authGateway.setMemberships('owner-1', [
       { companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null },
     ]);
-    authGateway.setActiveCompanyId('owner-1', 'company-1');
+    await authGateway.setActiveCompanyId('owner-1', 'company-1');
 
     const app = createApp({
       adminGateway,
       authIdentityGateway: authGateway,
-      computeEffectivePermissions: async () => [],
+      computeEffectivePermissions: () => Promise.resolve([]),
       hrEmployeesGateway: new InMemoryHrEmployeesGateway(),
       passwordHasher,
       sessionTokenService,

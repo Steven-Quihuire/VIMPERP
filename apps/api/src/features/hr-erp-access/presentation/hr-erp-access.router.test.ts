@@ -300,7 +300,7 @@ describe('hr erp access routes', () => {
     authGateway.setMemberships('owner-1', [
       { companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null },
     ]);
-    authGateway.setActiveCompanyId('owner-1', 'company-1');
+    await authGateway.setActiveCompanyId('owner-1', 'company-1');
 
     const hrErpAccessGateway = new InMemoryErpAccessGateway();
     hrErpAccessGateway.employees = [
@@ -314,10 +314,10 @@ describe('hr erp access routes', () => {
     const app = createApp({
       adminGateway,
       authIdentityGateway: authGateway,
-      computeEffectivePermissions: async () => [
+      computeEffectivePermissions: () => Promise.resolve([
         'hr.erp_access.invite',
         'hr.erp_access.revoke',
-      ],
+      ]),
       hrErpAccessGateway,
       passwordHasher,
       sessionTokenService,
@@ -419,7 +419,7 @@ describe('hr erp access routes', () => {
     authGateway.setMemberships('owner-1', [
       { companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null },
     ]);
-    authGateway.setActiveCompanyId('owner-1', 'company-1');
+    await authGateway.setActiveCompanyId('owner-1', 'company-1');
 
     const hrErpAccessGateway = new InMemoryErpAccessGateway();
     hrErpAccessGateway.employees = [
@@ -433,7 +433,7 @@ describe('hr erp access routes', () => {
     const app = createApp({
       adminGateway,
       authIdentityGateway: authGateway,
-      computeEffectivePermissions: async () => [],
+      computeEffectivePermissions: () => Promise.resolve([]),
       hrErpAccessGateway,
       passwordHasher,
       sessionTokenService,

@@ -92,14 +92,14 @@ export const createInMemoryScopeResolver = ({
 }): ScopeResolver => {
   const { nodesByKey, childrenByParentKey } = buildIndexes(nodes);
 
-  const getLineage = async (companyId: string, scope: ScopeRef) => {
+  const getLineage = (companyId: string, scope: ScopeRef): Promise<ScopeRef[]> => {
     const lineage: ScopeRef[] = [];
     let current: ResolvedScopeNode | undefined = nodesByKey.get(
       scopeRefToKey(scope),
     );
 
     if (!current || current.companyId !== companyId) {
-      throw new ScopeNodeNotFoundError();
+      return Promise.reject(new ScopeNodeNotFoundError());
     }
 
     while (current) {
@@ -109,7 +109,7 @@ export const createInMemoryScopeResolver = ({
         : undefined;
     }
 
-    return lineage;
+    return Promise.resolve(lineage);
   };
 
   return {
@@ -127,7 +127,7 @@ export const createInMemoryScopeResolver = ({
           : scopeLineageContains(lineage, assignment.scope),
       );
     },
-    listAuthorizedDescendants: async (companyId, userId) => {
+    listAuthorizedDescendants: (companyId, userId) => {
       const userAssignments = assignments.filter(
         (assignment) =>
           assignment.companyId === companyId && assignment.userId === userId,
@@ -161,7 +161,7 @@ export const createInMemoryScopeResolver = ({
         }
       }
 
-      return [...visibleNodes.values()];
+      return Promise.resolve([...visibleNodes.values()]);
     },
   };
 };

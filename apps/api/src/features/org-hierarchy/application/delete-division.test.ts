@@ -8,7 +8,7 @@ import {
 } from '../domain/org-hierarchy';
 
 const createGateway = (): OrgHierarchyGateway => ({
-  getScopeNodeDependencyCounts: vi.fn(async () => ({
+  getScopeNodeDependencyCounts: vi.fn(() => Promise.resolve({
     roleAssignments: 0,
     responsibilities: 0,
     managementInvitations: 0,
@@ -19,14 +19,14 @@ const createGateway = (): OrgHierarchyGateway => ({
   listDivisions: vi.fn(),
   updateDivision: vi.fn(),
   deleteDivision: vi.fn(),
-  countLocalsInDivision: vi.fn(async () => 0),
+  countLocalsInDivision: vi.fn(() => Promise.resolve(0)),
   createLocal: vi.fn(),
   listLocals: vi.fn(),
   updateLocal: vi.fn(),
   deleteLocal: vi.fn(),
   countItemsInLocal: vi.fn(),
   countMembershipsInLocal: vi.fn(),
-  countAreasInDivision: vi.fn(async () => 0),
+  countAreasInDivision: vi.fn(() => Promise.resolve(0)),
   countAreasInLocal: vi.fn(),
   countWarehousesInLocal: vi.fn(),
   countPointsOfSaleInLocal: vi.fn(),

@@ -254,7 +254,7 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
         erpAccessGateway: hrErpAccessGateway,
       }),
       scopeHierarchyGateway: {
-        assertScopeRefBelongsToCompany: async () => undefined,
+        assertScopeRefBelongsToCompany: () => Promise.resolve(undefined),
         getScopeLineage: scopeResolver.getLineage,
       },
     });

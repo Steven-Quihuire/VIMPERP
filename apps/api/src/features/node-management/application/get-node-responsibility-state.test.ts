@@ -31,7 +31,7 @@ class InMemoryNodeManagementGateway implements NodeManagementGateway {
     return await Promise.resolve(null);
   }
 
-  async createInvitation(): Promise<NodeManagementInvitation> {
+  createInvitation(): Promise<NodeManagementInvitation> {
     throw new Error('not used');
   }
 

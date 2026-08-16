@@ -5,22 +5,22 @@ import { createResolveDirectReportsUseCase } from './resolve-direct-reports';
 import { createResolveReportingLineUseCase } from './resolve-reporting-line';
 
 const createGateway = (): HrEmployeesGateway => ({
-  createEmployee: async () => ({
+  createEmployee: () => Promise.resolve({
     id: 'employee-1',
     companyId: 'company-1',
     createdAt: new Date('2026-08-13T10:00:00.000Z'),
   }),
-  updateEmployee: async () => null,
-  getEmployeeById: async (companyId, employeeId) =>
-    employeeId === 'employee-1'
+  updateEmployee: () => Promise.resolve(null),
+  getEmployeeById: (companyId, employeeId) =>
+    Promise.resolve(employeeId === 'employee-1'
       ? {
           id: employeeId,
           companyId,
           createdAt: new Date('2026-08-13T10:00:00.000Z'),
         }
-      : null,
-  listEmployees: async () => [],
-  createPosition: async () => ({
+      : null),
+  listEmployees: () => Promise.resolve([]),
+  createPosition: () => Promise.resolve({
     id: 'position-1',
     companyId: 'company-1',
     name: 'People Lead',
@@ -31,9 +31,9 @@ const createGateway = (): HrEmployeesGateway => ({
     isActive: true,
     createdAt: new Date('2026-08-13T10:00:00.000Z'),
   }),
-  getPositionById: async (_companyId, positionId) => {
+  getPositionById: (_companyId, positionId) => {
     if (positionId === 'position-employee') {
-      return {
+      return Promise.resolve({
         id: 'position-employee',
         companyId: 'company-1',
         name: 'HR Analyst',
@@ -43,11 +43,11 @@ const createGateway = (): HrEmployeesGateway => ({
         remainingVacancies: 1,
         isActive: true,
         createdAt: new Date('2026-08-13T10:00:00.000Z'),
-      };
+      });
     }
 
     if (positionId === 'position-manager') {
-      return {
+      return Promise.resolve({
         id: 'position-manager',
         companyId: 'company-1',
         name: 'People Lead',
@@ -57,15 +57,15 @@ const createGateway = (): HrEmployeesGateway => ({
         remainingVacancies: 1,
         isActive: true,
         createdAt: new Date('2026-08-13T10:00:00.000Z'),
-      };
+      });
     }
 
-    return null;
+    return Promise.resolve(null);
   },
-  listPositions: async () => [],
-  countActivePrimaryAssignmentsForPosition: async () => 0,
-  findScopeNode: async () => null,
-  createAssignment: async () => ({
+  listPositions: () => Promise.resolve([]),
+  countActivePrimaryAssignmentsForPosition: () => Promise.resolve(0),
+  findScopeNode: () => Promise.resolve(null),
+  createAssignment: () => Promise.resolve({
     id: 'assignment-1',
     companyId: 'company-1',
     employeeId: 'employee-1',
@@ -76,10 +76,10 @@ const createGateway = (): HrEmployeesGateway => ({
     isPrimary: true,
     createdAt: new Date('2026-08-13T10:00:00.000Z'),
   }),
-  listAssignmentHistory: async () => [],
-  getActivePrimaryAssignmentByEmployeeId: async (_companyId, employeeId) => {
+  listAssignmentHistory: () => Promise.resolve([]),
+  getActivePrimaryAssignmentByEmployeeId: (_companyId, employeeId) => {
     if (employeeId === 'employee-1') {
-      return {
+      return Promise.resolve({
         id: 'assignment-employee',
         companyId: 'company-1',
         employeeId: 'employee-1',
@@ -89,13 +89,13 @@ const createGateway = (): HrEmployeesGateway => ({
         endedAt: null,
         isPrimary: true,
         createdAt: new Date('2026-08-13T10:00:00.000Z'),
-      };
+      });
     }
 
-    return null;
+    return Promise.resolve(null);
   },
-  getActivePrimaryAssignmentByPositionId: async () => null,
-  listDirectReportAssignments: async () => [],
+  getActivePrimaryAssignmentByPositionId: () => Promise.resolve(null),
+  listDirectReportAssignments: () => Promise.resolve([]),
 });
 
 describe('createResolveReportingLineUseCase', () => {
@@ -103,12 +103,12 @@ describe('createResolveReportingLineUseCase', () => {
     const baseGateway = createGateway();
     const gateway: HrEmployeesGateway = {
       ...baseGateway,
-      getEmployeeById: async (companyId, employeeId) => ({
+      getEmployeeById: (companyId, employeeId) => Promise.resolve({
         id: employeeId,
         companyId,
         createdAt: new Date('2026-08-13T10:00:00.000Z'),
       }),
-      getActivePrimaryAssignmentByPositionId: async () => ({
+      getActivePrimaryAssignmentByPositionId: () => Promise.resolve({
         id: 'assignment-manager',
         companyId: 'company-1',
         employeeId: 'employee-manager',
@@ -150,7 +150,7 @@ describe('createResolveReportingLineUseCase', () => {
     const resolveReportingLine = createResolveReportingLineUseCase({
       gateway: {
         ...baseGateway,
-        getActivePrimaryAssignmentByEmployeeId: async () => ({
+        getActivePrimaryAssignmentByEmployeeId: () => Promise.resolve({
           id: 'closed-assignment',
           companyId: 'company-2',
           employeeId: 'employee-1',
@@ -178,12 +178,12 @@ describe('createResolveDirectReportsUseCase', () => {
     const baseGateway = createGateway();
     const gateway: HrEmployeesGateway = {
       ...baseGateway,
-      getEmployeeById: async (companyId, employeeId) => ({
+      getEmployeeById: (companyId, employeeId) => Promise.resolve({
         id: employeeId,
         companyId,
         createdAt: new Date('2026-08-13T10:00:00.000Z'),
       }),
-      getPositionById: async (companyId, positionId) => ({
+      getPositionById: (companyId, positionId) => Promise.resolve({
         id: positionId,
         companyId,
         name: positionId === 'position-manager' ? 'People Lead' : 'HR Analyst',
@@ -195,7 +195,7 @@ describe('createResolveDirectReportsUseCase', () => {
         isActive: true,
         createdAt: new Date('2026-08-13T10:00:00.000Z'),
       }),
-      getActivePrimaryAssignmentByEmployeeId: async () => ({
+      getActivePrimaryAssignmentByEmployeeId: () => Promise.resolve({
         id: 'assignment-manager',
         companyId: 'company-1',
         employeeId: 'employee-manager',
@@ -206,7 +206,7 @@ describe('createResolveDirectReportsUseCase', () => {
         isPrimary: true,
         createdAt: new Date('2026-08-13T10:00:00.000Z'),
       }),
-      listDirectReportAssignments: async () => [
+      listDirectReportAssignments: () => Promise.resolve([
         {
           id: 'assignment-report',
           companyId: 'company-1',
@@ -229,7 +229,7 @@ describe('createResolveDirectReportsUseCase', () => {
           isPrimary: true,
           createdAt: new Date('2026-08-13T10:00:00.000Z'),
         },
-      ],
+      ]),
     };
 
     await expect(

@@ -51,38 +51,38 @@ const createComputeEffectivePermissions = (
   rolePermissionRows: Array<{ roleId: string; permissionKey: string }>,
 ) => {
   const assignmentsGateway: RoleAssignmentsGateway = {
-    createAssignment: async () => {
+    createAssignment: () => {
       throw new Error('not implemented');
     },
-    deleteAssignment: async () => {
+    deleteAssignment: () => {
       throw new Error('not implemented');
     },
-    findAssignmentById: async () => null,
-    listAssignmentsForUser: async ({ companyId, userId }) =>
-      assignments.filter(
+    findAssignmentById: () => Promise.resolve(null),
+    listAssignmentsForUser: ({ companyId, userId }) =>
+      Promise.resolve(assignments.filter(
         (assignment) => assignment.companyId === companyId && assignment.userId === userId,
-      ),
-    countAssignmentsForRole: async () => 0,
+      )),
+    countAssignmentsForRole: () => Promise.resolve(0),
   };
   const rolesGateway: RolesGateway = {
-    createRole: async () => {
+    createRole: () => {
       throw new Error('not implemented');
     },
-    updateRole: async () => {
+    updateRole: () => {
       throw new Error('not implemented');
     },
-    deleteRole: async () => {
+    deleteRole: () => {
       throw new Error('not implemented');
     },
-    listRoles: async () => [],
-    findRoleById: async () => null,
-    findRoleWithPermissions: async () => null,
-    listRolePermissionRows: async (roleIds) =>
-      rolePermissionRows.filter((row) => roleIds.includes(row.roleId)),
-    replaceRolePermissions: async () => {
+    listRoles: () => Promise.resolve([]),
+    findRoleById: () => Promise.resolve(null),
+    findRoleWithPermissions: () => Promise.resolve(null),
+    listRolePermissionRows: (roleIds) =>
+      Promise.resolve(rolePermissionRows.filter((row) => roleIds.includes(row.roleId))),
+    replaceRolePermissions: () => {
       throw new Error('not implemented');
     },
-    countAssignmentsForRole: async () => 0,
+    countAssignmentsForRole: () => Promise.resolve(0),
   };
   const scopeResolver = createScopeResolver(
     assignments.map((assignment) => ({
@@ -97,7 +97,7 @@ const createComputeEffectivePermissions = (
     rolesGateway,
     assignmentsGateway,
     scopeHierarchyGateway: {
-      assertScopeRefBelongsToCompany: async () => undefined,
+      assertScopeRefBelongsToCompany: () => Promise.resolve(undefined),
       getScopeLineage: scopeResolver.getLineage,
     },
   });
@@ -123,31 +123,32 @@ const createGateway = ({
   users?: Map<string, AuthUser>;
 } = {}): AuthIdentityGateway => {
   return {
-    findUserByIdentifier: async () => null,
-    findUserById: async (userId) => users.get(userId) ?? null,
+    findUserByIdentifier: () => Promise.resolve(null),
+    findUserById: (userId) => Promise.resolve(users.get(userId) ?? null),
     createUser: vi.fn(),
     createUserWithSession: vi.fn(),
     createSession: vi.fn(),
-    findSession: async (token) => sessions.get(token) ?? null,
-    deleteSession: async (token) => {
+    findSession: (token) => Promise.resolve(sessions.get(token) ?? null),
+    deleteSession: (token) => {
       sessions.delete(token);
-    },
-    listMemberships: async (userId) =>
-      membershipsByUserId.get(userId) ?? [],
-    findActiveCompanyId: async (userId) =>
-      activeCompanyIdByUserId.get(userId) ?? null,
-    findCompanyStatus: async (companyId) =>
-      companyStatusByCompanyId.get(companyId) ?? 'active',
+    
+    return Promise.resolve();},
+    listMemberships: (userId) =>
+      Promise.resolve(membershipsByUserId.get(userId) ?? []),
+    findActiveCompanyId: (userId) =>
+      Promise.resolve(activeCompanyIdByUserId.get(userId) ?? null),
+    findCompanyStatus: (companyId) =>
+      Promise.resolve(companyStatusByCompanyId.get(companyId) ?? 'active'),
     setActiveCompanyId: vi.fn(),
-    findActiveScopeNodeId: async (userId) =>
-      activeScopeNodeIdByUserId.get(userId) ?? null,
+    findActiveScopeNodeId: (userId) =>
+      Promise.resolve(activeScopeNodeIdByUserId.get(userId) ?? null),
     setActiveScopeNodeId: vi.fn(),
-    findActiveLocalId: async (userId) =>
-      activeLocalIdByUserId.get(userId) ?? null,
+    findActiveLocalId: (userId) =>
+      Promise.resolve(activeLocalIdByUserId.get(userId) ?? null),
     setActiveLocalId: vi.fn(),
-    findLocalCompanyById: async (localId) =>
-      localCompanyByLocalId.get(localId) ?? null,
-    countRecentActiveCompanySwitches: async () => 0,
+    findLocalCompanyById: (localId) =>
+      Promise.resolve(localCompanyByLocalId.get(localId) ?? null),
+    countRecentActiveCompanySwitches: () => Promise.resolve(0),
     recordActiveCompanySwitch: vi.fn(),
   };
 };
