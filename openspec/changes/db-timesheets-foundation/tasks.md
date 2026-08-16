@@ -45,7 +45,8 @@ Chain strategy: stacked-to-main
 
 ## Phase 4: Verification
 
-- [ ] 4.1 Run full `pnpm --filter api test`, `pnpm --filter api typecheck`, `pnpm --filter api lint` — all must pass.
+- [x] 4.1 Run full `pnpm --filter api test`, `pnpm --filter api typecheck`, `pnpm --filter api lint` — all must pass.
+  - Completed after lint-debt cleanup commits `30911f2` and `963213e`: `pnpm --filter api lint` passes; `pnpm --filter api test` passes (79 files / 398 tests); typecheck still fails only in the known pre-existing 7-file set, with no new error files introduced.
 - [x] 4.2 Apply on fresh DB via `pnpm --filter api db:migrate`; confirm `\d+ timesheet_periods` lists `timesheet_periods_no_overlap_excl`.
 
 ## Phase 5: Doc correction
