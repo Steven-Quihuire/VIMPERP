@@ -836,6 +836,19 @@ export const timesheetStatusEnum = pgEnum('timesheet_status', [
   'rejected',
 ]);
 
+export const stockDocumentTypeEnum = pgEnum('stock_document_type', [
+  'receipt',
+  'transfer',
+  'adjustment',
+  'loss',
+]);
+
+export const stockDocumentStatusEnum = pgEnum('stock_document_status', [
+  'draft',
+  'confirmed',
+  'cancelled',
+]);
+
 export const timesheetPeriodsTable = pgTable(
   'timesheet_periods',
   {
@@ -1031,6 +1044,255 @@ export const pointsOfSaleTable = pgTable(
     index('points_of_sale_area_idx').on(table.areaId),
   ],
 );
+
+export const stockLotsTable = pgTable(
+  'stock_lots',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: 'restrict' }),
+    itemId: uuid('item_id').notNull().references(() => itemsTable.id),
+    lotNumber: text('lot_number').notNull(),
+    expiresAt: date('expires_at'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('stock_lots_id_company_idx').on(table.id, table.companyId),
+    uniqueIndex('stock_lots_company_item_lot_idx').on(
+      table.companyId,
+      table.itemId,
+      table.lotNumber,
+    ),
+    foreignKey({
+      columns: [table.itemId, table.companyId],
+      foreignColumns: [itemsTable.id, itemsTable.companyId],
+      name: 'stock_lots_item_company_fk',
+    }),
+    index('stock_lots_item_idx').on(table.itemId),
+    index('stock_lots_expires_at_idx').on(table.expiresAt),
+  ],
+);
+
+export const stockDocumentsTable = pgTable(
+  'stock_documents',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: 'restrict' }),
+    documentNo: text('document_no').notNull(),
+    type: stockDocumentTypeEnum('type').notNull(),
+    status: stockDocumentStatusEnum('status').notNull().default('draft'),
+    originScopeNodeId: text('origin_scope_node_id').references(() => scopeNodesTable.id, {
+      onDelete: 'restrict',
+    }),
+    originScopeType: text('origin_scope_type'),
+    destinationScopeNodeId: text('destination_scope_node_id').references(
+      () => scopeNodesTable.id,
+      {
+        onDelete: 'restrict',
+      },
+    ),
+    destinationScopeType: text('destination_scope_type'),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
+    createdByUserId: text('created_by_user_id')
+      .notNull()
+      .references(() => usersTable.id, { onDelete: 'restrict' }),
+    reversalOfId: uuid('reversal_of_id'),
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('stock_documents_id_company_idx').on(table.id, table.companyId),
+    uniqueIndex('stock_documents_company_document_no_idx').on(
+      table.companyId,
+      table.documentNo,
+    ),
+    foreignKey({
+      columns: [table.originScopeNodeId, table.companyId],
+      foreignColumns: [scopeNodesTable.id, scopeNodesTable.companyId],
+      name: 'stock_documents_origin_scope_node_company_fk',
+    }),
+    foreignKey({
+      columns: [table.destinationScopeNodeId, table.companyId],
+      foreignColumns: [scopeNodesTable.id, scopeNodesTable.companyId],
+      name: 'stock_documents_destination_scope_node_company_fk',
+    }),
+    foreignKey({
+      columns: [table.reversalOfId],
+      foreignColumns: [table.id],
+      name: 'stock_documents_reversal_of_id_stock_documents_id_fk',
+    }),
+    foreignKey({
+      columns: [table.reversalOfId, table.companyId],
+      foreignColumns: [table.id, table.companyId],
+      name: 'stock_documents_reversal_company_fk',
+    }),
+    check(
+      'stock_documents_origin_scope_type_warehouse_pos_chk',
+      sql`${table.originScopeType} IS NULL OR ${table.originScopeType} IN ('warehouse', 'point-of-sale')`,
+    ),
+    check(
+      'stock_documents_destination_scope_type_warehouse_pos_chk',
+      sql`${table.destinationScopeType} IS NULL OR ${table.destinationScopeType} IN ('warehouse', 'point-of-sale')`,
+    ),
+    check(
+      'stock_documents_origin_scope_pair_chk',
+      sql`(${table.originScopeNodeId} IS NULL AND ${table.originScopeType} IS NULL) OR (${table.originScopeNodeId} IS NOT NULL AND ${table.originScopeType} IS NOT NULL)`,
+    ),
+    check(
+      'stock_documents_destination_scope_pair_chk',
+      sql`(${table.destinationScopeNodeId} IS NULL AND ${table.destinationScopeType} IS NULL) OR (${table.destinationScopeNodeId} IS NOT NULL AND ${table.destinationScopeType} IS NOT NULL)`,
+    ),
+    check(
+      'stock_documents_reversal_confirmed_chk',
+      sql`${table.reversalOfId} IS NULL OR ${table.status} = 'confirmed'`,
+    ),
+    check(
+      'stock_documents_receipt_shape_chk',
+      sql`${table.type} <> 'receipt' OR (${table.originScopeNodeId} IS NULL AND ${table.destinationScopeNodeId} IS NOT NULL)`,
+    ),
+    check(
+      'stock_documents_loss_adjustment_shape_chk',
+      sql`${table.type} NOT IN ('loss', 'adjustment') OR (${table.originScopeNodeId} IS NOT NULL AND ${table.destinationScopeNodeId} IS NULL)`,
+    ),
+    check(
+      'stock_documents_transfer_shape_chk',
+      sql`${table.type} <> 'transfer' OR (${table.originScopeNodeId} IS NOT NULL AND ${table.destinationScopeNodeId} IS NOT NULL AND ${table.originScopeNodeId} <> ${table.destinationScopeNodeId})`,
+    ),
+    index('stock_documents_company_idx').on(table.companyId),
+    index('stock_documents_type_status_idx').on(table.companyId, table.type, table.status),
+    index('stock_documents_origin_scope_idx').on(table.originScopeNodeId),
+    index('stock_documents_destination_scope_idx').on(table.destinationScopeNodeId),
+  ],
+);
+
+export const stockDocumentLinesTable = pgTable(
+  'stock_document_lines',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: 'restrict' }),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => stockDocumentsTable.id, { onDelete: 'restrict' }),
+    itemId: uuid('item_id').notNull().references(() => itemsTable.id),
+    quantity: numeric('quantity', { precision: 14, scale: 3 }).notNull(),
+    unitCost: numeric('unit_cost', { precision: 14, scale: 4 }),
+    lotId: uuid('lot_id').references(() => stockLotsTable.id, { onDelete: 'restrict' }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('stock_document_lines_id_company_idx').on(table.id, table.companyId),
+    foreignKey({
+      columns: [table.documentId, table.companyId],
+      foreignColumns: [stockDocumentsTable.id, stockDocumentsTable.companyId],
+      name: 'stock_document_lines_document_company_fk',
+    }),
+    foreignKey({
+      columns: [table.itemId, table.companyId],
+      foreignColumns: [itemsTable.id, itemsTable.companyId],
+      name: 'stock_document_lines_item_company_fk',
+    }),
+    foreignKey({
+      columns: [table.lotId, table.companyId],
+      foreignColumns: [stockLotsTable.id, stockLotsTable.companyId],
+      name: 'stock_document_lines_lot_company_fk',
+    }),
+    check('stock_document_lines_quantity_positive_chk', sql`${table.quantity} > 0`),
+    index('stock_document_lines_document_idx').on(table.documentId),
+    index('stock_document_lines_item_idx').on(table.itemId),
+  ],
+);
+
+export const stockQuantsTable = pgTable(
+  'stock_quants',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: 'restrict' }),
+    itemId: uuid('item_id').notNull().references(() => itemsTable.id),
+    scopeNodeId: text('scope_node_id')
+      .notNull()
+      .references(() => scopeNodesTable.id, { onDelete: 'restrict' }),
+    scopeType: text('scope_type').notNull(),
+    lotId: uuid('lot_id').references(() => stockLotsTable.id, { onDelete: 'restrict' }),
+    quantity: numeric('quantity', { precision: 14, scale: 3 })
+      .notNull()
+      .default('0'),
+    reservedQuantity: numeric('reserved_quantity', { precision: 14, scale: 3 })
+      .notNull()
+      .default('0'),
+    quarantineQuantity: numeric('quarantine_quantity', { precision: 14, scale: 3 })
+      .notNull()
+      .default('0'),
+    avgUnitCost: numeric('avg_unit_cost', { precision: 14, scale: 4 }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('stock_quants_id_company_idx').on(table.id, table.companyId),
+    foreignKey({
+      columns: [table.itemId, table.companyId],
+      foreignColumns: [itemsTable.id, itemsTable.companyId],
+      name: 'stock_quants_item_company_fk',
+    }),
+    foreignKey({
+      columns: [table.scopeNodeId, table.companyId],
+      foreignColumns: [scopeNodesTable.id, scopeNodesTable.companyId],
+      name: 'stock_quants_scope_node_company_fk',
+    }),
+    foreignKey({
+      columns: [table.lotId, table.companyId],
+      foreignColumns: [stockLotsTable.id, stockLotsTable.companyId],
+      name: 'stock_quants_lot_company_fk',
+    }),
+    check(
+      'stock_quants_scope_type_warehouse_pos_chk',
+      sql`${table.scopeType} IN ('warehouse', 'point-of-sale')`,
+    ),
+    check('stock_quants_quantity_nonnegative_chk', sql`${table.quantity} >= 0`),
+    check(
+      'stock_quants_reserved_nonnegative_chk',
+      sql`${table.reservedQuantity} >= 0`,
+    ),
+    check(
+      'stock_quants_quarantine_nonnegative_chk',
+      sql`${table.quarantineQuantity} >= 0`,
+    ),
+    check(
+      'stock_quants_reserved_quarantine_within_quantity_chk',
+      sql`${table.reservedQuantity} + ${table.quarantineQuantity} <= ${table.quantity}`,
+    ),
+    index('stock_quants_company_item_scope_idx').on(
+      table.companyId,
+      table.itemId,
+      table.scopeNodeId,
+    ),
+    index('stock_quants_scope_node_idx').on(table.scopeNodeId),
+  ],
+);
+// Drizzle 0.44.x does not expose `unique().nullsNotDistinct()` for PostgreSQL indexes.
+// Add `stock_quants_company_item_scope_lot_uk ... NULLS NOT DISTINCT` in PR2 migration SQL.
 
 export const themePreferencesTable = pgTable('theme_preferences', {
   userId: text('user_id').primaryKey(),

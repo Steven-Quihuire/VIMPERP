@@ -27,6 +27,19 @@ export const inventoryPermissionKeys = [
   'catalog.delete',
 ] as const;
 
+export const inventoryStockPermissionKeys = [
+  'inventory.stock.read',
+  'inventory.stock.write',
+  'inventory.stock.adjust',
+] as const;
+
+export const inventoryDocumentsPermissionKeys = [
+  'inventory.documents.read',
+  'inventory.documents.write',
+  'inventory.documents.confirm',
+  'inventory.documents.cancel',
+] as const;
+
 export const hrPermissionKeys = [
   'hr.employees.read',
   'hr.employees.write',
@@ -49,7 +62,11 @@ export const reservedPlatformPermissionKeys = [
 ] as const;
 
 const modulePermissionRegistry: Record<string, readonly string[]> = {
-  inventory: inventoryPermissionKeys,
+  inventory: [
+    ...inventoryPermissionKeys,
+    ...inventoryStockPermissionKeys,
+    ...inventoryDocumentsPermissionKeys,
+  ],
   hr: hrPermissionKeys,
 };
 
@@ -58,6 +75,11 @@ export const permissionCatalogSeeds: Array<{
   family: PermissionFamily;
 }> = [
   ...inventoryPermissionKeys.map((key) => ({ key, family: 'normal' as const })),
+  ...inventoryStockPermissionKeys.map((key) => ({ key, family: 'normal' as const })),
+  ...inventoryDocumentsPermissionKeys.map((key) => ({
+    key,
+    family: 'normal' as const,
+  })),
   ...hrPermissionKeys.map((key) => ({ key, family: 'normal' as const })),
   ...roleManagementPermissionKeys.map((key) => ({
     key,
