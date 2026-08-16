@@ -32,7 +32,7 @@ The CHECK `scope_type IN ('warehouse','point-of-sale')` stays at column level. T
 
 ### Decision: Reversal pattern = reversalOfId self-FK + confirmed-only
 
-`stock_documents.reversal_of_id text NULL REFERENCES stock_documents(id)`. CHECK: `reversal_of_id IS NULL OR status = 'confirmed'` (a reversal is itself confirmed; reversing a draft is meaningless). The original row is never UPDATEd or DELETEd — reversal creates a NEW row that negates quantities. The application is responsible for copying the line set with negated quantities (DB cannot enforce "lines must mirror original × -1" without complex triggers; this is documented as app-phase discipline).
+`stock_documents.reversal_of_id uuid NULL REFERENCES stock_documents(id)`. CHECK: `reversal_of_id IS NULL OR status = 'confirmed'` (a reversal is itself confirmed; reversing a draft is meaningless). The original row is never UPDATEd or DELETEd — reversal creates a NEW row that negates quantities. The application is responsible for copying the line set with negated quantities (DB cannot enforce "lines must mirror original × -1" without complex triggers; this is documented as app-phase discipline).
 
 ### Decision: Confirm-time quant maintenance — transaction contract (described; app-phase implements)
 

@@ -200,6 +200,71 @@ const seedInventoryFixture = async (pool: Pool) => {
   };
 };
 
+type StockDocumentInsert = {
+  id: string;
+  documentNo: string;
+  type: 'receipt' | 'transfer' | 'adjustment' | 'loss';
+  status?: 'draft' | 'confirmed' | 'cancelled';
+  originScopeNodeId?: string | null;
+  originScopeType?: string | null;
+  destinationScopeNodeId?: string | null;
+  destinationScopeType?: string | null;
+  reversalOfId?: string | null;
+  note?: string | null;
+};
+
+const insertStockDocument = async (pool: Pool, document: StockDocumentInsert) => {
+  await pool.query(
+    `
+      INSERT INTO stock_documents (
+        id,
+        company_id,
+        document_no,
+        type,
+        status,
+        origin_scope_node_id,
+        origin_scope_type,
+        destination_scope_node_id,
+        destination_scope_type,
+        occurred_at,
+        created_by_user_id,
+        reversal_of_id,
+        note
+      )
+      VALUES (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
+        $9,
+        $10,
+        $11,
+        $12,
+        $13
+      )
+    `,
+    [
+      document.id,
+      companyOneId,
+      document.documentNo,
+      document.type,
+      document.status ?? 'draft',
+      document.originScopeNodeId ?? null,
+      document.originScopeType ?? null,
+      document.destinationScopeNodeId ?? null,
+      document.destinationScopeType ?? null,
+      '2026-08-16T10:00:00.000Z',
+      'user-1',
+      document.reversalOfId ?? null,
+      document.note ?? null,
+    ],
+  );
+};
+
 describe('inventory foundation migration', () => {
   it('adds inventory tables, enums, foreign keys, indexes, and scope triggers', async () => {
     const database = await createMigrationTestDatabase();
@@ -933,5 +998,114 @@ describe('inventory foundation migration', () => {
         lotNumber: 'LOT-001',
       },
     ]);
+  }, 30000);
+
+  it('accepts valid transfer, adjustment, and loss document writes', async () => {
+    const database = await createMigrationTestDatabase();
+    cleanups.push(database.cleanup);
+
+    await applyMigrationsThrough(database.pool, baselineMigrationFile);
+    await applyMigrationFile(database.pool, migrationFile);
+
+    const { warehouseScopeNodeId, pointOfSaleScopeNodeId } = await seedInventoryFixture(database.pool);
+
+    await insertStockDocument(database.pool, {
+      id: '00000000-0000-0000-0000-000000000601',
+      documentNo: 'DOC-TRANSFER-OK',
+      type: 'transfer',
+      originScopeNodeId: warehouseScopeNodeId,
+      originScopeType: 'warehouse',
+      destinationScopeNodeId: pointOfSaleScopeNodeId,
+      destinationScopeType: 'point-of-sale',
+      note: 'Warehouse to counter transfer',
+    });
+
+    await insertStockDocument(database.pool, {
+      id: '00000000-0000-0000-0000-000000000602',
+      documentNo: 'DOC-ADJUSTMENT-OK',
+      type: 'adjustment',
+      originScopeNodeId: warehouseScopeNodeId,
+      originScopeType: 'warehouse',
+      note: 'Cycle count adjustment',
+    });
+
+    await insertStockDocument(database.pool, {
+      id: '00000000-0000-0000-0000-000000000603',
+      documentNo: 'DOC-LOSS-OK',
+      type: 'loss',
+      originScopeNodeId: pointOfSaleScopeNodeId,
+      originScopeType: 'point-of-sale',
+      note: 'Shrinkage write-off',
+    });
+
+    const persistedDocuments = await database.pool.query<{
+      documentNo: string;
+      type: string;
+      originScopeType: string | null;
+      destinationScopeType: string | null;
+    }>(`
+      SELECT
+        document_no AS "documentNo",
+        type::text AS type,
+        origin_scope_type AS "originScopeType",
+        destination_scope_type AS "destinationScopeType"
+      FROM stock_documents
+      WHERE document_no IN ('DOC-TRANSFER-OK', 'DOC-ADJUSTMENT-OK', 'DOC-LOSS-OK')
+      ORDER BY document_no ASC
+    `);
+
+    expect(persistedDocuments.rows).toEqual([
+      {
+        documentNo: 'DOC-ADJUSTMENT-OK',
+        type: 'adjustment',
+        originScopeType: 'warehouse',
+        destinationScopeType: null,
+      },
+      {
+        documentNo: 'DOC-LOSS-OK',
+        type: 'loss',
+        originScopeType: 'point-of-sale',
+        destinationScopeType: null,
+      },
+      {
+        documentNo: 'DOC-TRANSFER-OK',
+        type: 'transfer',
+        originScopeType: 'warehouse',
+        destinationScopeType: 'point-of-sale',
+      },
+    ]);
+  }, 30000);
+
+  it('rejects reversal rows unless the reversal document is confirmed', async () => {
+    const database = await createMigrationTestDatabase();
+    cleanups.push(database.cleanup);
+
+    await applyMigrationsThrough(database.pool, baselineMigrationFile);
+    await applyMigrationFile(database.pool, migrationFile);
+
+    const { warehouseScopeNodeId } = await seedInventoryFixture(database.pool);
+
+    await insertStockDocument(database.pool, {
+      id: '00000000-0000-0000-0000-000000000701',
+      documentNo: 'DOC-REVERSAL-BASE',
+      type: 'receipt',
+      status: 'confirmed',
+      destinationScopeNodeId: warehouseScopeNodeId,
+      destinationScopeType: 'warehouse',
+      note: 'Base document for reversal checks',
+    });
+
+    await expect(
+      insertStockDocument(database.pool, {
+        id: '00000000-0000-0000-0000-000000000702',
+        documentNo: 'DOC-REVERSAL-DRAFT',
+        type: 'receipt',
+        status: 'draft',
+        destinationScopeNodeId: warehouseScopeNodeId,
+        destinationScopeType: 'warehouse',
+        reversalOfId: '00000000-0000-0000-0000-000000000701',
+        note: 'Draft reversal should fail',
+      }),
+    ).rejects.toThrow(/stock_documents_reversal_confirmed_chk/);
   }, 30000);
 });
