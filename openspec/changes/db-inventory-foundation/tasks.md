@@ -31,14 +31,14 @@ Chain strategy: stacked-to-main
 - [x] 1.1 Add 2 enums + 4 tables to `apps/api/src/shared/infrastructure/db/schema.ts` per design Schema section.
 - [x] 1.2 Evaluate `unique().nullsNotDistinct()` (drizzle-orm 0.44.5) for `stock_quants` dedup. If emitted SQL matches `UNIQUE … NULLS NOT DISTINCT` exactly, use it; else hand-write SQL (decision in commit body).
 - [x] 1.3 Add `inventoryStockPermissionKeys` (3 keys) and `inventoryDocumentsPermissionKeys` (4 keys) const arrays to `permissions.ts`; spread all 3 in `modulePermissionRegistry.inventory`.
-- [ ] 1.4 Add `0027_inventory_foundation` to `expectedJournalTags` + `expectedSnapshotTags` in `migration-journal.test.ts`.
+- [x] 1.4 Add `0027_inventory_foundation` to `expectedJournalTags` + `expectedSnapshotTags` in `migration-journal.test.ts`.
 - [ ] 1.5 `pnpm --filter api typecheck` pass; commit `feat(db-inventory): add stock tables, enums, scope-type checks, and permission arrays`.
 
 ## Phase 2: Migration + meta
 
-- [ ] 2.1 `pnpm --filter api db:generate` → `0027_inventory_foundation.sql` + `0027_snapshot.json`.
-- [ ] 2.2 Hand-edit `0027_inventory_foundation.sql`: append (a) `CREATE UNIQUE INDEX stock_quants_company_item_scope_lot_uk … NULLS NOT DISTINCT;` (only if 1.2 hand-written), (b) `stock_documents_scope_type_check()` plpgsql fn + trigger, (c) `stock_quants_scope_type_check()` fn + trigger.
-- [ ] 2.3 Confirm `meta/_journal.json` got `idx: 26, tag: '0027_inventory_foundation', breakpoints: true`; commit `feat(db-inventory): add 0027 migration with NULLS NOT DISTINCT unique and scope-type triggers`.
+- [x] 2.1 `pnpm --filter api db:generate` → `0027_inventory_foundation.sql` + `0027_snapshot.json`.
+- [x] 2.2 Hand-edit `0027_inventory_foundation.sql`: append (a) `CREATE UNIQUE INDEX stock_quants_company_item_scope_lot_uk … NULLS NOT DISTINCT;` (only if 1.2 hand-written), (b) `stock_documents_scope_type_check()` plpgsql fn + trigger, (c) `stock_quants_scope_type_check()` fn + trigger.
+- [x] 2.3 Confirm `meta/_journal.json` got `idx: 26, tag: '0027_inventory_foundation', breakpoints: true`; commit `feat(db-inventory): add 0027 migration with NULLS NOT DISTINCT unique and scope-type triggers`.
 
 ## Phase 3: Per-migration test (strict TDD)
 

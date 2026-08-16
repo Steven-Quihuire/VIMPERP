@@ -4,6 +4,7 @@ import { getTableColumns } from 'drizzle-orm';
 import { getTableConfig } from 'drizzle-orm/pg-core';
 
 import {
+  itemsTable,
   stockDocumentLinesTable,
   stockDocumentsTable,
   stockDocumentStatusEnum,
@@ -100,6 +101,12 @@ describe('inventory schema metadata', () => {
   });
 
   it('defines stock document lines and stock quants with quantity bounds and tenant-safe links', () => {
+    const itemConfig = getTableConfig(itemsTable);
+
+    expect(itemConfig.indexes.map((index) => index.config.name)).toContain(
+      'items_id_company_idx',
+    );
+
     const lineColumns = getTableColumns(stockDocumentLinesTable);
     const lineConfig = getTableConfig(stockDocumentLinesTable);
 

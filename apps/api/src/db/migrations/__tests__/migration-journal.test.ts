@@ -44,6 +44,7 @@ const expectedSnapshotTags = [
   '0016_canonical_scope_nodes',
   '0017_role_assignment_scope_fk',
   '0026_timesheets',
+  '0027_inventory_foundation',
 ] as const;
 
 const expectedJournalTags = [
@@ -55,6 +56,7 @@ const expectedJournalTags = [
   '0024_hr_reporting_line_integrity',
   '0025_hr_responsibility_invitations',
   '0026_timesheets',
+  '0027_inventory_foundation',
 ] as const;
 
 describe('migration journal metadata', () => {
@@ -90,14 +92,23 @@ describe('migration journal metadata', () => {
       true,
       true,
       true,
+      true,
     ]);
 
     expect(snapshots.map(({ entry }) => entry?.tag ?? null)).toEqual([
       ...expectedSnapshotTags,
     ]);
-    expect(snapshots.map(({ entry }) => entry?.idx ?? null)).toEqual([13, 14, 15, 16, 25]);
-    expect(snapshots.map(({ entry }) => entry?.version ?? null)).toEqual(['7', '7', '7', '7', '7']);
+    expect(snapshots.map(({ entry }) => entry?.idx ?? null)).toEqual([13, 14, 15, 16, 25, 26]);
+    expect(snapshots.map(({ entry }) => entry?.version ?? null)).toEqual([
+      '7',
+      '7',
+      '7',
+      '7',
+      '7',
+      '7',
+    ]);
     expect(snapshots.map(({ entry }) => entry?.breakpoints ?? null)).toEqual([
+      true,
       true,
       true,
       true,
@@ -109,17 +120,24 @@ describe('migration journal metadata', () => {
     expect(snapshots[2]?.snapshot.prevId).toBe(snapshots[1]?.snapshot.id);
     expect(snapshots[3]?.snapshot.prevId).toBe(snapshots[2]?.snapshot.id);
     expect(snapshots[4]?.snapshot.prevId).toBe(snapshots[3]?.snapshot.id);
+    expect(snapshots[5]?.snapshot.prevId).toBe(snapshots[4]?.snapshot.id);
 
     expect(
       expectedJournalTags.map((tag) => entriesByTag.get(tag)?.tag ?? null),
     ).toEqual([...expectedJournalTags]);
     expect(
       expectedJournalTags.map((tag) => entriesByTag.get(tag)?.idx ?? null),
-    ).toEqual([13, 14, 15, 16, 22, 23, 24, 25]);
+    ).toEqual([13, 14, 15, 16, 22, 23, 24, 25, 26]);
 
     expect(snapshots[4]?.snapshot.enums).toHaveProperty('public.timesheet_status');
     expect(snapshots[4]?.snapshot.tables).toHaveProperty('public.timesheet_periods');
     expect(snapshots[4]?.snapshot.tables).toHaveProperty('public.time_entries');
+    expect(snapshots[5]?.snapshot.enums).toHaveProperty('public.stock_document_type');
+    expect(snapshots[5]?.snapshot.enums).toHaveProperty('public.stock_document_status');
+    expect(snapshots[5]?.snapshot.tables).toHaveProperty('public.stock_lots');
+    expect(snapshots[5]?.snapshot.tables).toHaveProperty('public.stock_documents');
+    expect(snapshots[5]?.snapshot.tables).toHaveProperty('public.stock_document_lines');
+    expect(snapshots[5]?.snapshot.tables).toHaveProperty('public.stock_quants');
   });
 
   it('lets drizzle-kit migrate apply cleanly on a fresh local postgres database', async () => {

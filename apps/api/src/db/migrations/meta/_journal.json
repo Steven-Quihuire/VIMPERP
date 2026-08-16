@@ -183,6 +183,13 @@
       "when": 1786849592851,
       "tag": "0026_timesheets",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1786896000000,
+      "tag": "0027_inventory_foundation",
+      "breakpoints": true
     }
   ]
 }

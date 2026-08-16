@@ -524,6 +524,7 @@ export const itemsTable = pgTable(
       .defaultNow(),
   },
   (table) => [
+    uniqueIndex('items_id_company_idx').on(table.id, table.companyId),
     uniqueIndex('items_company_local_sku_idx')
       .on(table.companyId, table.localId, table.sku)
       .where(sql`${table.sku} IS NOT NULL`),
