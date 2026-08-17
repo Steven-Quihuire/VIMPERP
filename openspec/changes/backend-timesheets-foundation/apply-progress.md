@@ -2,8 +2,8 @@
 
 ## Scope
 
-- Current work unit: `remediate-verify-blockers`
-- Completed work units: `S1-domain-application`, `S2-drizzle-gateway`, `S3-router-wiring`, `remediate-verify-blockers`
+- Current work unit: `remediate-timesheets-lint`
+- Completed work units: `S1-domain-application`, `S2-drizzle-gateway`, `S3-router-wiring`, `remediate-verify-blockers`, `remediate-timesheets-lint`
 - Delivery strategy: `auto-chain`
 - Chain strategy: `feature-branch-chain`
 - Size handling: focused chained slice for S3, plus bounded remediation slice after blocked verify
@@ -111,11 +111,72 @@
 | Runtime harness command/scenario and exact result | `pnpm --filter api exec vitest run src/features/hr-timesheets/presentation/timesheets.router.test.ts` → exit `0`; `1` test file / `5` tests passed through `createApp` + Supertest |
 | Rollback boundary | Revert `apps/api/src/features/hr-timesheets/{domain/timesheets.ts,application/submit-period.ts,application/__tests__/submit-period.test.ts,application/__tests__/support.ts,infrastructure/drizzle-timesheets.gateway.ts,infrastructure/drizzle-timesheets.gateway.test.ts}` plus `openspec/changes/backend-timesheets-foundation/{tasks.md,apply-progress.md}` only |
 
+## Remediation — Lint Cleanup
+
+- [x] Cleared the three `@typescript-eslint/require-await` findings in `drizzle-timesheets.gateway.test.ts` by returning `Promise.resolve(...)` from synchronous approval-policy callbacks.
+- [x] Removed the five unnecessary Zod string type assertions in `presentation/timesheets.router.ts` without changing request validation behavior.
+- [x] Reworked the router integration test helpers to parse response bodies through Zod-backed helpers, removing the ten unsafe/unnecessary body access assertions while preserving the same endpoint assertions.
+
+### Lint Remediation TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| R3 | `apps/api/src/features/hr-timesheets/infrastructure/drizzle-timesheets.gateway.test.ts`, `apps/api/src/features/hr-timesheets/presentation/timesheets.router.ts`, `apps/api/src/features/hr-timesheets/presentation/timesheets.router.test.ts` | Quality + Integration | ✅ `pnpm --filter api exec vitest run src/features/hr-timesheets/infrastructure/drizzle-timesheets.gateway.test.ts src/features/hr-timesheets/presentation/timesheets.router.test.ts` → exit `0`; `2` files / `10` tests passed before edits | ✅ `pnpm --filter api lint` → exit `1`; 18 changed-slice ESLint errors across the gateway test, router source, and router test | ✅ `pnpm --filter api exec eslint src/features/hr-timesheets/infrastructure/drizzle-timesheets.gateway.test.ts src/features/hr-timesheets/presentation/timesheets.router.ts src/features/hr-timesheets/presentation/timesheets.router.test.ts --max-warnings=0` → exit `0`; `pnpm --filter api lint` → exit `0` | ✅ Covered three distinct lint classes: `require-await`, unnecessary assertions, and unsafe Supertest body access | ✅ Extracted typed Zod parsing helpers in the router test and kept runtime behavior pinned by the unchanged focused integration suite |
+
+### Lint Remediation Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `pnpm --filter api exec eslint src/features/hr-timesheets/infrastructure/drizzle-timesheets.gateway.test.ts src/features/hr-timesheets/presentation/timesheets.router.ts src/features/hr-timesheets/presentation/timesheets.router.test.ts --max-warnings=0` → exit `0` |
+| Runtime harness command/scenario and exact result | `pnpm --filter api exec vitest run src/features/hr-timesheets/infrastructure/drizzle-timesheets.gateway.test.ts src/features/hr-timesheets/presentation/timesheets.router.test.ts` → exit `0`; `2` test files / `10` tests passed through the real PostgreSQL gateway harness and `createApp` + Supertest router flow |
+| Rollback boundary | Revert `apps/api/src/features/hr-timesheets/infrastructure/drizzle-timesheets.gateway.test.ts`, `apps/api/src/features/hr-timesheets/presentation/timesheets.router.ts`, `apps/api/src/features/hr-timesheets/presentation/timesheets.router.test.ts`, and `openspec/changes/backend-timesheets-foundation/apply-progress.md` only |
+
+### gentle-ai.remediation-result/v1
+
+```yaml
+lineage_id: unknown-orchestrator-owned
+generation: unknown-orchestrator-owned
+fix_batch: remediate-timesheets-lint
+failed_evidence_revision: sha256:2a6d8adeab4964d5bf83017c3788a58a262c4b1d08580d34a654cb7b32a50250
+outcome: success
+```
+
+### gentle-ai.remediation-evidence/v1
+
+```json
+{
+  "lineage_id": "unknown-orchestrator-owned",
+  "generation": "unknown-orchestrator-owned",
+  "fix_batch": "remediate-timesheets-lint",
+  "failed_evidence_revision": "sha256:2a6d8adeab4964d5bf83017c3788a58a262c4b1d08580d34a654cb7b32a50250",
+  "native_attempt_token": "sha256:e77c0db3638388df6fa3edd3dec055392f72ebb044bc800ab7fe70635841354b",
+  "focused_lint": {
+    "command": "pnpm --filter api exec eslint src/features/hr-timesheets/infrastructure/drizzle-timesheets.gateway.test.ts src/features/hr-timesheets/presentation/timesheets.router.ts src/features/hr-timesheets/presentation/timesheets.router.test.ts --max-warnings=0",
+    "exit_code": 0
+  },
+  "full_lint": {
+    "command": "pnpm --filter api lint",
+    "exit_code": 0
+  },
+  "runtime_harness": {
+    "command": "pnpm --filter api exec vitest run src/features/hr-timesheets/infrastructure/drizzle-timesheets.gateway.test.ts src/features/hr-timesheets/presentation/timesheets.router.test.ts",
+    "exit_code": 0,
+    "test_files": 2,
+    "tests_passed": 10
+  },
+  "notes": [
+    "Behavior preserved; no frontend, migration, or create-app/error-middleware scope expansion.",
+    "Baseline build/typecheck failures remain out of scope and unchanged."
+  ]
+}
+```
+
 ## Deviations from Design
 
 - Previous submit-flow deviation resolved: `TimesheetGateway.submitPeriod` now performs the design-required transaction with `SELECT ... FOR UPDATE`, re-checks draft status from the locked row, reloads the active assignment scope, resolves the policy snapshot inside the transaction, and updates the submitted fields atomically.
 - `findActiveAssignment` still returns `scopeNodeId` in addition to `id/companyId/employeeId`; this remains the clean boundary that lets submit resolve policy scope without leaking HR gateway dependencies into the application layer.
 - `create-app.ts` still adapts approval-policy lookups by exact `scopeNodeId`, but that lookup now runs through the submit gateway's transaction callback instead of across separate pre-submit reads and writes.
+- Lint remediation stayed inside the changed timesheet slice; `create-app.ts`, `error.middleware.ts`, and `.atl/skill-registry.md` remain untouched in this batch.
 
 ## Remaining Tasks
 
@@ -123,5 +184,5 @@
 
 ## Status
 
-- S1, S2, S3, cross-cutting 4.1/4.2, and remediation `remediate-verify-blockers` complete.
-- Ready for `sdd-verify`.
+- S1, S2, S3, cross-cutting 4.1/4.2, and remediations `remediate-verify-blockers` + `remediate-timesheets-lint` complete.
+- Ready for `sdd-verify` re-run after lint cleanup evidence merge.
