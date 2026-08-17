@@ -100,6 +100,25 @@ import { createUpdateApprovalPolicyUseCase } from '../features/approval-policy/a
 import type { ApprovalPolicyGateway } from '../features/approval-policy/domain/approval-policy';
 import { createDrizzleApprovalPolicyGateway } from '../features/approval-policy/infrastructure/drizzle-approval-policy.gateway';
 import { createApprovalPolicyRouter } from '../features/approval-policy/presentation/approval-policy.router';
+import { createApprovePeriodUseCase } from '../features/hr-timesheets/application/approve-period';
+import type { ApprovalPolicyGateway as TimesheetApprovalPolicyGateway } from '../features/hr-timesheets/application/approval-policy.gateway';
+import { createCreatePeriodUseCase } from '../features/hr-timesheets/application/create-period';
+import { createGetPeriodUseCase } from '../features/hr-timesheets/application/get-period';
+import { createListPeriodsUseCase } from '../features/hr-timesheets/application/list-periods';
+import { createPatchPeriodUseCase } from '../features/hr-timesheets/application/patch-period';
+import { createRejectPeriodUseCase } from '../features/hr-timesheets/application/reject-period';
+import { createReopenPeriodUseCase } from '../features/hr-timesheets/application/reopen-period';
+import { createSubmitPeriodUseCase } from '../features/hr-timesheets/application/submit-period';
+import { createAddEntryUseCase } from '../features/hr-timesheets/application/entries/add-entry';
+import { createRemoveEntryUseCase } from '../features/hr-timesheets/application/entries/remove-entry';
+import { createUpdateEntryUseCase } from '../features/hr-timesheets/application/entries/update-entry';
+import {
+  TimesheetAssignmentNotFoundError,
+  TimesheetPeriodNotFoundError,
+  type TimesheetGateway,
+} from '../features/hr-timesheets/domain/timesheets';
+import { createDrizzleTimesheetsGateway } from '../features/hr-timesheets/infrastructure/drizzle-timesheets.gateway';
+import { createTimesheetsRouter } from '../features/hr-timesheets/presentation/timesheets.router';
 import { createAcceptNodeManagementInvitationUseCase } from '../features/node-management/application/accept-node-management-invitation';
 import { createCreateNodeManagementInvitationUseCase } from '../features/node-management/application/create-node-management-invitation';
 import { createGetNodeManagementInvitationUseCase } from '../features/node-management/application/get-node-management-invitation';
@@ -190,6 +209,7 @@ type CreateAppInput = {
   hrErpAccessGateway?: ErpAccessGateway;
   hrResponsibilityGateway?: HrResponsibilityGateway;
   approvalPolicyGateway?: ApprovalPolicyGateway;
+  timesheetGateway?: TimesheetGateway;
   nodeManagementGateway?: NodeManagementGateway;
   scopeResolver?: ScopeResolver;
   computeEffectivePermissions?: ComputeEffectivePermissions;
@@ -245,6 +265,18 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     input.hrResponsibilityGateway ?? createDrizzleHrResponsibilityGateway(db);
   const approvalPolicyGateway =
     input.approvalPolicyGateway ?? createDrizzleApprovalPolicyGateway(db);
+  const timesheetGateway =
+    input.timesheetGateway ?? createDrizzleTimesheetsGateway(db);
+  const timesheetApprovalPolicyGateway: TimesheetApprovalPolicyGateway = {
+    findActivePolicyForScope: async (companyId, scopeNodeId) => {
+      const policies = await approvalPolicyGateway.listApprovalPolicies(companyId);
+      const activePolicy = policies.find(
+        (policy) => policy.isActive && policy.scopeNodeId === scopeNodeId,
+      );
+
+      return activePolicy ? { id: activePolicy.id } : null;
+    },
+  };
   const computeEffectivePermissions =
     input.computeEffectivePermissions ??
     createComputeEffectivePermissionsUseCase({
@@ -688,6 +720,145 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       )
     ).filter((policy): policy is NonNullable<typeof policy> => policy !== null);
   };
+  const getActorTimesheetContext = async ({
+    companyId,
+    auth,
+  }: {
+    companyId: string;
+    auth: AuthSession;
+  }) => {
+    const activeLink = await hrErpAccessGateway.getActiveLinkByUserId(
+      companyId,
+      auth.user.id,
+    );
+
+    if (!activeLink) {
+      return {
+        actorAssignment: null,
+        actorEmployeeId: null,
+        directReportEmployeeIds: [] as string[],
+      };
+    }
+
+    const actorAssignment =
+      await hrEmployeesGateway.getActivePrimaryAssignmentByEmployeeId(
+        companyId,
+        activeLink.employeeId,
+      );
+    const directReportEmployeeIds = actorAssignment
+      ? (
+          await hrEmployeesGateway.listDirectReportAssignments(
+            companyId,
+            actorAssignment.positionId,
+          )
+        ).map((assignment) => assignment.employeeId)
+      : [];
+
+    return {
+      actorAssignment,
+      actorEmployeeId: activeLink.employeeId,
+      directReportEmployeeIds,
+    };
+  };
+  const listVisibleTimesheetEmployeeIds = async ({
+    companyId,
+    auth,
+  }: {
+    companyId: string;
+    auth: AuthSession;
+  }) => {
+    const context = await getActorTimesheetContext({ companyId, auth });
+
+    if (!context.actorEmployeeId) {
+      return [];
+    }
+
+    return [
+      ...new Set([context.actorEmployeeId, ...context.directReportEmployeeIds]),
+    ];
+  };
+  const resolveTimesheetPermissionScope = async ({
+    request,
+    auth,
+  }: {
+    request: Parameters<RequestHandler>[0];
+    response: Parameters<RequestHandler>[1];
+    auth: AuthSession;
+  }): Promise<PermissionScope | undefined> => {
+    const companyId = String(request.params.companyId);
+    const body = (request.body ?? {}) as { employeeAssignmentId?: unknown };
+    const context = await getActorTimesheetContext({ companyId, auth });
+    const isPeriodRoute = typeof request.params.periodId === 'string';
+
+    let targetEmployeeId: string | null = null;
+
+    if (typeof body.employeeAssignmentId === 'string') {
+      const assignment = await timesheetGateway.findActiveAssignment(
+        companyId,
+        body.employeeAssignmentId,
+      );
+
+      if (!assignment) {
+        throw new TimesheetAssignmentNotFoundError();
+      }
+
+      targetEmployeeId = assignment.employeeId;
+    } else if (isPeriodRoute) {
+      const period = await timesheetGateway.getPeriod(
+        companyId,
+        String(request.params.periodId),
+      );
+
+      if (!period) {
+        throw new TimesheetPeriodNotFoundError();
+      }
+
+      const assignment = await timesheetGateway.findActiveAssignment(
+        companyId,
+        period.employeeAssignmentId,
+      );
+
+      if (!assignment) {
+        throw new TimesheetPeriodNotFoundError();
+      }
+
+      targetEmployeeId = assignment.employeeId;
+    }
+
+    if (!targetEmployeeId) {
+      return context.directReportEmployeeIds.length > 0
+        ? { kind: 'direct_reports' }
+        : { kind: 'self' };
+    }
+
+    if (context.actorEmployeeId === targetEmployeeId) {
+      return { kind: 'self' };
+    }
+
+    if (context.directReportEmployeeIds.includes(targetEmployeeId)) {
+      return { kind: 'direct_reports' };
+    }
+
+    if (isPeriodRoute) {
+      throw new TimesheetPeriodNotFoundError();
+    }
+
+    throw new TimesheetAssignmentNotFoundError();
+  };
+  const createPeriod = createCreatePeriodUseCase({ gateway: timesheetGateway });
+  const listPeriods = createListPeriodsUseCase({ gateway: timesheetGateway });
+  const getPeriod = createGetPeriodUseCase({ gateway: timesheetGateway });
+  const patchPeriod = createPatchPeriodUseCase({ gateway: timesheetGateway });
+  const addEntry = createAddEntryUseCase({ gateway: timesheetGateway });
+  const updateEntry = createUpdateEntryUseCase({ gateway: timesheetGateway });
+  const removeEntry = createRemoveEntryUseCase({ gateway: timesheetGateway });
+  const submitPeriod = createSubmitPeriodUseCase({
+    gateway: timesheetGateway,
+    approvalPolicyGateway: timesheetApprovalPolicyGateway,
+  });
+  const approvePeriod = createApprovePeriodUseCase({ gateway: timesheetGateway });
+  const rejectPeriod = createRejectPeriodUseCase({ gateway: timesheetGateway });
+  const reopenPeriod = createReopenPeriodUseCase({ gateway: timesheetGateway });
   const requirePlatformAdmin = createRequireRole('platform-admin');
   const sweepStaleProvisioningRuns = createSweepStaleProvisioningRuns({
     recorder: provisioningRecorder,
@@ -914,6 +1085,103 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       deactivateApprovalPolicy: createDeactivateApprovalPolicyUseCase({
         gateway: approvalPolicyGateway,
       }),
+    }),
+  );
+  app.use(
+    createTimesheetsRouter({
+      requireAuth,
+      requireHrCapability,
+      resolvePermissionScope: resolveTimesheetPermissionScope,
+      createPeriod: async ({
+        companyId,
+        employeeAssignmentId,
+        periodStart,
+        periodEnd,
+      }) =>
+        await createPeriod({
+          companyId,
+          employeeAssignmentId,
+          periodStart,
+          periodEnd,
+        }),
+      listPeriods: async ({ companyId, status, auth }) => {
+        const visibleEmployeeIds = await listVisibleTimesheetEmployeeIds({
+          companyId,
+          auth,
+        });
+
+        return await listPeriods({
+          companyId,
+          visibleEmployeeIds,
+          ...(status ? { status } : {}),
+        });
+      },
+      getPeriod: async ({ companyId, periodId, auth }) => {
+        const visibleEmployeeIds = await listVisibleTimesheetEmployeeIds({
+          companyId,
+          auth,
+        });
+
+        return await getPeriod({ companyId, periodId, visibleEmployeeIds });
+      },
+      patchPeriod: async ({ companyId, periodId, periodStart, periodEnd }) =>
+        await patchPeriod({ companyId, periodId, periodStart, periodEnd }),
+      createEntry: async ({
+        companyId,
+        periodId,
+        entryDate,
+        hours,
+        projectId,
+        taskLabel,
+        note,
+      }) =>
+        await addEntry({
+          companyId,
+          periodId,
+          entryDate,
+          hours,
+          projectId,
+          taskLabel,
+          note,
+        }),
+      updateEntry: async ({
+        companyId,
+        periodId,
+        entryId,
+        entryDate,
+        hours,
+        projectId,
+        taskLabel,
+        note,
+      }) =>
+        await updateEntry({
+          companyId,
+          periodId,
+          entryId,
+          entryDate,
+          hours,
+          projectId,
+          taskLabel,
+          note,
+        }),
+      deleteEntry: async ({ companyId, periodId, entryId }) =>
+        await removeEntry({ companyId, periodId, entryId }),
+      submitPeriod: async ({ companyId, periodId, auth }) =>
+        await submitPeriod({
+          companyId,
+          periodId,
+          submittedByUserId: auth.user.id,
+        }),
+      approvePeriod: async ({ companyId, periodId, auth }) =>
+        await approvePeriod({
+          companyId,
+          periodId,
+          approvedByUserId: auth.user.id,
+        }),
+      rejectPeriod: async ({ companyId, periodId, rejectionReason }) =>
+        await rejectPeriod({ companyId, periodId, rejectionReason }),
+      reopenPeriod: async ({ companyId, periodId }) =>
+        await reopenPeriod({ companyId, periodId }),
     }),
   );
   app.use(

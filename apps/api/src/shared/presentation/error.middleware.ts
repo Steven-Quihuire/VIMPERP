@@ -45,6 +45,18 @@ import {
   ApprovalPolicyValidationError,
 } from '../../features/approval-policy/domain/approval-policy';
 import {
+  TimesheetAssignmentNotFoundError,
+  TimesheetEntryConflictError,
+  TimesheetEntryNotFoundError,
+  TimesheetInvalidStatusTransitionError,
+  TimesheetLockedError,
+  TimesheetPeriodNotFoundError,
+  TimesheetPeriodOverlapError,
+  TimesheetRejectionReasonRequiredError,
+  TimesheetSelfApprovalError,
+  TimesheetValidationError,
+} from '../../features/hr-timesheets/domain/timesheets';
+import {
   PositionHeadcountExceededError,
   PositionHierarchyError,
   PositionParentNotFoundError,
@@ -168,14 +180,27 @@ export const createErrorMiddleware = ({
     }
 
     if (
+      error instanceof TimesheetValidationError ||
+      error instanceof TimesheetRejectionReasonRequiredError
+    ) {
+      response.status(400).json(toResponseBody(error.code, error.message));
+      return;
+    }
+
+    if (
       error instanceof EmployeeAssignmentConflictError ||
       error instanceof PositionHeadcountExceededError ||
       error instanceof PositionHierarchyError ||
       error instanceof ErpAccessLinkConflictError ||
-      error instanceof ErpAccessInvitationAlreadyAcceptedError
-      || error instanceof HrResponsibilityInvitationAlreadyAcceptedError
-      || error instanceof HrResponsibilityInvitationDuplicateError
-      || error instanceof HrResponsibleAlreadyAssignedError
+      error instanceof ErpAccessInvitationAlreadyAcceptedError ||
+      error instanceof HrResponsibilityInvitationAlreadyAcceptedError ||
+      error instanceof HrResponsibilityInvitationDuplicateError ||
+      error instanceof HrResponsibleAlreadyAssignedError ||
+      error instanceof TimesheetPeriodOverlapError ||
+      error instanceof TimesheetLockedError ||
+      error instanceof TimesheetEntryConflictError ||
+      error instanceof TimesheetInvalidStatusTransitionError ||
+      error instanceof TimesheetSelfApprovalError
     ) {
       response.status(409).json(toResponseBody(error.code, error.message));
       return;
@@ -197,6 +222,9 @@ export const createErrorMiddleware = ({
       || error instanceof HrResponsibilityInvitationNotFoundError
       || error instanceof HrResponsibilityCompanyNotFoundError
       || error instanceof HrResponsibleUserNotFoundError
+      || error instanceof TimesheetAssignmentNotFoundError
+      || error instanceof TimesheetPeriodNotFoundError
+      || error instanceof TimesheetEntryNotFoundError
     ) {
       response.status(404).json(toResponseBody(error.code, error.message));
       return;

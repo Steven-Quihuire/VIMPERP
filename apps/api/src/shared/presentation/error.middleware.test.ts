@@ -3,6 +3,18 @@ import request from 'supertest';
 import type { Logger } from 'pino';
 import { describe, expect, it, vi } from 'vitest';
 
+import {
+  TimesheetAssignmentNotFoundError,
+  TimesheetEntryConflictError,
+  TimesheetEntryNotFoundError,
+  TimesheetInvalidStatusTransitionError,
+  TimesheetLockedError,
+  TimesheetPeriodNotFoundError,
+  TimesheetPeriodOverlapError,
+  TimesheetRejectionReasonRequiredError,
+  TimesheetSelfApprovalError,
+  TimesheetValidationError,
+} from '../../features/hr-timesheets/domain/timesheets';
 import { createErrorMiddleware } from './error.middleware';
 import type { ApplicationErrorRecorder } from './error.middleware';
 import {
@@ -30,6 +42,76 @@ const createMetrics = (): RequestMetrics => ({
 });
 
 describe('createErrorMiddleware', () => {
+  it.each([
+    {
+      error: new TimesheetValidationError('Entry hours must be greater than zero and at most twenty-four.'),
+      expectedStatus: 400,
+      expectedCode: 'TIMESHEET_VALIDATION',
+    },
+    {
+      error: new TimesheetRejectionReasonRequiredError(),
+      expectedStatus: 400,
+      expectedCode: 'TIMESHEET_REJECTION_REASON_REQUIRED',
+    },
+    {
+      error: new TimesheetAssignmentNotFoundError(),
+      expectedStatus: 404,
+      expectedCode: 'TIMESHEET_ASSIGNMENT_NOT_FOUND',
+    },
+    {
+      error: new TimesheetPeriodNotFoundError(),
+      expectedStatus: 404,
+      expectedCode: 'TIMESHEET_PERIOD_NOT_FOUND',
+    },
+    {
+      error: new TimesheetEntryNotFoundError(),
+      expectedStatus: 404,
+      expectedCode: 'TIMESHEET_ENTRY_NOT_FOUND',
+    },
+    {
+      error: new TimesheetPeriodOverlapError(),
+      expectedStatus: 409,
+      expectedCode: 'TIMESHEET_PERIOD_OVERLAP',
+    },
+    {
+      error: new TimesheetLockedError(),
+      expectedStatus: 409,
+      expectedCode: 'TIMESHEET_LOCKED',
+    },
+    {
+      error: new TimesheetEntryConflictError(),
+      expectedStatus: 409,
+      expectedCode: 'TIMESHEET_ENTRY_CONFLICT',
+    },
+    {
+      error: new TimesheetInvalidStatusTransitionError(),
+      expectedStatus: 409,
+      expectedCode: 'TIMESHEET_INVALID_STATUS_TRANSITION',
+    },
+    {
+      error: new TimesheetSelfApprovalError(),
+      expectedStatus: 409,
+      expectedCode: 'TIMESHEET_SELF_APPROVAL',
+    },
+  ])('maps $expectedCode to $expectedStatus', async ({ error, expectedStatus, expectedCode }) => {
+    const app = express();
+
+    app.get('/timesheets', (_request, _response, next) => {
+      next(error);
+    });
+    app.use(createErrorMiddleware());
+
+    const response = await request(app).get('/timesheets');
+
+    expect(response.status).toBe(expectedStatus);
+    expect(response.body).toEqual({
+      error: {
+        code: expectedCode,
+        message: error.message,
+      },
+    });
+  });
+
   it('records a sanitized 500 row without breaking the request flow', async () => {
     const record = vi.fn<ApplicationErrorRecorder['record']>().mockResolvedValue(undefined);
     const logger = { info: vi.fn() } as unknown as Logger;
