@@ -1,5 +1,11 @@
 import type { AuthSession } from '@/features/auth/domain/auth';
-import { BriefcaseBusiness, Plus, Users } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronsLeft,
+  BriefcaseBusiness,
+  Plus,
+  Users,
+} from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/shared/ui/button';
@@ -16,14 +22,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/ui/table';
+import {
+  defaultPageSizeOptions,
+  TablePageSize,
+} from '@/shared/ui/table-page-size';
 
 import { usePositions } from '../../application/hr-employees-queries';
-import type { Position } from '../../domain/positions';
 import { PositionDetailDrawer } from '../components/position-detail-drawer';
 import { PositionFilters } from '../components/position-filters';
 import type { PositionFiltersValue } from '../components/position-filters';
 import { PositionRowActions } from '../components/position-row-actions';
-import { PositionStatsCards } from '../components/position-stats';
 import { PositionFormPage } from './position-form';
 
 const emptyFilters: PositionFiltersValue = { active: new Set() };
@@ -42,6 +50,8 @@ export const PositionsListPage = ({
   const companyId = session.activeCompany?.companyId;
   const positionsQuery = usePositions(companyId, apiBaseUrl);
   const [filters, setFilters] = useState<PositionFiltersValue>(emptyFilters);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(10);
   const [detailPositionId, setDetailPositionId] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
@@ -76,24 +86,29 @@ export const PositionsListPage = ({
     );
   }
 
-  const positions = (positionsQuery.data ?? []).filter((position) => {
+  const filteredPositions = (positionsQuery.data ?? []).filter((position) => {
     if (filters.active.size === 0) return true;
     if (filters.active.has('active') && position.isActive) return true;
     if (filters.active.has('inactive') && !position.isActive) return true;
     return false;
   });
-
+  const totalPositions = filteredPositions.length;
+  const totalPages = Math.max(1, Math.ceil(totalPositions / pageSize));
+  const positions = filteredPositions.slice(
+    (page - 1) * pageSize,
+    page * pageSize,
+  );
   const detailPosition = positionsQuery.data?.find(
     (position) => position.id === detailPositionId,
   );
 
   return (
     <section className="space-y-6">
-      <PositionStatsCards positions={positionsQuery.data ?? []} />
-
       <div className="-mt-2 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-xl font-medium tracking-tight">Gestionar puestos</h2>
+          <h2 className="text-xl font-medium tracking-tight">
+            Gestionar puestos
+          </h2>
           <Button
             type="button"
             variant="outline"
@@ -106,8 +121,14 @@ export const PositionsListPage = ({
         </div>
         <PositionFilters
           value={filters}
-          onChange={setFilters}
-          onClear={() => setFilters(emptyFilters)}
+          onChange={(next) => {
+            setFilters(next);
+            setPage(1);
+          }}
+          onClear={() => {
+            setFilters(emptyFilters);
+            setPage(1);
+          }}
         />
       </div>
 
@@ -133,6 +154,7 @@ export const PositionsListPage = ({
                 onCreated={(positionId) => {
                   setIsCreateOpen(false);
                   onSelectPosition?.(positionId);
+                  setPage(1);
                 }}
                 onCancel={() => setIsCreateOpen(false)}
               />
@@ -141,7 +163,7 @@ export const PositionsListPage = ({
         </DialogContent>
       </Dialog>
 
-      {positions.length === 0 ? (
+      {totalPositions === 0 ? (
         <div className="border-t px-5 py-12 text-center">
           <Users className="mx-auto size-8 text-muted-foreground/50" />
           <h2 className="text-xl font-medium tracking-tight">
@@ -221,6 +243,77 @@ export const PositionsListPage = ({
           </TableBody>
         </Table>
       )}
+
+      {totalPositions > 0 ? (
+        <footer className="flex min-h-16 flex-wrap items-center justify-between gap-4 border-t bg-muted/10 px-4 py-3 text-xs sm:px-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span>
+              Mostrando{' '}
+              <strong className="font-semibold text-foreground">
+                {positions.length}
+              </strong>{' '}
+              puestos de{' '}
+              <strong className="font-semibold text-foreground">
+                {totalPositions}
+              </strong>
+            </span>
+            <span aria-hidden className="h-4 w-px bg-border" />
+            <span>Filas por página</span>
+            <TablePageSize
+              value={pageSize}
+              options={defaultPageSizeOptions}
+              onChange={(next) => {
+                setPageSize(next);
+                setPage(1);
+              }}
+            />
+          </div>
+          <nav
+            aria-label="Paginación de puestos"
+            className="flex items-center gap-1"
+          >
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Ir a la primera página"
+              disabled={page === 1}
+              onClick={() => setPage(1)}
+              className="size-8 rounded-md"
+            >
+              <ChevronsLeft className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Volver al inicio"
+              disabled={page === 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              className="size-8 rounded-md"
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+            <span className="mx-1 h-5 w-px bg-border" />
+            {page < totalPages ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() =>
+                  setPage((current) => Math.min(totalPages, current + 1))
+                }
+                className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-foreground transition-colors hover:bg-muted hover:text-primary"
+              >
+                Siguiente
+              </Button>
+            ) : (
+              <span className="px-2 text-muted-foreground/60">
+                Última página
+              </span>
+            )}
+          </nav>
+        </footer>
+      ) : null}
 
       <button
         type="button"
