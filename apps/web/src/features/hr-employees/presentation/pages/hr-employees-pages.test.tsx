@@ -15,6 +15,7 @@ const useEmployeesPageMock = vi.fn();
 const useEmployeeMock = vi.fn();
 const useCreateEmployeeMock = vi.fn();
 const useUpdateEmployeeMock = vi.fn();
+const useDeleteEmployeeMock = vi.fn();
 const usePositionsMock = vi.fn();
 const useCreatePositionMock = vi.fn();
 const useAssignmentsMock = vi.fn();
@@ -26,6 +27,7 @@ vi.mock('../../application/hr-employees-queries', () => ({
   useEmployee: (...args: unknown[]) => useEmployeeMock(...args),
   useCreateEmployee: (...args: unknown[]) => useCreateEmployeeMock(...args),
   useUpdateEmployee: (...args: unknown[]) => useUpdateEmployeeMock(...args),
+  useDeleteEmployee: (...args: unknown[]) => useDeleteEmployeeMock(...args),
   usePositions: (...args: unknown[]) => usePositionsMock(...args),
   useCreatePosition: (...args: unknown[]) => useCreatePositionMock(...args),
   useAssignments: (...args: unknown[]) => useAssignmentsMock(...args),
@@ -138,6 +140,11 @@ describe('hr-employees pages', () => {
       isPending: false,
       error: null,
     });
+    useDeleteEmployeeMock.mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue({ id: 'employee-1' }),
+      isPending: false,
+      error: null,
+    });
     usePositionsMock.mockReturnValue({
       data: [
         {
@@ -236,9 +243,7 @@ describe('hr-employees pages', () => {
       />,
     );
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Abrir empleado employee-1' }),
-    );
+    fireEvent.click(screen.getByText('Employee One'));
 
     expect(screen.getByText('Employee One')).toBeInTheDocument();
     expect(onSelectEmployee).toHaveBeenCalledWith('employee-1');
@@ -371,12 +376,16 @@ describe('hr-employees pages', () => {
 
     expect(screen.getByText('People Lead')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('Nodo de alcance'), {
-      target: { value: 'company:company-1' },
-    });
-    fireEvent.change(screen.getByLabelText('Puesto'), {
-      target: { value: 'position-1' },
-    });
+    fireEvent.click(screen.getByLabelText('Dónde trabaja'));
+    fireEvent.click(
+      await screen.findByRole('option', {
+        name: 'Vimcore · Empresa (0 empleados)',
+      }),
+    );
+    fireEvent.click(screen.getByLabelText('Puesto'));
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'People Lead · 1 vacantes' }),
+    );
     fireEvent.change(screen.getByLabelText('Fecha de inicio'), {
       target: { value: '2026-08-13T12:30' },
     });
