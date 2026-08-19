@@ -59,9 +59,11 @@ import {
 import { EmployeeFilters } from '../components/employee-filters';
 import type { EmployeeFiltersValue } from '../components/employee-filters';
 import { EmployeeRowActions } from '../components/employee-row-actions';
-import { EmployeeStatsCards } from '../components/employee-stats';
-import type { EmployeeStats } from '../components/employee-stats';
 import { EmployeeFormPage } from './employee-form';
+import {
+  defaultPageSizeOptions,
+  TablePageSize,
+} from '@/shared/ui/table-page-size';
 
 const employeeMonthLabels = [
   'ene',
@@ -103,6 +105,7 @@ export const EmployeesListPage = ({
   const companyId = session.activeCompany?.companyId;
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(25);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filters, setFilters] = useState<EmployeeFiltersValue>(emptyFilters);
@@ -121,6 +124,7 @@ export const EmployeesListPage = ({
     {
       companyId,
       page,
+      pageSize,
       search: debouncedSearch,
       status: undefined,
     },
@@ -148,29 +152,7 @@ export const EmployeesListPage = ({
   }, [employeesQuery.data, filters]);
 
   const totalEmployees = employeesQuery.data?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalEmployees / 10));
-
-  const stats = useMemo<EmployeeStats>(() => {
-    const now = new Date();
-    const hiredThisMonth = allEmployees.filter((employee) => {
-      const raw = employee.hiredAt ?? employee.createdAt;
-      const date = new Date(raw);
-      return (
-        date.getMonth() === now.getMonth() &&
-        date.getFullYear() === now.getFullYear()
-      );
-    }).length;
-
-    return {
-      total: allEmployees.length,
-      active: allEmployees.filter((e) => e.employmentStatus === 'active').length,
-      suspended: allEmployees.filter((e) => e.employmentStatus === 'suspended')
-        .length,
-      separated: allEmployees.filter((e) => e.employmentStatus === 'separated')
-        .length,
-      hiredThisMonth,
-    };
-  }, [allEmployees]);
+  const totalPages = Math.max(1, Math.ceil(totalEmployees / pageSize));
 
   if (!companyId) {
     return (
@@ -315,7 +297,6 @@ export const EmployeesListPage = ({
 
   return (
     <section className="space-y-6">
-      <EmployeeStatsCards stats={stats} />
 
       <div className="-mt-2 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center justify-between gap-4">
@@ -538,7 +519,14 @@ export const EmployeesListPage = ({
           </span>
           <span aria-hidden className="h-4 w-px bg-border" />
           <span>Filas por página</span>
-          <strong className="font-semibold text-foreground">10</strong>
+          <TablePageSize
+            value={pageSize}
+            options={defaultPageSizeOptions}
+            onChange={(next) => {
+              setPageSize(next);
+              setPage(1);
+            }}
+          />
         </div>
         <nav
           aria-label="Paginación de empleados"

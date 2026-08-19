@@ -20,6 +20,7 @@ export const hrEmployeesQueryKeys = {
   employeesPage: (
     companyId: string,
     page: number,
+    pageSize: number,
     search: string,
     status: string,
   ) =>
@@ -29,6 +30,7 @@ export const hrEmployeesQueryKeys = {
       companyId,
       'page',
       page,
+      pageSize,
       search,
       status,
     ] as const,
@@ -61,6 +63,7 @@ export const useEmployeesPage = (
   input: {
     companyId: string | undefined;
     page: number;
+    pageSize: number;
     search: string;
     status: EmploymentStatus | undefined;
   },
@@ -71,6 +74,7 @@ export const useEmployeesPage = (
     queryKey: hrEmployeesQueryKeys.employeesPage(
       input.companyId ?? '',
       input.page,
+      input.pageSize,
       input.search,
       input.status ?? 'all',
     ),
@@ -78,7 +82,7 @@ export const useEmployeesPage = (
       api.listEmployeesPage({
         companyId: input.companyId as string,
         page: input.page,
-        pageSize: 10,
+        pageSize: input.pageSize,
         ...(input.search ? { search: input.search } : {}),
         ...(input.status ? { status: input.status } : {}),
       }),
