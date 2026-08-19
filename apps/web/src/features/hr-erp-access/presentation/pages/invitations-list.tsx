@@ -1,5 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
+  ChevronLeft,
+  ChevronsLeft,
   Copy,
   Loader2,
   Mail,
@@ -45,6 +47,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/ui/table';
+import {
+  defaultPageSizeOptions,
+  TablePageSize,
+} from '@/shared/ui/table-page-size';
 
 import { useInvitations } from '../../application/hr-erp-access-queries';
 import type { PendingErpAccessInvitation } from '../../domain/erp-access';
@@ -129,6 +135,8 @@ export const InvitationsListPage = ({
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [pendingRevoke, setPendingRevoke] =
     useState<PendingErpAccessInvitation | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(10);
   const form = useForm<InvitationFormInput, unknown, InvitationFormValues>({
     resolver: zodResolver(invitationFormSchema),
     defaultValues,
@@ -145,13 +153,12 @@ export const InvitationsListPage = ({
   const invitations = sortInvitationsByExpiresAt(invitationsQuery.data ?? []);
   const employees = employeesQuery.data ?? [];
   const now = Date.now();
-  const expired = invitations.filter(
-    (invitation) => new Date(invitation.expiresAt).getTime() < now,
-  ).length;
-  const expiringSoon = invitations.filter((invitation) => {
-    const expiresAt = new Date(invitation.expiresAt).getTime();
-    return expiresAt >= now && expiresAt - now < 7 * 24 * 60 * 60 * 1000;
-  }).length;
+  const totalInvitations = invitations.length;
+  const totalPages = Math.max(1, Math.ceil(totalInvitations / pageSize));
+  const paginatedInvitations = invitations.slice(
+    (page - 1) * pageSize,
+    page * pageSize,
+  );
 
   const openCreateDialog = () => {
     form.reset(defaultValues);
@@ -176,40 +183,6 @@ export const InvitationsListPage = ({
 
   return (
     <section className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <div className="flex items-center gap-3 rounded-2xl border border-black/10 bg-card p-4">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/5 text-primary">
-            <MailPlus className="size-5" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-xs text-black/45">Invitaciones pendientes</p>
-            <p className="text-xl font-semibold tracking-tight">
-              {invitations.length}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 rounded-2xl border border-black/10 bg-card p-4">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
-            <Mail className="size-5" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-xs text-black/45">Vencen en los próximos 7 días</p>
-            <p className="text-xl font-semibold tracking-tight">
-              {expiringSoon}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 rounded-2xl border border-black/10 bg-card p-4">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-700">
-            <Trash2 className="size-5" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-xs text-black/45">Vencidas</p>
-            <p className="text-xl font-semibold tracking-tight">{expired}</p>
-          </div>
-        </div>
-      </div>
-
       <div className="-mt-2 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <h2 className="text-xl font-medium tracking-tight">
           Invitaciones pendientes
@@ -365,7 +338,7 @@ export const InvitationsListPage = ({
         </p>
       ) : null}
 
-      {!invitationsQuery.isLoading && !invitationsQuery.isError && invitations.length === 0 ? (
+      {!invitationsQuery.isLoading && !invitationsQuery.isError && totalInvitations === 0 ? (
         <div className="border-t px-5 py-12 text-center">
           <Mail className="mx-auto size-8 text-muted-foreground/50" />
           <h2 className="text-xl font-medium tracking-tight">
@@ -377,7 +350,7 @@ export const InvitationsListPage = ({
         </div>
       ) : null}
 
-      {!invitationsQuery.isLoading && !invitationsQuery.isError && invitations.length > 0 ? (
+      {!invitationsQuery.isLoading && !invitationsQuery.isError && totalInvitations > 0 ? (
         <Table>
           <TableHeader className="bg-[#f6f6f6] rounded-2xl">
             <TableRow>
@@ -389,7 +362,7 @@ export const InvitationsListPage = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {invitations.map((invitation) => {
+            {paginatedInvitations.map((invitation) => {
               const employeeName = getEmployeeName(invitation.employeeId, employees);
               const expiresAtMs = new Date(invitation.expiresAt).getTime();
               const isExpired = expiresAtMs < now;
@@ -447,6 +420,77 @@ export const InvitationsListPage = ({
             })}
           </TableBody>
         </Table>
+      ) : null}
+
+      {totalInvitations > 0 ? (
+        <footer className="flex min-h-16 flex-wrap items-center justify-between gap-4 border-t bg-muted/10 px-4 py-3 text-xs sm:px-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span>
+              Mostrando{' '}
+              <strong className="font-semibold text-foreground">
+                {paginatedInvitations.length}
+              </strong>{' '}
+              invitaciones de{' '}
+              <strong className="font-semibold text-foreground">
+                {totalInvitations}
+              </strong>
+            </span>
+            <span aria-hidden className="h-4 w-px bg-border" />
+            <span>Filas por página</span>
+            <TablePageSize
+              value={pageSize}
+              options={defaultPageSizeOptions}
+              onChange={(next) => {
+                setPageSize(next);
+                setPage(1);
+              }}
+            />
+          </div>
+          <nav
+            aria-label="Paginación de invitaciones"
+            className="flex items-center gap-1"
+          >
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Ir a la primera página"
+              disabled={page === 1}
+              onClick={() => setPage(1)}
+              className="size-8 rounded-md"
+            >
+              <ChevronsLeft className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Volver al inicio"
+              disabled={page === 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              className="size-8 rounded-md"
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+            <span className="mx-1 h-5 w-px bg-border" />
+            {page < totalPages ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() =>
+                  setPage((current) => Math.min(totalPages, current + 1))
+                }
+                className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-foreground transition-colors hover:bg-muted hover:text-primary"
+              >
+                Siguiente
+              </Button>
+            ) : (
+              <span className="px-2 text-muted-foreground/60">
+                Última página
+              </span>
+            )}
+          </nav>
+        </footer>
       ) : null}
 
       <button
