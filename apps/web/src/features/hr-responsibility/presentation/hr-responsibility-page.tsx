@@ -1,4 +1,11 @@
-import { Loader2, Mail, MailPlus, UserPlus, Users } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronsLeft,
+  Loader2,
+  MailPlus,
+  UserPlus,
+  Users,
+} from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -18,6 +25,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/ui/table';
+import {
+  defaultPageSizeOptions,
+  TablePageSize,
+} from '@/shared/ui/table-page-size';
 
 import { useHrResponsibility } from '../application/hr-responsibility-queries';
 
@@ -46,6 +57,8 @@ export const HrResponsibilityPage = ({
   const [openDialog, setOpenDialog] = useState<DialogKind>(null);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [inviteeEmail, setInviteeEmail] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   if (!companyId) {
     return (
@@ -70,6 +83,13 @@ export const HrResponsibilityPage = ({
   }
 
   const state = stateQuery.data;
+  const allResponsibles = state?.responsibles ?? [];
+  const totalResponsibles = allResponsibles.length;
+  const totalPages = Math.max(1, Math.ceil(totalResponsibles / pageSize));
+  const responsibles = allResponsibles.slice(
+    (page - 1) * pageSize,
+    page * pageSize,
+  );
 
   const handleAssign = async () => {
     if (!selectedUserId) return;
@@ -103,42 +123,6 @@ export const HrResponsibilityPage = ({
 
   return (
     <section className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <div className="flex items-center gap-3 rounded-2xl border border-black/10 bg-card p-4">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/5 text-primary">
-            <Users className="size-5" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-xs text-black/45">Responsables actuales</p>
-            <p className="text-xl font-semibold tracking-tight">
-              {state?.responsibles.length ?? 0}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 rounded-2xl border border-black/10 bg-card p-4">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-            <UserPlus className="size-5" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-xs text-black/45">Usuarios disponibles</p>
-            <p className="text-xl font-semibold tracking-tight">
-              {state?.availableUsers.length ?? 0}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 rounded-2xl border border-black/10 bg-card p-4">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
-            <Mail className="size-5" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-xs text-black/45">Invitaciones pendientes</p>
-            <p className="text-xl font-semibold tracking-tight">
-              {state?.pendingInvitations?.length ?? 0}
-            </p>
-          </div>
-        </div>
-      </div>
-
       <div className="-mt-2 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <h2 className="text-xl font-medium tracking-tight">
           Responsables actuales
@@ -169,7 +153,7 @@ export const HrResponsibilityPage = ({
       </div>
 
       <div className="rounded-2xl border">
-        {state?.responsibles.length ? (
+        {totalResponsibles > 0 ? (
           <Table>
             <TableHeader className="bg-[#f6f6f6] rounded-2xl">
               <TableRow>
@@ -178,7 +162,7 @@ export const HrResponsibilityPage = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {state.responsibles.map((user) => (
+              {responsibles.map((user) => (
                 <TableRow key={user.userId}>
                   <TableCell className="py-4 pl-5">
                     <div className="flex items-center gap-3">
@@ -209,6 +193,77 @@ export const HrResponsibilityPage = ({
           </div>
         )}
       </div>
+
+      {totalResponsibles > 0 ? (
+        <footer className="flex min-h-16 flex-wrap items-center justify-between gap-4 border-t bg-muted/10 px-4 py-3 text-xs sm:px-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span>
+              Mostrando{' '}
+              <strong className="font-semibold text-foreground">
+                {responsibles.length}
+              </strong>{' '}
+              responsables de{' '}
+              <strong className="font-semibold text-foreground">
+                {totalResponsibles}
+              </strong>
+            </span>
+            <span aria-hidden className="h-4 w-px bg-border" />
+            <span>Filas por página</span>
+            <TablePageSize
+              value={pageSize}
+              options={defaultPageSizeOptions}
+              onChange={(next) => {
+                setPageSize(next);
+                setPage(1);
+              }}
+            />
+          </div>
+          <nav
+            aria-label="Paginación de responsables"
+            className="flex items-center gap-1"
+          >
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Ir a la primera página"
+              disabled={page === 1}
+              onClick={() => setPage(1)}
+              className="size-8 rounded-md"
+            >
+              <ChevronsLeft className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Volver al inicio"
+              disabled={page === 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              className="size-8 rounded-md"
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+            <span className="mx-1 h-5 w-px bg-border" />
+            {page < totalPages ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() =>
+                  setPage((current) => Math.min(totalPages, current + 1))
+                }
+                className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-foreground transition-colors hover:bg-muted hover:text-primary"
+              >
+                Siguiente
+              </Button>
+            ) : (
+              <span className="px-2 text-muted-foreground/60">
+                Última página
+              </span>
+            )}
+          </nav>
+        </footer>
+      ) : null}
 
       {state?.pendingInvitations?.length ? (
         <div className="space-y-3">
