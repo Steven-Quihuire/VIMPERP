@@ -1,10 +1,32 @@
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Pencil, Trash2, X } from 'lucide-react';
+import {
+  FileText,
+  History,
+  MoreHorizontal,
+  Network,
+  Pencil,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import type { z } from 'zod';
+import { toast } from 'sonner';
 
 import type { AuthSession } from '@/features/auth/domain/auth';
+import {
+  useAssignments,
+  useDeleteEmployee,
+  useEmployee,
+  useEmployees,
+  usePositions,
+  useUpdateEmployee,
+} from '@/features/hr-employees/application/hr-employees-queries';
+import {
+  toEmployeeFormValues,
+  toUpdateEmployeeInput,
+  type Employee,
+  type EmploymentStatus,
+} from '@/features/hr-employees/domain/employees';
+import { EmployeeEditDrawer } from '../components/employee-edit-drawer';
+import { AssignmentTimelinePage } from './assignment-timeline';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,41 +38,29 @@ import {
   AlertDialogTitle,
 } from '@/shared/ui/alert-dialog';
 import { Button } from '@/shared/ui/button';
-import { Field, FieldContent, FieldError, FieldLabel } from '@/shared/ui/field';
-import { Input } from '@/shared/ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/shared/ui/dropdown-menu';
 import { Skeleton } from '@/shared/ui/skeleton';
-
-import {
-  useAssignments,
-  useDeleteEmployee,
-  useEmployee,
-  useEmployees,
-  usePositions,
-  useUpdateEmployee,
-} from '../../application/hr-employees-queries';
-import {
-  employeeDocumentTypeValues,
-  employeeFormSchema,
-  toEmployeeFormValues,
-  toUpdateEmployeeInput,
-  type Employee,
-  type EmployeeFormValues,
-} from '../../domain/employees';
-
-const vimcoreButtonClassName =
-  'cursor-pointer transition-all ease-in-out duration-400 border text-sm h-10 px-5 flex items-center justify-center gap-2 rounded-2xl hover:bg-black hover:px-7 hover:text-white';
-
-const documentTypeLabels = {
-  cedula: 'Cédula',
-  ruc: 'RUC',
-  pasaporte: 'Pasaporte',
-} as const;
 
 const fallbackImage =
   'https://i.ibb.co/Pzv53qFM/Whats-App-Image-2026-08-15-at-13-57-12.jpg';
 
 const formatDate = (value: string | null | undefined) =>
   value ? new Date(value).toLocaleDateString('es-AR') : 'No informado';
+
+type DetailTab = 'info' | 'assignment' | 'documents' | 'history';
+
+const tabItems: { id: DetailTab; label: string }[] = [
+  { id: 'info', label: 'Información' },
+  { id: 'assignment', label: 'Asignación' },
+  { id: 'documents', label: 'Documentos' },
+  { id: 'history', label: 'Historial' },
+];
 
 export const EmployeeDetailPage = ({
   session,
@@ -61,7 +71,6 @@ export const EmployeeDetailPage = ({
   session: AuthSession;
   employeeId: string | null;
   apiBaseUrl?: string;
-  onSelectEmployee?: (employeeId: string) => void;
   onDeleted?: (deleted: Employee) => void;
 }) => {
   const companyId = session.activeCompany?.companyId;
@@ -74,20 +83,13 @@ export const EmployeeDetailPage = ({
   const positionsQuery = usePositions(companyId, apiBaseUrl);
   const updateEmployeeMutation = useUpdateEmployee(apiBaseUrl);
   const deleteEmployeeMutation = useDeleteEmployee(apiBaseUrl);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const assignments = useAssignments(
     { companyId, employeeId: employeeId ?? undefined },
     apiBaseUrl,
   );
-  const form = useForm<
-    z.input<typeof employeeFormSchema>,
-    unknown,
-    EmployeeFormValues
-  >({
-    resolver: zodResolver(employeeFormSchema),
-    values: toEmployeeFormValues(employeeQuery.data),
-  });
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<DetailTab>('info');
 
   if (!companyId) {
     return (
@@ -155,11 +157,30 @@ export const EmployeeDetailPage = ({
         .join(', ')
     : 'Ninguno';
 
-  const handleConfirmDelete = async () => {
-    if (!employee || !companyId) {
-      return;
+  const changeStatus = async (employmentStatus: EmploymentStatus) => {
+    try {
+      const values = toEmployeeFormValues(employee);
+      await updateEmployeeMutation.mutateAsync(
+        toUpdateEmployeeInput(companyId, employee.id, {
+          ...values,
+          employmentStatus,
+        }),
+      );
+      toast.success(
+        employmentStatus === 'active'
+          ? 'Empleado activado'
+          : employmentStatus === 'suspended'
+            ? 'Empleado suspendido'
+            : 'Empleado desvinculado',
+        { description: displayName },
+      );
+    } catch {
+      // El error se refleja en el mutation.
     }
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!employee || !companyId) return;
     try {
       await deleteEmployeeMutation.mutateAsync({
         companyId,
@@ -172,24 +193,20 @@ export const EmployeeDetailPage = ({
     }
   };
 
-  const inputClassName = `h-auto border-0 border-b-0 px-0 py-0 text-sm leading-5 shadow-none focus-visible:ring-0 disabled:cursor-default disabled:opacity-100 ${isEditing ? 'text-[#074446]' : 'text-black/80'}`;
+  const readOnlyField = (label: string, value: string) => (
+    <div className="py-4">
+      <p className="text-xs text-black/45">{label}</p>
+      <p className="mt-1 wrap-break-words text-sm leading-5 text-black/80">
+        {value}
+      </p>
+    </div>
+  );
 
   return (
-    <section>
-      {/* detalles del empleado */}
-      <form
-        className="overflow-hidden rounded-[18px] border border-black/10 bg-[#fbfbfa]"
-        onSubmit={(event) => {
-          void form.handleSubmit(async (values) => {
-            await updateEmployeeMutation.mutateAsync(
-              toUpdateEmployeeInput(companyId, employee.id, values),
-            );
-            setIsEditing(false);
-          })(event);
-        }}
-      >
+    <section className="space-y-6">
+      <div className="overflow-hidden rounded-[18px] border border-black/10 bg-[#fbfbfa]">
         <div className="grid lg:grid-cols-[minmax(260px,0.72fr)_1.28fr]">
-          <div className="relative bg-[#e9e9e6] h-full">
+          <div className="relative h-56 lg:h-full">
             <img
               src={employee.avatarUrl || fallbackImage}
               alt={`Foto de ${displayName}`}
@@ -209,166 +226,94 @@ export const EmployeeDetailPage = ({
             </div>
           </div>
 
-          <div className="relative p-9 ">
-            <button
-              type="button"
-              aria-label="Eliminar empleado"
-              className="absolute right-16 top-5 flex size-9 cursor-pointer items-center justify-center rounded-full bg-red-500/15 text-red-600 shadow-[0_4px_20px_rgba(225,29,72,0.25)] ring-1 ring-red-400/40 backdrop-blur-xl transition-all ease-in-out duration-400 hover:bg-red-500/30 hover:text-red-700"
-              onClick={() => setIsDeleteOpen(true)}
-              disabled={isEditing}
-            >
-              <Trash2 className="size-4" color="#e11d48" />
-              <span className="sr-only">Eliminar empleado</span>
-            </button>
-            <Button
-              type="button"
-              size="icon"
-              aria-label="Editar datos del empleado"
-              aria-pressed={isEditing}
-              className="absolute right-5 top-5 cursor-pointer transition-all ease-in-out duration-400 hover:bg-black/5"
-              onClick={() => setIsEditing(true)}
-              disabled={isEditing}
-            >
-              <Pencil className="size-4" />
-            </Button>
+          <div className="relative p-9">
+            <div className="absolute right-5 top-5 flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="shrink-0 cursor-pointer rounded-2xl"
+                onClick={() => setIsEditOpen(true)}
+                disabled={updateEmployeeMutation.isPending}
+              >
+                <Pencil className="size-4" />
+                Editar
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    aria-label="Más acciones"
+                    className="shrink-0 cursor-pointer rounded-2xl"
+                  >
+                    <MoreHorizontal className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                  {employee.employmentStatus === 'active' ? (
+                    <DropdownMenuItem onClick={() => void changeStatus('suspended')}>
+                      Suspender
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem onClick={() => void changeStatus('active')}>
+                      Activar
+                    </DropdownMenuItem>
+                  )}
+                  {employee.employmentStatus !== 'separated' ? (
+                    <DropdownMenuItem onClick={() => void changeStatus('separated')}>
+                      Desvincular
+                    </DropdownMenuItem>
+                  ) : null}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() => setIsDeleteOpen(true)}
+                  >
+                    Eliminar
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
-            <div className="grid gap-x-8 sm:grid-cols-2">
-              <Field
-                className={`py-4 transition-colors ${isEditing ? 'text-[#074446]' : ''}`}
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={
+                  employee.employmentStatus === 'separated'
+                    ? 'rounded-2xl border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700'
+                    : employee.employmentStatus === 'suspended'
+                      ? 'rounded-2xl border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700'
+                      : 'rounded-2xl border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700'
+                }
               >
-                <FieldLabel htmlFor="edit-employee-full-name">
-                  Nombre completo
-                </FieldLabel>
-                <FieldContent>
-                  <Input
-                    id="edit-employee-full-name"
-                    aria-label="Editar nombre completo"
-                    placeholder={employee.fullName || 'No informado'}
-                    className={inputClassName}
-                    disabled={!isEditing}
-                    {...form.register('fullName')}
-                  />
-                  <FieldError errors={[form.formState.errors.fullName]} />
-                </FieldContent>
-              </Field>
-              <Field
-                className={`py-4 transition-colors ${isEditing ? 'text-[#074446]' : ''}`}
-              >
-                <FieldLabel htmlFor="edit-employee-email">
-                  Correo electrónico
-                </FieldLabel>
-                <FieldContent>
-                  <Input
-                    id="edit-employee-email"
-                    aria-label="Editar correo electrónico"
-                    type="email"
-                    placeholder={employee.email || 'No informado'}
-                    className={inputClassName}
-                    disabled={!isEditing}
-                    {...form.register('email')}
-                  />
-                  <FieldError errors={[form.formState.errors.email]} />
-                </FieldContent>
-              </Field>
-              <Field
-                className={`py-4 transition-colors ${isEditing ? 'text-[#074446]' : ''}`}
-              >
-                <FieldLabel htmlFor="edit-employee-document-type">
-                  Tipo de documento
-                </FieldLabel>
-                <FieldContent>
-                  <select
-                    id="edit-employee-document-type"
-                    aria-label="Editar tipo de documento"
-                    className={`${inputClassName} w-full appearance-none bg-transparent outline-none`}
-                    disabled={!isEditing}
-                    {...form.register('documentType')}
-                  >
-                    <option value="">Sin documento</option>
-                    {employeeDocumentTypeValues.map((type) => (
-                      <option key={type} value={type}>
-                        {documentTypeLabels[type]}
-                      </option>
-                    ))}
-                  </select>
-                  <FieldError errors={[form.formState.errors.documentType]} />
-                </FieldContent>
-              </Field>
-              <Field
-                className={`py-4 transition-colors ${isEditing ? 'text-[#074446]' : ''}`}
-              >
-                <FieldLabel htmlFor="edit-employee-document-number">
-                  Número de documento
-                </FieldLabel>
-                <FieldContent>
-                  <Input
-                    id="edit-employee-document-number"
-                    aria-label="Editar número de documento"
-                    placeholder={employee.documentNumber || 'No informado'}
-                    className={inputClassName}
-                    disabled={!isEditing}
-                    {...form.register('documentNumber')}
-                  />
-                  <FieldError errors={[form.formState.errors.documentNumber]} />
-                </FieldContent>
-              </Field>
-              <Field
-                className={`py-4 transition-colors ${isEditing ? 'text-[#074446]' : ''}`}
-              >
-                <FieldLabel htmlFor="edit-employee-employment-status">
-                  Estado laboral
-                </FieldLabel>
-                <FieldContent>
-                  <select
-                    id="edit-employee-employment-status"
-                    aria-label="Editar estado laboral"
-                    className={`${inputClassName} w-full appearance-none bg-transparent outline-none`}
-                    disabled={!isEditing}
-                    {...form.register('employmentStatus')}
-                  >
-                    <option value="active">Activo</option>
-                    <option value="suspended">Suspendido</option>
-                    <option value="separated">Desvinculado</option>
-                  </select>
-                </FieldContent>
-              </Field>
-              <Field
-                className={`py-4 transition-colors ${isEditing ? 'text-[#074446]' : ''}`}
-              >
-                <FieldLabel htmlFor="edit-employee-hired-at">
-                  Fecha de contratación
-                </FieldLabel>
-                <FieldContent>
-                  <Input
-                    id="edit-employee-hired-at"
-                    aria-label="Editar fecha de contratación"
-                    type={isEditing ? 'datetime-local' : 'text'}
-                    placeholder={formatDate(employee.hiredAt)}
-                    className={inputClassName}
-                    disabled={!isEditing}
-                    {...form.register('hiredAt')}
-                  />
-                  <FieldError errors={[form.formState.errors.hiredAt]} />
-                </FieldContent>
-              </Field>
-              <div className="py-4">
-                <p className="text-xs text-black/45">ID del empleado</p>
-                <p className="mt-1 wrap-break-words text-sm leading-5 text-black/80">
-                  {employee.id}
-                </p>
-              </div>
-              <div className="py-4">
-                <p className="text-xs text-black/45">Fecha de registro</p>
-                <p className="mt-1 text-sm leading-5 text-black/80">
-                  {formatDate(employee.createdAt)}
-                </p>
-              </div>
-              <div className="py-4">
-                <p className="text-xs text-black/45">Jefe directo</p>
-                <p className="mt-1 wrap-break-words text-sm leading-5 text-black/80">
-                  {managerName}
-                </p>
-              </div>
+                {employee.employmentStatus === 'active'
+                  ? 'Activo'
+                  : employee.employmentStatus === 'suspended'
+                    ? 'Suspendido'
+                    : 'Desvinculado'}
+              </span>
+            </div>
+
+            <div className="mt-6 grid gap-x-8 sm:grid-cols-2">
+              {readOnlyField('Nombre completo', employee.fullName || 'No informado')}
+              {readOnlyField('Correo electrónico', employee.email || 'No informado')}
+              {readOnlyField(
+                'Tipo de documento',
+                employee.documentType
+                  ? employee.documentType.toUpperCase()
+                  : 'No informado',
+              )}
+              {readOnlyField(
+                'Número de documento',
+                employee.documentNumber || 'No informado',
+              )}
+              {readOnlyField(
+                'Fecha de contratación',
+                formatDate(employee.hiredAt),
+              )}
+              {readOnlyField('Fecha de registro', formatDate(employee.createdAt))}
+              {readOnlyField('ID del empleado', employee.id)}
+              {readOnlyField('Jefe directo', managerName)}
               <div className="py-4 sm:col-span-2">
                 <p className="text-xs text-black/45">Reportes directos</p>
                 <p className="mt-1 wrap-break-words text-sm leading-5 text-black/80">
@@ -376,41 +321,93 @@ export const EmployeeDetailPage = ({
                 </p>
               </div>
             </div>
-
-            {updateEmployeeMutation.error ? (
-              <p role="alert" className="mt-5 text-sm text-destructive">
-                {updateEmployeeMutation.error instanceof Error
-                  ? updateEmployeeMutation.error.message
-                  : 'No se pudo actualizar el empleado.'}
-              </p>
-            ) : null}
-            {isEditing ? (
-              <div className="mt-6 flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    form.reset(toEmployeeFormValues(employee));
-                    updateEmployeeMutation.reset();
-                    setIsEditing(false);
-                  }}
-                >
-                  <X className="size-4" />
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  variant="vimcore"
-                  disabled={updateEmployeeMutation.isPending}
-                  className="sm:w-auto"
-                >
-                  Guardar cambios
-                </Button>
-              </div>
-            ) : null}
           </div>
         </div>
-      </form>
+      </div>
+
+      <nav aria-label="Secciones del empleado" className="overflow-x-auto">
+        <ul className="flex min-w-max gap-6 text-sm">
+          {tabItems.map((tab) => (
+            <li key={tab.id}>
+              <button
+                type="button"
+                aria-pressed={activeTab === tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`inline-flex h-8 items-center whitespace-nowrap border-b-2 px-1 font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground'
+                }`}
+              >
+                {tab.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      {activeTab === 'assignment' ? (
+        <AssignmentTimelinePage
+          session={session}
+          {...(apiBaseUrl ? { apiBaseUrl } : {})}
+          employeeId={employeeId}
+        />
+      ) : null}
+
+      {activeTab === 'documents' ? (
+        <div className="rounded-[18px] border border-black/10 bg-[#fbfbfa] p-9">
+          <div className="flex items-center gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted">
+              <FileText className="size-5" />
+            </span>
+            <div>
+              <h3 className="text-lg font-medium tracking-tight">Documentos</h3>
+              <p className="text-xs text-gray-600">
+                Contratos, DNI y certificaciones del empleado.
+              </p>
+            </div>
+          </div>
+          <div className="mt-6 flex flex-col items-center gap-3 rounded-xl border border-dashed py-10 text-center">
+            <Upload className="size-7 text-muted-foreground/50" />
+            <p className="text-sm text-muted-foreground">
+              Todavía no hay documentos cargados.
+            </p>
+            <Button type="button" variant="outline" className="rounded-2xl">
+              Subir documento
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {activeTab === 'history' ? (
+        <div className="rounded-[18px] border border-black/10 bg-[#fbfbfa] p-9">
+          <div className="flex items-center gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted">
+              <History className="size-5" />
+            </span>
+            <div>
+              <h3 className="text-lg font-medium tracking-tight">Historial</h3>
+              <p className="text-xs text-gray-600">
+                Cambios de estado y movimientos del empleado.
+              </p>
+            </div>
+          </div>
+          <div className="mt-6 flex flex-col items-center gap-3 rounded-xl border border-dashed py-10 text-center">
+            <Network className="size-7 text-muted-foreground/50" />
+            <p className="text-sm text-muted-foreground">
+              El historial detallado estará disponible próximamente.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      <EmployeeEditDrawer
+        employee={employee}
+        session={session}
+        {...(apiBaseUrl ? { apiBaseUrl } : {})}
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+      />
 
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent>
@@ -421,8 +418,7 @@ export const EmployeeDetailPage = ({
               <span className="font-medium text-foreground">
                 {displayName}
               </span>{' '}
-              y no se puede deshacer. Podés revertirla desde la lista de
-              empleados.
+              y no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteEmployeeMutation.error ? (
@@ -434,7 +430,7 @@ export const EmployeeDetailPage = ({
           ) : null}
           <AlertDialogFooter>
             <AlertDialogCancel
-              className={`${vimcoreButtonClassName} bg-white text-black border-black/15`}
+              className="rounded-2xl"
               disabled={deleteEmployeeMutation.isPending}
             >
               Cancelar
@@ -444,10 +440,20 @@ export const EmployeeDetailPage = ({
                 event.preventDefault();
                 void handleConfirmDelete();
               }}
-              className={`${vimcoreButtonClassName} bg-red-500 text-white border-red-500 hover:bg-red-700 hover:px-7 hover:text-white`}
+              className="rounded-2xl bg-red-500 text-white hover:bg-red-700"
               disabled={deleteEmployeeMutation.isPending}
             >
-              {deleteEmployeeMutation.isPending ? 'Eliminando…' : 'Eliminar'}
+              {deleteEmployeeMutation.isPending ? (
+                <span className="flex items-center gap-2">
+                  <span className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  Eliminando…
+                </span>
+              ) : (
+                <>
+                  <Trash2 className="size-4" />
+                  Eliminar
+                </>
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

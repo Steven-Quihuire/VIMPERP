@@ -50,7 +50,6 @@ import {
   toEmployeeFormValues,
   type Employee,
 } from '../features/hr-employees/domain/employees';
-import { AssignmentTimelinePage } from '../features/hr-employees/presentation/pages/assignment-timeline';
 import { EmployeeDetailPage } from '../features/hr-employees/presentation/pages/employee-detail';
 import { EmployeesListPage } from '../features/hr-employees/presentation/pages/employees-list';
 import { PositionFormPage } from '../features/hr-employees/presentation/pages/position-form';
@@ -333,20 +332,12 @@ const HrEmployeesWorkspace = ({
         {!selectedEmployeeId ? <RrhHWorkspaceNav /> : null}
 
         {selectedEmployeeId ? (
-          <div className="space-y-4">
-            <EmployeeDetailPage
-              session={session}
-              {...(apiBaseUrl ? { apiBaseUrl } : {})}
-              employeeId={selectedEmployeeId}
-              onSelectEmployee={selectEmployee}
-              onDeleted={handleDeletedEmployee}
-            />
-            <AssignmentTimelinePage
-              session={session}
-              {...(apiBaseUrl ? { apiBaseUrl } : {})}
-              employeeId={selectedEmployeeId}
-            />
-          </div>
+          <EmployeeDetailPage
+            session={session}
+            {...(apiBaseUrl ? { apiBaseUrl } : {})}
+            employeeId={selectedEmployeeId}
+            onDeleted={handleDeletedEmployee}
+          />
         ) : (
           <div className="space-y-6">
             <EmployeesListPage
