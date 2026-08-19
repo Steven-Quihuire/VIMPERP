@@ -44,6 +44,7 @@ describe('createDrizzleHrEmployeesGateway', () => {
   it('persists employees, positions, assignments, managers, and direct reports', async () => {
     const { db } = await createDb();
     const now = new Date('2026-08-13T12:00:00.000Z');
+    const hiredAt = '2026-08-13';
 
     await db.insert(companiesTable).values({
       id: 'company-1',
@@ -92,7 +93,7 @@ describe('createDrizzleHrEmployeesGateway', () => {
       documentNumber: null,
       email: 'manager@vimcore.test',
       employmentStatus: 'active',
-      hiredAt: now,
+      hiredAt,
     });
     const directReport = await gateway.createEmployee({
       companyId: 'company-1',
@@ -101,7 +102,7 @@ describe('createDrizzleHrEmployeesGateway', () => {
       documentNumber: null,
       email: 'analyst@vimcore.test',
       employmentStatus: 'active',
-      hiredAt: now,
+      hiredAt,
     });
 
     expect(manager).toMatchObject({
@@ -115,7 +116,7 @@ describe('createDrizzleHrEmployeesGateway', () => {
         documentNumber: null,
         email: 'manager.updated@vimcore.test',
         employmentStatus: 'suspended',
-        hiredAt: now,
+        hiredAt,
       }),
     ).resolves.toMatchObject({
       fullName: 'People Manager Updated',

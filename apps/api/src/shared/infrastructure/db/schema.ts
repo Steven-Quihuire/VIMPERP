@@ -621,7 +621,7 @@ export const employeesTable = pgTable(
     documentNumber: text('document_number'),
     email: text('email'),
     employmentStatus: text('employment_status').notNull().default('active'),
-    hiredAt: timestamp('hired_at', { withTimezone: true }),
+    hiredAt: date('hired_at', { mode: 'string' }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -864,13 +864,19 @@ export const timesheetPeriodsTable = pgTable(
     periodEnd: date('period_end').notNull(),
     status: timesheetStatusEnum('status').notNull().default('draft'),
     submittedAt: timestamp('submitted_at', { withTimezone: true }),
-    submittedByUserId: text('submitted_by_user_id').references(() => usersTable.id, {
-      onDelete: 'restrict',
-    }),
+    submittedByUserId: text('submitted_by_user_id').references(
+      () => usersTable.id,
+      {
+        onDelete: 'restrict',
+      },
+    ),
     approvedAt: timestamp('approved_at', { withTimezone: true }),
-    approvedByUserId: text('approved_by_user_id').references(() => usersTable.id, {
-      onDelete: 'restrict',
-    }),
+    approvedByUserId: text('approved_by_user_id').references(
+      () => usersTable.id,
+      {
+        onDelete: 'restrict',
+      },
+    ),
     rejectionReason: text('rejection_reason'),
     approvalPolicyId: text('approval_policy_id').references(
       () => approvalPoliciesTable.id,
@@ -886,15 +892,24 @@ export const timesheetPeriodsTable = pgTable(
       .defaultNow(),
   },
   (table) => [
-    uniqueIndex('timesheet_periods_id_company_idx').on(table.id, table.companyId),
+    uniqueIndex('timesheet_periods_id_company_idx').on(
+      table.id,
+      table.companyId,
+    ),
     foreignKey({
       columns: [table.employeeAssignmentId, table.companyId],
-      foreignColumns: [employeeAssignmentsTable.id, employeeAssignmentsTable.companyId],
+      foreignColumns: [
+        employeeAssignmentsTable.id,
+        employeeAssignmentsTable.companyId,
+      ],
       name: 'timesheet_periods_employee_assignment_company_fk',
     }),
     foreignKey({
       columns: [table.approvalPolicyId, table.companyId],
-      foreignColumns: [approvalPoliciesTable.id, approvalPoliciesTable.companyId],
+      foreignColumns: [
+        approvalPoliciesTable.id,
+        approvalPoliciesTable.companyId,
+      ],
       name: 'timesheet_periods_approval_policy_company_fk',
     }),
     check(
@@ -941,7 +956,10 @@ export const timeEntriesTable = pgTable(
     uniqueIndex('time_entries_id_company_idx').on(table.id, table.companyId),
     foreignKey({
       columns: [table.periodId, table.companyId],
-      foreignColumns: [timesheetPeriodsTable.id, timesheetPeriodsTable.companyId],
+      foreignColumns: [
+        timesheetPeriodsTable.id,
+        timesheetPeriodsTable.companyId,
+      ],
       name: 'time_entries_period_company_fk',
     }),
     check(
@@ -1053,7 +1071,9 @@ export const stockLotsTable = pgTable(
     companyId: text('company_id')
       .notNull()
       .references(() => companiesTable.id, { onDelete: 'restrict' }),
-    itemId: uuid('item_id').notNull().references(() => itemsTable.id),
+    itemId: uuid('item_id')
+      .notNull()
+      .references(() => itemsTable.id),
     lotNumber: text('lot_number').notNull(),
     expiresAt: date('expires_at'),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -1090,9 +1110,12 @@ export const stockDocumentsTable = pgTable(
     documentNo: text('document_no').notNull(),
     type: stockDocumentTypeEnum('type').notNull(),
     status: stockDocumentStatusEnum('status').notNull().default('draft'),
-    originScopeNodeId: text('origin_scope_node_id').references(() => scopeNodesTable.id, {
-      onDelete: 'restrict',
-    }),
+    originScopeNodeId: text('origin_scope_node_id').references(
+      () => scopeNodesTable.id,
+      {
+        onDelete: 'restrict',
+      },
+    ),
     originScopeType: text('origin_scope_type'),
     destinationScopeNodeId: text('destination_scope_node_id').references(
       () => scopeNodesTable.id,
@@ -1173,9 +1196,15 @@ export const stockDocumentsTable = pgTable(
       sql`${table.type} <> 'transfer' OR (${table.originScopeNodeId} IS NOT NULL AND ${table.destinationScopeNodeId} IS NOT NULL AND ${table.originScopeNodeId} <> ${table.destinationScopeNodeId})`,
     ),
     index('stock_documents_company_idx').on(table.companyId),
-    index('stock_documents_type_status_idx').on(table.companyId, table.type, table.status),
+    index('stock_documents_type_status_idx').on(
+      table.companyId,
+      table.type,
+      table.status,
+    ),
     index('stock_documents_origin_scope_idx').on(table.originScopeNodeId),
-    index('stock_documents_destination_scope_idx').on(table.destinationScopeNodeId),
+    index('stock_documents_destination_scope_idx').on(
+      table.destinationScopeNodeId,
+    ),
   ],
 );
 
@@ -1189,16 +1218,23 @@ export const stockDocumentLinesTable = pgTable(
     documentId: uuid('document_id')
       .notNull()
       .references(() => stockDocumentsTable.id, { onDelete: 'restrict' }),
-    itemId: uuid('item_id').notNull().references(() => itemsTable.id),
+    itemId: uuid('item_id')
+      .notNull()
+      .references(() => itemsTable.id),
     quantity: numeric('quantity', { precision: 14, scale: 3 }).notNull(),
     unitCost: numeric('unit_cost', { precision: 14, scale: 4 }),
-    lotId: uuid('lot_id').references(() => stockLotsTable.id, { onDelete: 'restrict' }),
+    lotId: uuid('lot_id').references(() => stockLotsTable.id, {
+      onDelete: 'restrict',
+    }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (table) => [
-    uniqueIndex('stock_document_lines_id_company_idx').on(table.id, table.companyId),
+    uniqueIndex('stock_document_lines_id_company_idx').on(
+      table.id,
+      table.companyId,
+    ),
     foreignKey({
       columns: [table.documentId, table.companyId],
       foreignColumns: [stockDocumentsTable.id, stockDocumentsTable.companyId],
@@ -1214,7 +1250,10 @@ export const stockDocumentLinesTable = pgTable(
       foreignColumns: [stockLotsTable.id, stockLotsTable.companyId],
       name: 'stock_document_lines_lot_company_fk',
     }),
-    check('stock_document_lines_quantity_positive_chk', sql`${table.quantity} > 0`),
+    check(
+      'stock_document_lines_quantity_positive_chk',
+      sql`${table.quantity} > 0`,
+    ),
     index('stock_document_lines_document_idx').on(table.documentId),
     index('stock_document_lines_item_idx').on(table.itemId),
   ],
@@ -1227,19 +1266,26 @@ export const stockQuantsTable = pgTable(
     companyId: text('company_id')
       .notNull()
       .references(() => companiesTable.id, { onDelete: 'restrict' }),
-    itemId: uuid('item_id').notNull().references(() => itemsTable.id),
+    itemId: uuid('item_id')
+      .notNull()
+      .references(() => itemsTable.id),
     scopeNodeId: text('scope_node_id')
       .notNull()
       .references(() => scopeNodesTable.id, { onDelete: 'restrict' }),
     scopeType: text('scope_type').notNull(),
-    lotId: uuid('lot_id').references(() => stockLotsTable.id, { onDelete: 'restrict' }),
+    lotId: uuid('lot_id').references(() => stockLotsTable.id, {
+      onDelete: 'restrict',
+    }),
     quantity: numeric('quantity', { precision: 14, scale: 3 })
       .notNull()
       .default('0'),
     reservedQuantity: numeric('reserved_quantity', { precision: 14, scale: 3 })
       .notNull()
       .default('0'),
-    quarantineQuantity: numeric('quarantine_quantity', { precision: 14, scale: 3 })
+    quarantineQuantity: numeric('quarantine_quantity', {
+      precision: 14,
+      scale: 3,
+    })
       .notNull()
       .default('0'),
     avgUnitCost: numeric('avg_unit_cost', { precision: 14, scale: 4 }),

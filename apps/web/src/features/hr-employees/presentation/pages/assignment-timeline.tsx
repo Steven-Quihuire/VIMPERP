@@ -39,7 +39,7 @@ const defaultValues: AssignmentFormValues = {
   startedAt: '2026-08-13T12:30',
 };
 
-const scopeTypeLabels = {
+export const scopeTypeLabels = {
   company: 'Empresa',
   division: 'División',
   local: 'Local',
@@ -51,7 +51,7 @@ const scopeTypeLabels = {
 const scopeKey = (node: { ref: { scopeType: string; scopeId: string } }) =>
   `${node.ref.scopeType}:${node.ref.scopeId}`;
 
-const getScopeOptions = (nodes: OrgTreeNode[]) => {
+export const getScopeOptions = (nodes: OrgTreeNode[]) => {
   const nodeKeys = new Set(nodes.map(scopeKey));
   const children = new Map<string, typeof nodes>();
   for (const node of nodes) {

@@ -1,4 +1,5 @@
 import {
+  assertValidEmployeeDocument,
   assertValidEmployeeIdentity,
   EmployeeNotFoundError,
   type EmployeeIdentityInput,
@@ -11,9 +12,15 @@ export const createUpdateEmployeeUseCase = ({
   gateway: HrEmployeesGateway;
 }) => {
   return async (
-    input: { companyId: string; employeeId: string } & Partial<EmployeeIdentityInput>,
+    input: {
+      companyId: string;
+      employeeId: string;
+    } & Partial<EmployeeIdentityInput>,
   ) => {
-    const current = await gateway.getEmployeeById(input.companyId, input.employeeId);
+    const current = await gateway.getEmployeeById(
+      input.companyId,
+      input.employeeId,
+    );
 
     if (!current) {
       throw new EmployeeNotFoundError();
@@ -24,12 +31,23 @@ export const createUpdateEmployeeUseCase = ({
       documentType: input.documentType ?? current.documentType ?? null,
       documentNumber: input.documentNumber ?? current.documentNumber ?? null,
       email: input.email ?? current.email ?? null,
-      employmentStatus: input.employmentStatus ?? current.employmentStatus ?? 'active',
+      employmentStatus:
+        input.employmentStatus ?? current.employmentStatus ?? 'active',
       hiredAt: input.hiredAt ?? current.hiredAt ?? null,
     };
 
     assertValidEmployeeIdentity(identity);
+    if (
+      input.documentNumber !== undefined &&
+      input.documentNumber !== current.documentNumber
+    ) {
+      assertValidEmployeeDocument(input.documentType, input.documentNumber);
+    }
 
-    return await gateway.updateEmployee(input.companyId, input.employeeId, identity);
+    return await gateway.updateEmployee(
+      input.companyId,
+      input.employeeId,
+      identity,
+    );
   };
 };

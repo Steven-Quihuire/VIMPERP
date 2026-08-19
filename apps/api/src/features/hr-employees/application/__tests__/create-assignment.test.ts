@@ -84,6 +84,10 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
     );
   }
 
+  deleteEmployee(): Promise<null> {
+    return Promise.resolve(null);
+  }
+
   listEmployees(companyId: string) {
     return Promise.resolve(this.employees.filter((employee) => employee.companyId === companyId));
   }
@@ -102,6 +106,18 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
 
   listPositions(companyId: string) {
     return Promise.resolve(this.positions.filter((position) => position.companyId === companyId));
+  }
+
+  async updatePositionReportsTo(
+    companyId: string,
+    positionId: string,
+    reportsToPositionId: string,
+  ) {
+    const position = await this.getPositionById(companyId, positionId);
+    if (position) {
+      position.reportsToPositionId = reportsToPositionId;
+    }
+    return position;
   }
 
   countActivePrimaryAssignmentsForPosition(positionId: string) {

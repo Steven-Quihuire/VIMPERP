@@ -6,13 +6,6 @@ import type { z } from 'zod';
 import type { AuthSession } from '@/features/auth/domain/auth';
 import { Button } from '@/shared/ui/button';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/shared/ui/card';
-import {
   Field,
   FieldContent,
   FieldError,
@@ -45,10 +38,12 @@ export const PositionFormPage = ({
   session,
   apiBaseUrl,
   onCreated,
+  onCancel,
 }: {
   session: AuthSession;
   apiBaseUrl?: string;
   onCreated?: (positionId: string) => void;
+  onCancel?: () => void;
 }) => {
   const companyId = session.activeCompany?.companyId;
   const createPositionMutation = useCreatePosition(apiBaseUrl);
@@ -67,27 +62,26 @@ export const PositionFormPage = ({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Crear puesto</CardTitle>
-        <CardDescription>
+    <div className="space-y-6 p-6">
+      <div className="space-y-1.5">
+        <h2 className="text-lg font-semibold leading-none">Crear puesto</h2>
+        <p className="text-sm text-muted-foreground">
           Un puesto define una función laboral. Después podés asignarlo a una
           persona dentro de un nodo organizacional.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form
-          className="space-y-5"
-          onSubmit={(event) => {
-            void form.handleSubmit(async (values) => {
-              const position = await createPositionMutation.mutateAsync(
-                toCreatePositionInput(companyId, values),
-              );
-              form.reset(defaultValues);
-              onCreated?.(position.id);
-            })(event);
-          }}
-        >
+        </p>
+      </div>
+      <form
+        className="space-y-5"
+        onSubmit={(event) => {
+          void form.handleSubmit(async (values) => {
+            const position = await createPositionMutation.mutateAsync(
+              toCreatePositionInput(companyId, values),
+            );
+            form.reset(defaultValues);
+            onCreated?.(position.id);
+          })(event);
+        }}
+      >
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="position-name">Nombre del puesto</FieldLabel>
@@ -127,14 +121,29 @@ export const PositionFormPage = ({
                 ¿Cuántas personas puede tener?
               </FieldLabel>
               <FieldContent>
-                <Input
-                  id="position-headcount"
-                  aria-label="¿Cuántas personas puede tener?"
-                  placeholder="Ej.: 3"
-                  type="number"
-                  min={0}
-                  {...form.register('headcount', { valueAsNumber: true })}
-                />
+                {(() => {
+                  const headcountField = form.register('headcount', {
+                    setValueAs: (value) => (value === '' ? '' : Number(value)),
+                  });
+                  return (
+                    <Input
+                      id="position-headcount"
+                      aria-label="¿Cuántas personas puede tener?"
+                      placeholder="Ej.: 3"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      {...headcountField}
+                      onChange={(event) => {
+                        const digits = event.target.value.replace(/\D/g, '');
+                        if (digits !== event.target.value) {
+                          event.target.value = digits;
+                        }
+                        void headcountField.onChange(event);
+                      }}
+                    />
+                  );
+                })()}
                 <FieldError errors={[form.formState.errors.headcount]} />
               </FieldContent>
             </Field>
@@ -161,14 +170,25 @@ export const PositionFormPage = ({
             </p>
           ) : null}
 
-          <Button type="submit" disabled={createPositionMutation.isPending}>
-            {createPositionMutation.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
+          <div className="flex justify-end gap-2">
+            {onCancel ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onCancel}
+                disabled={createPositionMutation.isPending}
+              >
+                Cancelar
+              </Button>
             ) : null}
-            Crear puesto
-          </Button>
+            <Button type="submit" disabled={createPositionMutation.isPending}>
+              {createPositionMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : null}
+              Crear puesto
+            </Button>
+          </div>
         </form>
-      </CardContent>
-    </Card>
+    </div>
   );
 };

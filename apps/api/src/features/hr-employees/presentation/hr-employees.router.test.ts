@@ -141,6 +141,13 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
       ) ?? null
     );
   }
+  deleteEmployee(companyId: string, employeeId: string) {
+    this.employees = this.employees.filter(
+      (employee) =>
+        !(employee.companyId === companyId && employee.id === employeeId),
+    );
+    return Promise.resolve(null);
+  }
   listEmployees(companyId: string) {
     return Promise.resolve(this.employees.filter((employee) => employee.companyId === companyId));
   }
@@ -171,6 +178,17 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
         (position) => position.companyId === companyId && position.id === positionId,
       ) ?? null
     );
+  }
+  async updatePositionReportsTo(
+    companyId: string,
+    positionId: string,
+    reportsToPositionId: string,
+  ) {
+    const position = await this.getPositionById(companyId, positionId);
+    if (position) {
+      position.reportsToPositionId = reportsToPositionId;
+    }
+    return position;
   }
   async listPositions(companyId: string) {
     return await Promise.all(
@@ -509,6 +527,156 @@ describe('hr employees routes', () => {
       .get('/companies/company-2/hr-employees')
       .set('Cookie', sessionCookie);
     expect(crossCompanyResponse.status).toBe(403);
+  });
+
+  it('creates an employee with an initial assignment and derives the reporting line from the chosen manager', async () => {
+    const authGateway = new InMemoryAuthGateway();
+    authGateway.addUser({
+      id: 'owner-1',
+      email: 'owner@vimcore.test',
+      username: 'owner',
+      passwordHash: 'hashed:secret123',
+    });
+    authGateway.setMemberships('owner-1', [
+      { companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null },
+    ]);
+    await authGateway.setActiveCompanyId('owner-1', 'company-1');
+
+    const hrEmployeesGateway = new InMemoryHrEmployeesGateway();
+    hrEmployeesGateway.positions.push({
+      id: 'position-lead',
+      companyId: 'company-1',
+      name: 'People Lead',
+      reportsToPositionId: null,
+      headcount: 2,
+      occupiedHeadcount: 0,
+      remainingVacancies: 2,
+      isActive: true,
+      createdAt: new Date('2026-08-13T12:00:00.000Z'),
+    });
+    hrEmployeesGateway.positions.push({
+      id: 'position-analyst',
+      companyId: 'company-1',
+      name: 'HR Analyst',
+      reportsToPositionId: null,
+      headcount: 2,
+      occupiedHeadcount: 0,
+      remainingVacancies: 2,
+      isActive: true,
+      createdAt: new Date('2026-08-13T12:00:00.000Z'),
+    });
+
+    const app = createApp({
+      adminGateway,
+      authIdentityGateway: authGateway,
+      computeEffectivePermissions: () => Promise.resolve([
+        'hr.employees.read',
+        'hr.employees.write',
+        'hr.employees.assign',
+        'hr.positions.read',
+        'hr.positions.write',
+      ]),
+      hrEmployeesGateway,
+      passwordHasher,
+      sessionTokenService,
+      scopeResolver: createInMemoryScopeResolver({
+        nodes: [
+          {
+            ref: { scopeType: 'company', scopeId: 'company-1' },
+            parentRef: null,
+            companyId: 'company-1',
+            name: 'Vimcore',
+          },
+        ],
+        assignments: [
+          {
+            companyId: 'company-1',
+            userId: 'owner-1',
+            scope: { scopeType: 'company', scopeId: 'company-1' },
+            mode: 'subtree_inclusive',
+          },
+        ],
+      }),
+      seedAdminEnabled: false,
+      nodeEnv: 'test',
+    });
+
+    const loginResponse = await request(app).post('/auth/login').send({
+      identifier: 'owner',
+      password: 'secret123',
+    });
+    const sessionCookie = getSessionCookie(loginResponse.headers['set-cookie']);
+
+    const createManagerResponse = await request(app)
+      .post('/companies/company-1/hr-employees')
+      .set('Cookie', sessionCookie)
+      .send({ fullName: 'People Manager' });
+    expect(createManagerResponse.status).toBe(201);
+    const manager = createManagerResponse.body as { id: string };
+
+    const managerAssignmentResponse = await request(app)
+      .post(`/companies/company-1/hr-employees/${manager.id}/assignments`)
+      .set('Cookie', sessionCookie)
+      .send({
+        scopeNodeId: 'company:company-1',
+        positionId: 'position-lead',
+        startedAt: '2026-08-13T12:00:00.000Z',
+      });
+    expect(managerAssignmentResponse.status).toBe(201);
+
+    const createEmployeeResponse = await request(app)
+      .post('/companies/company-1/hr-employees')
+      .set('Cookie', sessionCookie)
+      .send({
+        fullName: 'Analyst With Manager',
+        positionId: 'position-analyst',
+        scopeNodeId: 'company:company-1',
+        managerId: manager.id,
+        hiredAt: '2026-08-14',
+      });
+    expect(createEmployeeResponse.status).toBe(201);
+    const employee = createEmployeeResponse.body as { id: string };
+
+    const assignmentHistoryResponse = await request(app)
+      .get(`/companies/company-1/hr-employees/${employee.id}/assignments`)
+      .set('Cookie', sessionCookie);
+    expect(assignmentHistoryResponse.status).toBe(200);
+    expect(assignmentHistoryResponse.body).toEqual([
+      expect.objectContaining({
+        employeeId: employee.id,
+        positionId: 'position-analyst',
+        scopeNodeId: 'company:company-1',
+        positionName: 'HR Analyst',
+        scopeNodeName: 'Vimcore',
+        isPrimary: true,
+        endedAt: null,
+      }),
+    ]);
+
+    const managerResponse = await request(app)
+      .get(`/companies/company-1/hr-employees/${employee.id}/reports/manager`)
+      .set('Cookie', sessionCookie);
+    expect(managerResponse.status).toBe(200);
+    expect(managerResponse.body).toEqual({
+      employeeId: manager.id,
+      positionId: 'position-lead',
+      assignmentId: managerAssignmentResponse.body.id,
+    });
+
+    const listedPositionsResponse = await request(app)
+      .get('/companies/company-1/hr-employees/positions')
+      .set('Cookie', sessionCookie);
+    expect(listedPositionsResponse.status).toBe(200);
+    expect(listedPositionsResponse.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'position-analyst',
+          reportsToPositionId: 'position-lead',
+          occupiedHeadcount: 1,
+          remainingVacancies: 1,
+        }),
+      ]),
+    );
   });
 
   it('returns 403 when the session lacks HR employee permissions', async () => {

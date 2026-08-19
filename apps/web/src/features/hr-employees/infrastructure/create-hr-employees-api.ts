@@ -34,6 +34,10 @@ export type HrEmployeesApi = {
   ) => Promise<Employee | null>;
   createEmployee: (input: CreateEmployeeInput) => Promise<Employee>;
   updateEmployee: (input: UpdateEmployeeInput) => Promise<Employee>;
+  deleteEmployee: (
+    companyId: string,
+    employeeId: string,
+  ) => Promise<Employee | null>;
   listPositions: (companyId: string) => Promise<Position[]>;
   createPosition: (input: CreatePositionInput) => Promise<Position>;
   createAssignment: (
@@ -95,6 +99,9 @@ export const createHrEmployeesApi = (
           email: input.email,
           employmentStatus: input.employmentStatus,
           hiredAt: input.hiredAt,
+          positionId: input.positionId,
+          scopeNodeId: input.scopeNodeId,
+          managerId: input.managerId,
         },
       );
       return (await response.json()) as Employee;
@@ -152,5 +159,9 @@ export const createHrEmployeesApi = (
       httpClient.get<ReportingLineRecord[]>(
         `/companies/${companyId}/hr-employees/${employeeId}/reports/direct`,
       ),
+    deleteEmployee: (companyId, employeeId) =>
+      httpClient
+        .delete(`/companies/${companyId}/hr-employees/${employeeId}`)
+        .then((response) => response.json() as Promise<Employee | null>),
   };
 };

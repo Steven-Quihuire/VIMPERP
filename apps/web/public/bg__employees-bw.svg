@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1200" role="img" aria-label="Ilustración en blanco y negro de una red de personas y organización">
+  <rect width="800" height="1200" fill="#0b0b0d" />
+  <defs>
+    <pattern id="dots" width="32" height="32" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.6" fill="#ffffff" fill-opacity="0.16" />
+    </pattern>
+  </defs>
+  <rect width="800" height="1200" fill="url(#dots)" />
+  <g fill="none" stroke="#ffffff">
+    <circle cx="400" cy="600" r="350" stroke-opacity="0.18" stroke-width="1.5" />
+    <circle cx="400" cy="600" r="270" stroke-opacity="0.3" stroke-width="1.5" />
+    <circle cx="400" cy="600" r="180" stroke-opacity="0.45" stroke-width="1" />
+  </g>
+  <g stroke="#ffffff">
+    <path d="M400 600 L236 392" stroke-opacity="0.4" stroke-width="1" />
+    <path d="M400 600 L552 322" stroke-opacity="0.4" stroke-width="1" />
+    <path d="M400 600 L682 586" stroke-opacity="0.4" stroke-width="1" />
+    <path d="M400 600 L302 818" stroke-opacity="0.4" stroke-width="1" />
+    <path d="M400 600 L548 872" stroke-opacity="0.4" stroke-width="1" />
+    <path d="M400 600 L164 668" stroke-opacity="0.4" stroke-width="1" />
+    <path d="M400 600 L646 176" stroke-opacity="0.4" stroke-width="1" />
+    <path d="M552 322 L682 586" stroke-opacity="0.22" stroke-width="1" />
+    <path d="M236 392 L164 668" stroke-opacity="0.22" stroke-width="1" />
+    <path d="M302 818 L548 872" stroke-opacity="0.22" stroke-width="1" />
+    <path d="M548 872 L682 586" stroke-opacity="0.22" stroke-width="1" />
+  </g>
+  <g fill="#ffffff">
+    <circle cx="400" cy="600" r="7" />
+    <circle cx="236" cy="392" r="5" />
+    <circle cx="552" cy="322" r="5" />
+    <circle cx="682" cy="586" r="5" />
+    <circle cx="302" cy="818" r="5" />
+    <circle cx="548" cy="872" r="5" />
+    <circle cx="164" cy="668" r="4" />
+    <circle cx="646" cy="176" r="4" />
+  </g>
+  <g fill="#0b0b0d" stroke="#ffffff">
+    <circle cx="400" cy="600" r="22" stroke-width="1.5" />
+  </g>
+</svg>

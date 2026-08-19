@@ -45,6 +45,13 @@ if (!globalThis.ResizeObserver) {
   });
 }
 
+if (!globalThis.HTMLElement.prototype.scrollIntoView) {
+  Object.defineProperty(globalThis.HTMLElement.prototype, 'scrollIntoView', {
+    value: () => undefined,
+    configurable: true,
+  });
+}
+
 afterEach(() => {
   useAuthStore.getState().clearSession();
   useOnboardingStore.getState().reset(null);

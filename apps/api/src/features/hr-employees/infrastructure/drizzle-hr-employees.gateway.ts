@@ -6,6 +6,8 @@ import type { AppDb } from '../../../shared/infrastructure/db/client';
 import {
   employeeAssignmentsTable,
   employeesTable,
+  erpAccessInvitationsTable,
+  erpAccessLinksTable,
   positionsTable,
   scopeNodesTable,
 } from '../../../shared/infrastructure/db/schema';
@@ -179,6 +181,61 @@ export const createDrizzleHrEmployeesGateway = (
 
     return row ? toEmployee(row) : null;
   },
+  deleteEmployee: async (companyId, employeeId) => {
+    const [existing] = await db
+      .select()
+      .from(employeesTable)
+      .where(
+        and(
+          eq(employeesTable.companyId, companyId),
+          eq(employeesTable.id, employeeId),
+        ),
+      )
+      .limit(1);
+
+    if (!existing) {
+      return null;
+    }
+
+    const employee = toEmployee(existing);
+
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(employeeAssignmentsTable)
+        .where(
+          and(
+            eq(employeeAssignmentsTable.companyId, companyId),
+            eq(employeeAssignmentsTable.employeeId, employeeId),
+          ),
+        );
+      await tx
+        .delete(erpAccessLinksTable)
+        .where(
+          and(
+            eq(erpAccessLinksTable.companyId, companyId),
+            eq(erpAccessLinksTable.employeeId, employeeId),
+          ),
+        );
+      await tx
+        .delete(erpAccessInvitationsTable)
+        .where(
+          and(
+            eq(erpAccessInvitationsTable.companyId, companyId),
+            eq(erpAccessInvitationsTable.employeeId, employeeId),
+          ),
+        );
+      await tx
+        .delete(employeesTable)
+        .where(
+          and(
+            eq(employeesTable.companyId, companyId),
+            eq(employeesTable.id, employeeId),
+          ),
+        );
+    });
+
+    return employee;
+  },
   listEmployees: async (companyId) => {
     const rows = await db
       .select()
@@ -312,6 +369,35 @@ export const createDrizzleHrEmployeesGateway = (
       );
 
     return rows.length;
+  },
+  updatePositionReportsTo: async (companyId, positionId, reportsToPositionId) => {
+    const [row] = await db
+      .update(positionsTable)
+      .set({ reportsToPositionId })
+      .where(
+        and(
+          eq(positionsTable.companyId, companyId),
+          eq(positionsTable.id, positionId),
+        ),
+      )
+      .returning();
+
+    if (!row) {
+      return null;
+    }
+
+    const activeAssignments = await db
+      .select()
+      .from(employeeAssignmentsTable)
+      .where(
+        and(
+          eq(employeeAssignmentsTable.positionId, positionId),
+          eq(employeeAssignmentsTable.isPrimary, true),
+          isNull(employeeAssignmentsTable.endedAt),
+        ),
+      );
+
+    return toPosition(row, activeAssignments.length);
   },
   findScopeNode: async (companyId, scopeNodeId) => {
     const [row] = await db

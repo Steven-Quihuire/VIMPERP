@@ -120,3 +120,27 @@ body {
   -webkit-box-shadow: 0 0 0 1000px var(--muted) inset;
   box-shadow: 0 0 0 1000px var(--muted) inset;
 }
+
+@keyframes positions-svg-drift {
+  0% {
+    transform: scale(1.06) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: scale(1.14) translate3d(-2%, -2%, 0);
+  }
+  100% {
+    transform: scale(1.06) translate3d(0, 0, 0);
+  }
+}
+
+.positions-svg-drift {
+  animation: positions-svg-drift 20s ease-in-out infinite;
+  will-change: transform;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .positions-svg-drift {
+    animation: none;
+  }
+}

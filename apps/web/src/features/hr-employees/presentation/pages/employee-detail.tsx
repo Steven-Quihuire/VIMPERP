@@ -1,10 +1,20 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Pencil, X } from 'lucide-react';
+import { Pencil, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
 
 import type { AuthSession } from '@/features/auth/domain/auth';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/shared/ui/alert-dialog';
 import { Button } from '@/shared/ui/button';
 import { Field, FieldContent, FieldError, FieldLabel } from '@/shared/ui/field';
 import { Input } from '@/shared/ui/input';
@@ -12,6 +22,7 @@ import { Skeleton } from '@/shared/ui/skeleton';
 
 import {
   useAssignments,
+  useDeleteEmployee,
   useEmployee,
   useEmployees,
   usePositions,
@@ -22,8 +33,12 @@ import {
   employeeFormSchema,
   toEmployeeFormValues,
   toUpdateEmployeeInput,
+  type Employee,
   type EmployeeFormValues,
 } from '../../domain/employees';
+
+const vimcoreButtonClassName =
+  'cursor-pointer transition-all ease-in-out duration-400 border text-sm h-10 px-5 flex items-center justify-center gap-2 rounded-2xl hover:bg-black hover:px-7 hover:text-white';
 
 const documentTypeLabels = {
   cedula: 'Cédula',
@@ -41,11 +56,13 @@ export const EmployeeDetailPage = ({
   session,
   employeeId,
   apiBaseUrl,
+  onDeleted,
 }: {
   session: AuthSession;
   employeeId: string | null;
   apiBaseUrl?: string;
   onSelectEmployee?: (employeeId: string) => void;
+  onDeleted?: (deleted: Employee) => void;
 }) => {
   const companyId = session.activeCompany?.companyId;
   const employeeQuery = useEmployee(
@@ -56,7 +73,9 @@ export const EmployeeDetailPage = ({
   const employeesQuery = useEmployees(companyId, apiBaseUrl);
   const positionsQuery = usePositions(companyId, apiBaseUrl);
   const updateEmployeeMutation = useUpdateEmployee(apiBaseUrl);
+  const deleteEmployeeMutation = useDeleteEmployee(apiBaseUrl);
   const [isEditing, setIsEditing] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const assignments = useAssignments(
     { companyId, employeeId: employeeId ?? undefined },
     apiBaseUrl,
@@ -136,6 +155,23 @@ export const EmployeeDetailPage = ({
         .join(', ')
     : 'Ninguno';
 
+  const handleConfirmDelete = async () => {
+    if (!employee || !companyId) {
+      return;
+    }
+
+    try {
+      await deleteEmployeeMutation.mutateAsync({
+        companyId,
+        employeeId: employee.id,
+      });
+      setIsDeleteOpen(false);
+      onDeleted?.(employee);
+    } catch {
+      // Mantener el diálogo abierto para mostrar el error.
+    }
+  };
+
   const inputClassName = `h-auto border-0 border-b-0 px-0 py-0 text-sm leading-5 shadow-none focus-visible:ring-0 disabled:cursor-default disabled:opacity-100 ${isEditing ? 'text-[#074446]' : 'text-black/80'}`;
 
   return (
@@ -174,12 +210,22 @@ export const EmployeeDetailPage = ({
           </div>
 
           <div className="relative p-9 ">
+            <button
+              type="button"
+              aria-label="Eliminar empleado"
+              className="absolute right-16 top-5 flex size-9 cursor-pointer items-center justify-center rounded-full bg-red-500/15 text-red-600 shadow-[0_4px_20px_rgba(225,29,72,0.25)] ring-1 ring-red-400/40 backdrop-blur-xl transition-all ease-in-out duration-400 hover:bg-red-500/30 hover:text-red-700"
+              onClick={() => setIsDeleteOpen(true)}
+              disabled={isEditing}
+            >
+              <Trash2 className="size-4" color="#e11d48" />
+              <span className="sr-only">Eliminar empleado</span>
+            </button>
             <Button
               type="button"
               size="icon"
               aria-label="Editar datos del empleado"
               aria-pressed={isEditing}
-              className="absolute right-5 top-5 cursor-pointer"
+              className="absolute right-5 top-5 cursor-pointer transition-all ease-in-out duration-400 hover:bg-black/5"
               onClick={() => setIsEditing(true)}
               disabled={isEditing}
             >
@@ -365,6 +411,47 @@ export const EmployeeDetailPage = ({
           </div>
         </div>
       </form>
+
+      <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar este empleado?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción elimina el registro de{' '}
+              <span className="font-medium text-foreground">
+                {displayName}
+              </span>{' '}
+              y no se puede deshacer. Podés revertirla desde la lista de
+              empleados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteEmployeeMutation.error ? (
+            <p role="alert" className="text-sm text-destructive">
+              {deleteEmployeeMutation.error instanceof Error
+                ? deleteEmployeeMutation.error.message
+                : 'No se pudo eliminar el empleado.'}
+            </p>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className={`${vimcoreButtonClassName} bg-white text-black border-black/15`}
+              disabled={deleteEmployeeMutation.isPending}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                void handleConfirmDelete();
+              }}
+              className={`${vimcoreButtonClassName} bg-red-500 text-white border-red-500 hover:bg-red-700 hover:px-7 hover:text-white`}
+              disabled={deleteEmployeeMutation.isPending}
+            >
+              {deleteEmployeeMutation.isPending ? 'Eliminando…' : 'Eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 };

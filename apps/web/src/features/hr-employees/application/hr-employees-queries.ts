@@ -145,6 +145,29 @@ export const useUpdateEmployee = (apiBaseUrl?: string) => {
   });
 };
 
+export const useDeleteEmployee = (apiBaseUrl?: string) => {
+  const api = createHrEmployeesApi(apiBaseUrl);
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (variables: { companyId: string; employeeId: string }) =>
+      api.deleteEmployee(variables.companyId, variables.employeeId),
+    onSuccess: async (_result, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: hrEmployeesQueryKeys.employees(variables.companyId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: hrEmployeesQueryKeys.employee(
+            variables.companyId,
+            variables.employeeId,
+          ),
+        }),
+      ]);
+    },
+  });
+};
+
 export const usePositions = (
   companyId: string | undefined,
   apiBaseUrl?: string,

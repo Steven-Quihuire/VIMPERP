@@ -1,5 +1,9 @@
-import type { EmployeeAssignment, EmployeeAssignmentHistory } from './employee-assignments';
+import type {
+  EmployeeAssignment,
+  EmployeeAssignmentHistory,
+} from './employee-assignments';
 import type { Position } from './positions';
+import { detectEcuadorianDocumentType } from '../../../shared/domain/ecuadorian-document';
 
 export const employmentStatusValues = [
   'active',
@@ -14,7 +18,7 @@ export type EmployeeIdentityInput = {
   documentNumber: string | null;
   email: string | null;
   employmentStatus: EmploymentStatus;
-  hiredAt: Date | null;
+  hiredAt: string | null;
 };
 
 export type Employee = {
@@ -25,7 +29,7 @@ export type Employee = {
   documentNumber?: string | null;
   email?: string | null;
   employmentStatus?: EmploymentStatus;
-  hiredAt?: Date | null;
+  hiredAt?: string | null;
   createdAt: Date;
   updatedAt?: Date;
 };
@@ -59,6 +63,26 @@ export const assertValidEmployeeIdentity = (input: EmployeeIdentityInput) => {
   }
 };
 
+export const assertValidEmployeeDocument = (
+  documentType: string | null | undefined,
+  documentNumber: string | null | undefined,
+) => {
+  if (!documentNumber) return;
+
+  const detectedType = detectEcuadorianDocumentType(documentNumber);
+  if (!detectedType) {
+    throw new EmployeeValidationError(
+      'Employee document number must be a valid Ecuadorian cedula, RUC, or passport.',
+    );
+  }
+
+  if (documentType && documentType !== detectedType) {
+    throw new EmployeeValidationError(
+      `Employee document type must be '${detectedType}' for the provided document number.`,
+    );
+  }
+};
+
 export type ScopeNodeRecord = {
   id: string;
   companyId: string;
@@ -82,6 +106,10 @@ export type HrEmployeesGateway = {
     companyId: string,
     employeeId: string,
   ) => Promise<Employee | null>;
+  deleteEmployee: (
+    companyId: string,
+    employeeId: string,
+  ) => Promise<Employee | null>;
   listEmployees: (companyId: string) => Promise<Employee[]>;
   listEmployeesPage?: (
     companyId: string,
@@ -98,6 +126,11 @@ export type HrEmployeesGateway = {
   getPositionById: (
     companyId: string,
     positionId: string,
+  ) => Promise<Position | null>;
+  updatePositionReportsTo: (
+    companyId: string,
+    positionId: string,
+    reportsToPositionId: string,
   ) => Promise<Position | null>;
   listPositions: (companyId: string) => Promise<Position[]>;
   countActivePrimaryAssignmentsForPosition: (

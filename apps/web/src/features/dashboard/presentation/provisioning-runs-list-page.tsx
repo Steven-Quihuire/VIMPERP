@@ -106,7 +106,7 @@ export const ProvisioningRunsListPage = ({
   }`;
 
   return (
-    <main className="mx-auto flex max-w-6xl flex-col gap-6">
+    <main className="mx-auto flex max-w-6xl p-4 flex-col gap-6">
       <header>
         <h1 className="text-3xl font-medium tracking-tight">
           Historial de creación de empresas

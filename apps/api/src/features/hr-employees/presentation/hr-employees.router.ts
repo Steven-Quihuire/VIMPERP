@@ -19,14 +19,24 @@ const employeeFieldsSchema = {
   documentNumber: z.string().trim().min(1).nullable(),
   email: z.string().trim().email().nullable(),
   employmentStatus: z.enum(employmentStatusValues),
-  hiredAt: z.coerce.date().nullable(),
+  hiredAt: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'hiredAt must be a valid date.')
+    .nullable(),
 };
 const createEmployeeBodySchema = z.object(employeeFieldsSchema).extend({
   employmentStatus: z.enum(employmentStatusValues).default('active'),
   documentType: z.string().trim().min(1).nullable().default(null),
   documentNumber: z.string().trim().min(1).nullable().default(null),
   email: z.string().trim().email().nullable().default(null),
-  hiredAt: z.coerce.date().nullable().default(null),
+  hiredAt: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'hiredAt must be a valid date.')
+    .nullable()
+    .default(null),
+  positionId: z.string().trim().min(1).nullable().default(null),
+  scopeNodeId: z.string().trim().min(1).nullable().default(null),
+  managerId: z.string().trim().min(1).nullable().default(null),
 });
 const updateEmployeeBodySchema = z.object(employeeFieldsSchema).partial();
 const createPositionBodySchema = z.object({
@@ -68,6 +78,7 @@ export const createHrEmployeesRouter = ({
   resolvePermissionScope,
   createEmployee,
   updateEmployee,
+  deleteEmployee,
   listEmployees,
   getEmployee,
   createPosition,
@@ -88,7 +99,14 @@ export const createHrEmployeesRouter = ({
     auth: AuthSession;
   }) => PermissionScope | undefined | Promise<PermissionScope | undefined>;
   createEmployee: (
-    input: { companyId: string } & EmployeeIdentityInput,
+    input: { companyId: string } & EmployeeIdentityInput & {
+      positionId?: string | null;
+      scopeNodeId?: string | null;
+      managerId?: string | null;
+    },
+  ) => Promise<unknown>;
+  deleteEmployee: (
+    input: { companyId: string; employeeId: string },
   ) => Promise<unknown>;
   updateEmployee: (
     companyId: string,
@@ -206,6 +224,22 @@ export const createHrEmployeesRouter = ({
               body as Partial<EmployeeIdentityInput>,
             ),
           );
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.delete(
+    '/companies/:companyId/hr-employees/:employeeId',
+    requireAuth,
+    requireEmployeeCapability('hr.employees.write'),
+    async (request, response, next) => {
+      try {
+        const params = employeeParamsSchema.parse(request.params);
+        ensureCompanyAccess(getAuth(response), params.companyId);
+        const employee = await deleteEmployee(params);
+        response.status(200).json(employee ?? null);
       } catch (error) {
         next(error);
       }

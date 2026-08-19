@@ -11,6 +11,7 @@ const createGateway = (): HrEmployeesGateway => ({
     createdAt: new Date('2026-08-13T10:00:00.000Z'),
   }),
   updateEmployee: () => Promise.resolve(null),
+  deleteEmployee: () => Promise.resolve(null),
   getEmployeeById: (companyId, employeeId) =>
     Promise.resolve(employeeId === 'employee-1'
       ? {
@@ -62,6 +63,7 @@ const createGateway = (): HrEmployeesGateway => ({
 
     return Promise.resolve(null);
   },
+  updatePositionReportsTo: () => Promise.resolve(null),
   listPositions: () => Promise.resolve([]),
   countActivePrimaryAssignmentsForPosition: () => Promise.resolve(0),
   findScopeNode: () => Promise.resolve(null),

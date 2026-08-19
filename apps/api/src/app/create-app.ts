@@ -66,6 +66,7 @@ import { createDrizzleOrgTreeGateway } from '../features/org-tree/infrastructure
 import { createOrgTreeRouter } from '../features/org-tree/presentation/org-tree.router';
 import { createCreateAssignmentUseCase } from '../features/hr-employees/application/create-assignment';
 import { createCreateEmployeeUseCase } from '../features/hr-employees/application/create-employee';
+import { createDeleteEmployeeUseCase } from '../features/hr-employees/application/delete-employee';
 import { createCreatePositionUseCase } from '../features/hr-employees/application/create-position';
 import { createGetEmployeeUseCase } from '../features/hr-employees/application/get-employee';
 import { createListEmployeesUseCase } from '../features/hr-employees/application/list-employees';
@@ -1197,6 +1198,8 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
           employeeId,
           ...input,
         }),
+      deleteEmployee: (input) =>
+        createDeleteEmployeeUseCase({ gateway: hrEmployeesGateway })(input),
       listEmployees: listVisibleEmployees,
       resolvePermissionScope: resolveEmployeePermissionScope,
       getEmployee: createGetEmployeeUseCase({ gateway: hrEmployeesGateway }),

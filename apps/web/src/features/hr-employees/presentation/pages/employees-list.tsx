@@ -221,15 +221,32 @@ export const EmployeesListPage = ({
             open={isCreateDialogOpen}
             onOpenChange={setIsCreateDialogOpen}
           >
-            <DialogContent className="max-h-[90vh] overflow-y-auto p-0 sm:max-w-5xl">
+            <DialogContent
+              hideCloseButton
+              className="gap-0 overflow-hidden border-0 p-0 sm:max-w-4xl"
+            >
               <DialogTitle className="sr-only">Agregar empleado</DialogTitle>
-              <EmployeeFormPage
-                key={isCreateDialogOpen ? 'open' : 'closed'}
-                session={session}
-                {...(apiBaseUrl ? { apiBaseUrl } : {})}
-                onCreated={() => setIsCreateDialogOpen(false)}
-                onCancel={() => setIsCreateDialogOpen(false)}
-              />
+              <div className="grid sm:grid-cols-[2fr_3fr]">
+                <div className="relative hidden sm:block">
+                  <img
+                    src="/bg__employees-bw.svg"
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                </div>
+                <div className="max-h-[90vh] overflow-y-auto">
+                  <EmployeeFormPage
+                    key={isCreateDialogOpen ? 'open' : 'closed'}
+                    session={session}
+                    {...(apiBaseUrl ? { apiBaseUrl } : {})}
+                    onSelectEmployee={(employeeId) => {
+                      setIsCreateDialogOpen(false);
+                      onSelectEmployee?.(employeeId);
+                    }}
+                    onCancel={() => setIsCreateDialogOpen(false)}
+                  />
+                </div>
+              </div>
             </DialogContent>
           </Dialog>
 

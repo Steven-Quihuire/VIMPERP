@@ -30,3 +30,7 @@ OpenSpec is the repository source of truth for feature planning. Engram may pres
 ## Current Repository State
 
 Existing historical changes under `openspec/changes/` are intentionally preserved. New work must use a new change directory and must not modify archived or historical artifacts unless the task is explicitly an archive/spec synchronization operation.
+
+
+$ docker exec vimcore-postgres-1 psql -U postgres -d vimcore -c "SELECT id, full_name, document_number, document_type, email, company_id, employment_status FROM employees WHERE full_name ILIKE '%Steven%' OR document_number = '2350481194';" 2>&1 | head -30
+

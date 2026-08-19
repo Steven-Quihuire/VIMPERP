@@ -13,6 +13,7 @@ import {
   useParams,
 } from 'react-router-dom';
 import { Toaster as SileoToaster } from 'sileo';
+import { toast } from 'sonner';
 
 import { useApprovalPolicies } from '../features/approval-policy/application/approval-policy-queries';
 import { PoliciesListPage } from '../features/approval-policy/presentation/pages/policies-list';
@@ -40,7 +41,15 @@ import { DashboardThemeSettingsPage } from '../features/dashboard/presentation/d
 import { ProvisioningRunDetailPage } from '../features/dashboard/presentation/provisioning-run-detail-page';
 import { ProvisioningRunsListPage } from '../features/dashboard/presentation/provisioning-runs-list-page';
 import { DesktopGate } from '../features/desktop-access/presentation/desktop-gate';
-import { useEmployees } from '../features/hr-employees/application/hr-employees-queries';
+import {
+  useCreateEmployee,
+  useEmployees,
+} from '../features/hr-employees/application/hr-employees-queries';
+import {
+  toCreateEmployeeInput,
+  toEmployeeFormValues,
+  type Employee,
+} from '../features/hr-employees/domain/employees';
 import { AssignmentTimelinePage } from '../features/hr-employees/presentation/pages/assignment-timeline';
 import { EmployeeDetailPage } from '../features/hr-employees/presentation/pages/employee-detail';
 import { EmployeesListPage } from '../features/hr-employees/presentation/pages/employees-list';
@@ -70,8 +79,10 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/shared/ui/breadcrumb';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
 import { Toaster as ShadcnToaster } from '@/shared/ui/sonner';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Plus } from 'lucide-react';
 import type { AuthSession } from '../features/auth/domain/auth';
 
 const getAuthenticatedEntryRoute = (
@@ -203,6 +214,7 @@ const HrEmployeesWorkspace = ({
     session.activeCompany?.companyId,
     apiBaseUrl,
   );
+  const createEmployeeMutation = useCreateEmployee(apiBaseUrl);
   const selectedEmployeeName = employeesQuery.data?.find(
     (employee) => employee.id === selectedEmployeeId,
   )?.fullName;
@@ -213,6 +225,29 @@ const HrEmployeesWorkspace = ({
     }
 
     setLocalEmployeeId(employeeId);
+  };
+
+  const handleDeletedEmployee = (deleted: Employee) => {
+    toast('Empleado eliminado', {
+      action: {
+        label: 'Deshacer',
+        onClick: () => {
+          void createEmployeeMutation.mutateAsync(
+            toCreateEmployeeInput(
+              deleted.companyId,
+              toEmployeeFormValues(deleted),
+            ),
+          );
+        },
+      },
+    });
+
+    if (routeEmployeeId) {
+      void navigate('/manage-employees');
+      return;
+    }
+
+    setLocalEmployeeId(null);
   };
 
   return (
@@ -304,6 +339,7 @@ const HrEmployeesWorkspace = ({
               {...(apiBaseUrl ? { apiBaseUrl } : {})}
               employeeId={selectedEmployeeId}
               onSelectEmployee={selectEmployee}
+              onDeleted={handleDeletedEmployee}
             />
             <AssignmentTimelinePage
               session={session}
@@ -336,30 +372,101 @@ const HrPositionsWorkspace = ({
   const [selectedPositionId, setSelectedPositionId] = useState<string | null>(
     null,
   );
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Puestos de Recursos Humanos</h1>
-        <p className="text-sm text-muted-foreground">
-          Definí los puestos de reporte y la capacidad de personal.
-        </p>
-      </div>
+    <main className="mx-auto flex w-full max-w-[1480px] flex-col gap-6 p-4 md:p-6">
+      <div className="space-y-6">
+        <header>
+          <div className="">
+            <h1 className="text-3xl font-medium tracking-tight">Puestos</h1>
+          </div>
+          <Breadcrumb className="mt-1">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link
+                    className="text-gray-500 text-xs hover:text-gray-700 transition-all ease-in-out duration-300"
+                    to="/dashboard"
+                  >
+                    Inicio
+                  </Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="text-gray-500 text-xs" />
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link
+                    className="text-gray-500 text-xs hover:text-gray-700 transition-all ease-in-out duration-300"
+                    to="/dashboard/hr/employees"
+                  >
+                    Recursos humanos
+                  </Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage className="text-gray-800 text-xs">
+                  Puestos
+                </BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </header>
 
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Definí los puestos de reporte y la capacidad de personal.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="shrink-0 cursor-pointer rounded-2xl"
+            onClick={() => setIsCreateDialogOpen(true)}
+          >
+            <Plus className="size-4" color="#000" />
+            Agregar puesto
+          </Button>
+        </div>
+
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogContent
+            hideCloseButton
+            className="gap-0 overflow-hidden border-0 p-0 sm:max-w-4xl"
+          >
+            <DialogTitle className="sr-only">Agregar puesto</DialogTitle>
+            <div className="grid sm:grid-cols-[2fr_3fr]">
+            <div className="relative hidden overflow-hidden sm:block">
+              <img
+                src="/bg__positions-bw.svg"
+                alt=""
+                className="positions-svg-drift absolute inset-0 h-full w-full object-cover"
+              />
+            </div>
+              <div className="max-h-[90vh] overflow-y-auto">
+              <PositionFormPage
+                key={isCreateDialogOpen ? 'open' : 'closed'}
+                session={session}
+                {...(apiBaseUrl ? { apiBaseUrl } : {})}
+                onCreated={(positionId) => {
+                  setIsCreateDialogOpen(false);
+                  setSelectedPositionId(positionId);
+                }}
+                onCancel={() => setIsCreateDialogOpen(false)}
+              />
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <PositionsListPage
           session={session}
           {...(apiBaseUrl ? { apiBaseUrl } : {})}
           selectedPositionId={selectedPositionId}
           onSelectPosition={setSelectedPositionId}
         />
-        <PositionFormPage
-          session={session}
-          {...(apiBaseUrl ? { apiBaseUrl } : {})}
-          onCreated={setSelectedPositionId}
-        />
       </div>
-    </div>
+    </main>
   );
 };
 

@@ -169,6 +169,9 @@ describe('hr-employees query hooks', () => {
       email: null,
       employmentStatus: 'active',
       hiredAt: null,
+      positionId: 'position-1',
+      scopeNodeId: 'company:company-1',
+      managerId: 'employee-9',
     })).resolves.toMatchObject({
       id: 'employee-3',
     });

@@ -1,6 +1,9 @@
 import { eq } from 'drizzle-orm';
 
-import { companiesTable, employeesTable } from '../shared/infrastructure/db/schema';
+import {
+  companiesTable,
+  employeesTable,
+} from '../shared/infrastructure/db/schema';
 import { createDb } from '../shared/infrastructure/db/client';
 
 const demoEmployees = [
@@ -18,7 +21,8 @@ const demoEmployees = [
 
 const run = async () => {
   const db = createDb(process.env.DATABASE_URL);
-  const requestedCompanyId = process.argv[2] ?? process.env.SEED_EMPLOYEES_COMPANY_ID;
+  const requestedCompanyId =
+    process.argv[2] ?? process.env.SEED_EMPLOYEES_COMPANY_ID;
   const [company] = requestedCompanyId
     ? await db
         .select({ id: companiesTable.id })
@@ -43,22 +47,26 @@ const run = async () => {
   await db
     .insert(employeesTable)
     .values(
-      demoEmployees.map(([fullName, email, employmentStatus, hiredAt], index) => ({
-        id: `demo-employee-${String(index + 1).padStart(2, '0')}`,
-        companyId: company.id,
-        fullName,
-        documentType: 'cedula',
-        documentNumber: `DEMO${String(index + 1).padStart(8, '0')}`,
-        email,
-        employmentStatus,
-        hiredAt: new Date(`${hiredAt}T12:00:00.000Z`),
-        createdAt: now,
-        updatedAt: now,
-      })),
+      demoEmployees.map(
+        ([fullName, email, employmentStatus, hiredAt], index) => ({
+          id: `demo-employee-${String(index + 1).padStart(2, '0')}`,
+          companyId: company.id,
+          fullName,
+          documentType: 'cedula',
+          documentNumber: `DEMO${String(index + 1).padStart(8, '0')}`,
+          email,
+          employmentStatus,
+          hiredAt,
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ),
     )
     .onConflictDoNothing({ target: employeesTable.id });
 
-  console.log(`Seeded ${demoEmployees.length} demo employees for company ${company.id}.`);
+  console.log(
+    `Seeded ${demoEmployees.length} demo employees for company ${company.id}.`,
+  );
 };
 
 void run().catch((error: unknown) => {

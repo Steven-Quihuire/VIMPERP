@@ -119,7 +119,27 @@ describe('createHrEmployeesApi', () => {
       email: null,
       employmentStatus: 'active',
       hiredAt: null,
+      positionId: 'position-1',
+      scopeNodeId: 'company:company-1',
+      managerId: 'employee-9',
     })).resolves.toEqual({ id: 'employee-2' });
+
+    const createEmployeeCall = fetchMock.mock.calls.find(
+      ([input, init]) =>
+        typeof input === 'string' &&
+        input === 'https://api.vimcore.test/companies/company-1/hr-employees' &&
+        init?.method === 'POST',
+    );
+    expect(
+      JSON.parse(
+        (createEmployeeCall?.[1] as RequestInit | undefined)?.body as string,
+      ),
+    ).toMatchObject({
+      fullName: 'New Employee',
+      positionId: 'position-1',
+      scopeNodeId: 'company:company-1',
+      managerId: 'employee-9',
+    });
     await expect(
       api.createPosition({
         companyId: 'company-1',

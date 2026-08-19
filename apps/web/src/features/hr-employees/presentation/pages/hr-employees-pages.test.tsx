@@ -116,7 +116,18 @@ describe('hr-employees pages', () => {
       error: null,
     });
     useCreateEmployeeMock.mockReturnValue({
-      mutateAsync: vi.fn().mockResolvedValue({ id: 'employee-2' }),
+      mutateAsync: vi.fn().mockResolvedValue({
+        id: 'employee-2',
+        companyId: 'company-1',
+        fullName: 'Employee Two',
+        documentType: null,
+        documentNumber: null,
+        email: 'two@example.com',
+        employmentStatus: 'active',
+        hiredAt: '2026-08-13',
+        createdAt: '2026-08-13T12:00:00.000Z',
+        updatedAt: '2026-08-13T12:00:00.000Z',
+      }),
       isPending: false,
       error: null,
     });
@@ -233,30 +244,93 @@ describe('hr-employees pages', () => {
     expect(onSelectEmployee).toHaveBeenCalledWith('employee-1');
   });
 
-  it('creates an employee record through the employee form page', async () => {
-    const onCreated = vi.fn();
-
-    render(<EmployeeFormPage session={session} onCreated={onCreated} />);
+  it('walks the three-step wizard and shows the created summary', async () => {
+    render(<EmployeeFormPage session={session} />);
 
     fireEvent.change(screen.getByLabelText('Nombre completo'), {
       target: { value: 'Employee Two' },
     });
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+
+    await screen.findByLabelText('Fecha de alta');
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+
+    await screen.findByLabelText('Puesto');
+    fireEvent.click(screen.getByLabelText('Puesto'));
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'People Lead · 1 vacantes' }),
+    );
+    fireEvent.click(screen.getByLabelText('Encargado'));
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'Employee One' }),
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Crear empleado' }));
 
-    await waitFor(() => expect(onCreated).toHaveBeenCalledWith('employee-2'));
+    await waitFor(() => {
+      expect(screen.getByText('Empleado creado')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Employee Two')).toBeInTheDocument();
+    expect(screen.getByText('People Lead')).toBeInTheDocument();
+    expect(screen.getByText('Employee One')).toBeInTheDocument();
+
+    expect(
+      useCreateEmployeeMock.mock.results[0]?.value.mutateAsync,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        companyId: 'company-1',
+        fullName: 'Employee Two',
+        positionId: 'position-1',
+        managerId: 'employee-1',
+        scopeNodeId: null,
+      }),
+    );
   });
 
-  it('switches from document type choices to the animated document input', () => {
+  it('keeps the create dialog open and navigates to the employee from the success screen', async () => {
+    const onSelectEmployee = vi.fn();
+
+    render(
+      <EmployeesListPage
+        session={session}
+        selectedEmployeeId={null}
+        onSelectEmployee={onSelectEmployee}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Agregar empleado' }),
+    );
+
+    fireEvent.change(screen.getByLabelText('Nombre completo'), {
+      target: { value: 'Employee Two' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+    await screen.findByLabelText('Fecha de alta');
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+    await screen.findByLabelText('Puesto');
+    fireEvent.click(screen.getByRole('button', { name: 'Crear empleado' }));
+
+    await screen.findByText('Empleado creado');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ver detalles' }));
+
+    expect(onSelectEmployee).toHaveBeenCalledWith('employee-2');
+  });
+
+  it('detects the document type while typing', () => {
     render(<EmployeeFormPage session={session} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cédula' }));
+    fireEvent.change(screen.getByLabelText('Número de documento'), {
+      target: { value: '1710034065' },
+    });
 
-    expect(screen.getByLabelText('Número de Cédula')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'RUC' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cédula' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    expect(screen.getByText('Cédula')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Número de documento'), {
+      target: { value: '1710034065001' },
+    });
+
+    expect(screen.getByText('RUC')).toBeInTheDocument();
   });
 
   it('renders employee detail with manager and direct reports', () => {
