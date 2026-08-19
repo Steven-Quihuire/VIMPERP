@@ -52,7 +52,6 @@ import {
 } from '../features/hr-employees/domain/employees';
 import { EmployeeDetailPage } from '../features/hr-employees/presentation/pages/employee-detail';
 import { EmployeesListPage } from '../features/hr-employees/presentation/pages/employees-list';
-import { PositionFormPage } from '../features/hr-employees/presentation/pages/position-form';
 import { PositionsListPage } from '../features/hr-employees/presentation/pages/positions-list';
 import { AcceptErpAccessInvitationPage } from '../features/hr-erp-access/presentation/pages/accept-invitation';
 import { InvitationsListPage } from '../features/hr-erp-access/presentation/pages/invitations-list';
@@ -78,10 +77,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/shared/ui/breadcrumb';
-import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
 import { Toaster as ShadcnToaster } from '@/shared/ui/sonner';
-import { ChevronLeft, Plus } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import type { AuthSession } from '../features/auth/domain/auth';
 
 const getAuthenticatedEntryRoute = (
@@ -363,7 +360,6 @@ const HrPositionsWorkspace = ({
   const [selectedPositionId, setSelectedPositionId] = useState<string | null>(
     null,
   );
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   return (
     <main className="mx-auto flex w-full max-w-[1480px] flex-col gap-6 p-4 md:p-6">
@@ -404,51 +400,6 @@ const HrPositionsWorkspace = ({
             </BreadcrumbList>
           </Breadcrumb>
         </header>
-
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <p className="text-sm text-muted-foreground">
-            Definí los puestos de reporte y la capacidad de personal.
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            className="shrink-0 cursor-pointer rounded-2xl"
-            onClick={() => setIsCreateDialogOpen(true)}
-          >
-            <Plus className="size-4" color="#000" />
-            Agregar puesto
-          </Button>
-        </div>
-
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogContent
-            hideCloseButton
-            className="gap-0 overflow-hidden border-0 p-0 sm:max-w-4xl"
-          >
-            <DialogTitle className="sr-only">Agregar puesto</DialogTitle>
-            <div className="grid sm:grid-cols-[2fr_3fr]">
-            <div className="relative hidden overflow-hidden sm:block">
-              <img
-                src="/bg__positions-bw.svg"
-                alt=""
-                className="positions-svg-drift absolute inset-0 h-full w-full object-cover"
-              />
-            </div>
-              <div className="max-h-[90vh] overflow-y-auto">
-              <PositionFormPage
-                key={isCreateDialogOpen ? 'open' : 'closed'}
-                session={session}
-                {...(apiBaseUrl ? { apiBaseUrl } : {})}
-                onCreated={(positionId) => {
-                  setIsCreateDialogOpen(false);
-                  setSelectedPositionId(positionId);
-                }}
-                onCancel={() => setIsCreateDialogOpen(false)}
-              />
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
 
         <PositionsListPage
           session={session}
