@@ -131,34 +131,6 @@ export const EmployeesListPage = ({
   const deleteEmployeeMutation = useDeleteEmployee(apiBaseUrl);
   const updateEmployeeMutation = useUpdateEmployee(apiBaseUrl);
 
-  if (!companyId) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        Seleccioná una compañía activa para consultar los empleados.
-      </p>
-    );
-  }
-
-  if (employeesQuery.isLoading) {
-    return (
-      <div className="space-y-3" aria-label="Cargando empleados">
-        {Array.from({ length: 5 }, (_, index) => (
-          <Skeleton key={index} className="h-14 w-full rounded-xl" />
-        ))}
-      </div>
-    );
-  }
-
-  if (employeesQuery.isError) {
-    return (
-      <p role="alert" className="text-sm text-destructive">
-        {employeesQuery.error instanceof Error
-          ? employeesQuery.error.message
-          : 'No se pudieron cargar los empleados.'}
-      </p>
-    );
-  }
-
   const allEmployees = allEmployeesQuery.data ?? [];
   const positions = positionsQuery.data ?? [];
 
@@ -199,6 +171,34 @@ export const EmployeesListPage = ({
       hiredThisMonth,
     };
   }, [allEmployees]);
+
+  if (!companyId) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Seleccioná una compañía activa para consultar los empleados.
+      </p>
+    );
+  }
+
+  if (employeesQuery.isLoading) {
+    return (
+      <div className="space-y-3" aria-label="Cargando empleados">
+        {Array.from({ length: 5 }, (_, index) => (
+          <Skeleton key={index} className="h-14 w-full rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  if (employeesQuery.isError) {
+    return (
+      <p role="alert" className="text-sm text-destructive">
+        {employeesQuery.error instanceof Error
+          ? employeesQuery.error.message
+          : 'No se pudieron cargar los empleados.'}
+      </p>
+    );
+  }
 
   const allOnPageSelected =
     employees.length > 0 && employees.every((employee) => selectedIds.has(employee.id));
