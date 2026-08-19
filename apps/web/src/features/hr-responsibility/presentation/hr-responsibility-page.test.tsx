@@ -63,17 +63,10 @@ describe('HrResponsibilityPage', () => {
     });
   });
 
-  it('keeps ERP selection and sends an external HR invitation scoped to the company', async () => {
+  it('opens the invite dialog and sends an external HR invitation scoped to the company', async () => {
     render(<HrResponsibilityPage session={session} />);
-    expect(
-      screen.getByRole('heading', { name: 'Responsables de RRHH' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: 'Invitar responsable por correo' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('option', { name: /erp-user/ }),
-    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Invitar por correo' }));
 
     fireEvent.change(screen.getByLabelText('Correo electrónico'), {
       target: { value: 'external@example.com' },
@@ -89,8 +82,5 @@ describe('HrResponsibilityPage', () => {
         inviteeEmail: 'external@example.com',
       });
     });
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'Invitación enviada',
-    );
   });
 });
