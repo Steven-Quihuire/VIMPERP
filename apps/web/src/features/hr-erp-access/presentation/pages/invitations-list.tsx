@@ -1,18 +1,34 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2 } from 'lucide-react';
+import {
+  Copy,
+  Loader2,
+  Mail,
+  MailPlus,
+  Trash2,
+} from 'lucide-react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 import type { z } from 'zod';
 
 import type { AuthSession } from '@/features/auth/domain/auth';
 import { useEmployees } from '@/features/hr-employees/application/hr-employees-queries';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/shared/ui/alert-dialog';
 import { Button } from '@/shared/ui/button';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/shared/ui/card';
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from '@/shared/ui/dialog';
 import {
   Field,
   FieldContent,
@@ -21,7 +37,6 @@ import {
   FieldLabel,
 } from '@/shared/ui/field';
 import { Input } from '@/shared/ui/input';
-import { Skeleton } from '@/shared/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -32,6 +47,7 @@ import {
 } from '@/shared/ui/table';
 
 import { useInvitations } from '../../application/hr-erp-access-queries';
+import type { PendingErpAccessInvitation } from '../../domain/erp-access';
 import {
   invitationFormSchema,
   sortInvitationsByExpiresAt,
@@ -46,6 +62,59 @@ const defaultValues: InvitationFormValues = {
   inviteeEmail: '',
 };
 
+const formatDateTime = (value: string) =>
+  new Date(value).toLocaleString('es-AR');
+
+const getEmployeeName = (
+  employeeId: string,
+  employees: { id: string; fullName: string | null; email: string | null }[],
+) => employees.find((employee) => employee.id === employeeId)?.fullName ?? employeeId;
+
+const InvitationRowActions = ({
+  invitation,
+  employeeName,
+  onRequestRevoke,
+}: {
+  invitation: PendingErpAccessInvitation;
+  employeeName: string;
+  onRequestRevoke: (invitation: PendingErpAccessInvitation) => void;
+}) => {
+  const copyEmail = async () => {
+    if (!navigator.clipboard?.writeText) return;
+    try {
+      await navigator.clipboard.writeText(invitation.inviteeEmail);
+      toast.success('Correo copiado');
+    } catch {
+      // El portapapeles puede estar bloqueado por el navegador.
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-end gap-1">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        aria-label={`Copiar correo de la invitación de ${employeeName}`}
+        className="size-8 rounded-full"
+        onClick={() => void copyEmail()}
+      >
+        <Copy className="size-4" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        aria-label={`Revocar acceso de la invitación de ${employeeName}`}
+        className="size-8 rounded-full text-red-600 hover:bg-red-500/10 hover:text-red-700"
+        onClick={() => onRequestRevoke(invitation)}
+      >
+        <Trash2 className="size-4" />
+      </Button>
+    </div>
+  );
+};
+
 export const InvitationsListPage = ({
   session,
   apiBaseUrl,
@@ -57,6 +126,9 @@ export const InvitationsListPage = ({
   const { invitationsQuery, createInvitationMutation, revokeAccessMutation } =
     useInvitations(companyId, apiBaseUrl);
   const employeesQuery = useEmployees(companyId, apiBaseUrl);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [pendingRevoke, setPendingRevoke] =
+    useState<PendingErpAccessInvitation | null>(null);
   const form = useForm<InvitationFormInput, unknown, InvitationFormValues>({
     resolver: zodResolver(invitationFormSchema),
     defaultValues,
@@ -71,174 +143,370 @@ export const InvitationsListPage = ({
   }
 
   const invitations = sortInvitationsByExpiresAt(invitationsQuery.data ?? []);
+  const employees = employeesQuery.data ?? [];
+  const now = Date.now();
+  const expired = invitations.filter(
+    (invitation) => new Date(invitation.expiresAt).getTime() < now,
+  ).length;
+  const expiringSoon = invitations.filter((invitation) => {
+    const expiresAt = new Date(invitation.expiresAt).getTime();
+    return expiresAt >= now && expiresAt - now < 7 * 24 * 60 * 60 * 1000;
+  }).length;
+
+  const openCreateDialog = () => {
+    form.reset(defaultValues);
+    setIsCreateOpen(true);
+  };
+
+  const confirmRevoke = async () => {
+    if (!pendingRevoke) return;
+    try {
+      await revokeAccessMutation.mutateAsync({
+        companyId,
+        employeeId: pendingRevoke.employeeId,
+      });
+      toast.success('Acceso revocado', {
+        description: pendingRevoke.inviteeEmail,
+      });
+      setPendingRevoke(null);
+    } catch {
+      // El error se refleja en el mutation.
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Invitar al acceso ERP</CardTitle>
-          <CardDescription>
-            Elegí un empleado y mandale un correo para que pueda entrar al
-            sistema.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form
-            className="space-y-5"
-            onSubmit={(event) => {
-              void form.handleSubmit(async (values) => {
-                await createInvitationMutation.mutateAsync(
-                  toCreateErpAccessInvitationInput(companyId, values),
-                );
-                form.reset(defaultValues);
-              })(event);
-            }}
-          >
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="erp-access-employee-id">
-                  ¿Qué empleado va a usar el sistema?
-                </FieldLabel>
-                <FieldContent>
-                  <select
-                    id="erp-access-employee-id"
-                    aria-label="¿Qué empleado va a usar el sistema?"
-                    className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-2 text-sm"
-                    {...form.register('employeeId')}
-                  >
-                    <option value="">Elegí un empleado</option>
-                    {(employeesQuery.data ?? []).map((employee) => (
-                      <option key={employee.id} value={employee.id}>
-                        {employee.fullName || 'Sin nombre'}
-                        {employee.email ? ` · ${employee.email}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-sm text-muted-foreground">
-                    El sistema guarda el empleado correcto automáticamente.
-                  </p>
-                  <FieldError errors={[form.formState.errors.employeeId]} />
-                </FieldContent>
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="erp-access-invitee-email">
-                  Correo de quien va a entrar
-                </FieldLabel>
-                <FieldContent>
-                  <Input
-                    id="erp-access-invitee-email"
-                    aria-label="Correo de la persona invitada"
-                    type="email"
-                    placeholder="Ej.: ana@empresa.com"
-                    {...form.register('inviteeEmail')}
-                  />
-                  <FieldError errors={[form.formState.errors.inviteeEmail]} />
-                </FieldContent>
-              </Field>
-            </FieldGroup>
-
-            {createInvitationMutation.error ? (
-              <p role="alert" className="text-sm text-destructive">
-                {createInvitationMutation.error instanceof Error
-                  ? createInvitationMutation.error.message
-                  : 'No se pudo crear la invitación de acceso al ERP.'}
-              </p>
-            ) : null}
-
-            <Button type="submit" disabled={createInvitationMutation.isPending}>
-              {createInvitationMutation.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : null}
-              Invitar al acceso ERP
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Invitaciones pendientes</CardTitle>
-          <CardDescription>
-            Consultá las invitaciones que todavía deben aceptarse.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {invitationsQuery.isLoading ? (
-            <Skeleton className="h-32 w-full" />
-          ) : null}
-
-          {invitationsQuery.isError ? (
-            <p role="alert" className="text-sm text-destructive">
-              {invitationsQuery.error instanceof Error
-                ? invitationsQuery.error.message
-                : 'No se pudieron cargar las invitaciones de acceso al ERP.'}
+    <section className="space-y-6">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-black/10 bg-card p-4">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/5 text-primary">
+            <MailPlus className="size-5" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs text-black/45">Invitaciones pendientes</p>
+            <p className="text-xl font-semibold tracking-tight">
+              {invitations.length}
             </p>
-          ) : null}
-
-          {!invitationsQuery.isLoading &&
-          !invitationsQuery.isError &&
-          invitations.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No hay invitaciones pendientes de acceso al ERP.
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl border border-black/10 bg-card p-4">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+            <Mail className="size-5" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs text-black/45">Vencen en los próximos 7 días</p>
+            <p className="text-xl font-semibold tracking-tight">
+              {expiringSoon}
             </p>
-          ) : null}
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl border border-black/10 bg-card p-4">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-700">
+            <Trash2 className="size-5" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs text-black/45">Vencidas</p>
+            <p className="text-xl font-semibold tracking-tight">{expired}</p>
+          </div>
+        </div>
+      </div>
 
-          {!invitationsQuery.isLoading &&
-          !invitationsQuery.isError &&
-          invitations.length > 0 ? (
-            <div className="rounded-lg border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Empleado</TableHead>
-                    <TableHead>Correo electrónico</TableHead>
-                    <TableHead>Vence el</TableHead>
-                    <TableHead className="text-right">Acción</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invitations.map((invitation) => (
-                    <TableRow key={invitation.id}>
-                      <TableCell className="font-medium">
-                        {invitation.employeeId}
-                      </TableCell>
-                      <TableCell>{invitation.inviteeEmail}</TableCell>
-                      <TableCell>
-                        {new Date(invitation.expiresAt).toLocaleString('es-AR')}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          aria-label={`Revocar acceso ERP para ${invitation.employeeId}`}
-                          disabled={revokeAccessMutation.isPending}
-                          onClick={() => {
-                            void revokeAccessMutation.mutateAsync({
-                              companyId,
-                              employeeId: invitation.employeeId,
-                            });
-                          }}
-                        >
-                          Revocar acceso
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+      <div className="-mt-2 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <h2 className="text-xl font-medium tracking-tight">
+          Invitaciones pendientes
+        </h2>
+        <Button
+          type="button"
+          variant="outline"
+          className="shrink-0 cursor-pointer rounded-2xl"
+          onClick={openCreateDialog}
+        >
+          <MailPlus className="size-4" color="#000" />
+          Invitar al ERP
+        </Button>
+      </div>
+
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent
+          hideCloseButton
+          className="gap-0 overflow-hidden border-0 p-0 sm:max-w-4xl"
+        >
+          <DialogTitle className="sr-only">Invitar al ERP</DialogTitle>
+          <div className="grid sm:grid-cols-[2fr_3fr]">
+            <div className="relative hidden overflow-hidden sm:block">
+              <img
+                src="/bg__employees-bw.svg"
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover"
+              />
             </div>
-          ) : null}
+            <div className="max-h-[90vh] overflow-y-auto p-6">
+              <div className="mb-6 space-y-1.5">
+                <h2 className="text-lg font-semibold leading-none">
+                  Invitar al acceso ERP
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Elegí un empleado y mandale un correo para que pueda entrar al
+                  sistema.
+                </p>
+              </div>
+              <form
+                className="space-y-5"
+                onSubmit={(event) => {
+                  void form.handleSubmit(async (values) => {
+                    try {
+                      await createInvitationMutation.mutateAsync(
+                        toCreateErpAccessInvitationInput(companyId, values),
+                      );
+                      toast.success('Invitación enviada', {
+                        description: values.inviteeEmail,
+                      });
+                      form.reset(defaultValues);
+                      setIsCreateOpen(false);
+                    } catch {
+                      // El error se refleja en el mutation.
+                    }
+                  })(event);
+                }}
+              >
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="erp-access-employee-id">
+                      ¿Qué empleado va a usar el sistema?
+                    </FieldLabel>
+                    <FieldContent>
+                      <select
+                        id="erp-access-employee-id"
+                        aria-label="¿Qué empleado va a usar el sistema?"
+                        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none"
+                        {...form.register('employeeId')}
+                      >
+                        <option value="">Elegí un empleado</option>
+                        {employees.map((employee) => (
+                          <option key={employee.id} value={employee.id}>
+                            {employee.fullName || 'Sin nombre'}
+                            {employee.email ? ` · ${employee.email}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <FieldError
+                        errors={[form.formState.errors.employeeId]}
+                      />
+                    </FieldContent>
+                  </Field>
 
+                  <Field>
+                    <FieldLabel htmlFor="erp-access-invitee-email">
+                      Correo de quien va a entrar
+                    </FieldLabel>
+                    <FieldContent>
+                      <Input
+                        id="erp-access-invitee-email"
+                        aria-label="Correo de la persona invitada"
+                        type="email"
+                        placeholder="Ej.: ana@empresa.com"
+                        {...form.register('inviteeEmail')}
+                      />
+                      <FieldError
+                        errors={[form.formState.errors.inviteeEmail]}
+                      />
+                    </FieldContent>
+                  </Field>
+                </FieldGroup>
+
+                {createInvitationMutation.error ? (
+                  <p role="alert" className="text-sm text-destructive">
+                    {createInvitationMutation.error instanceof Error
+                      ? createInvitationMutation.error.message
+                      : 'No se pudo crear la invitación de acceso al ERP.'}
+                  </p>
+                ) : null}
+
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setIsCreateOpen(false)}
+                    disabled={createInvitationMutation.isPending}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createInvitationMutation.isPending}
+                  >
+                    {createInvitationMutation.isPending ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : null}
+                    Enviar invitación
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {invitationsQuery.isLoading ? (
+        <div className="space-y-3" aria-label="Cargando invitaciones">
+          {Array.from({ length: 3 }, (_, index) => (
+            <div
+              key={index}
+              className="h-14 w-full animate-pulse rounded-xl bg-muted/40"
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {invitationsQuery.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          {invitationsQuery.error instanceof Error
+            ? invitationsQuery.error.message
+            : 'No se pudieron cargar las invitaciones de acceso al ERP.'}
+        </p>
+      ) : null}
+
+      {!invitationsQuery.isLoading && !invitationsQuery.isError && invitations.length === 0 ? (
+        <div className="border-t px-5 py-12 text-center">
+          <Mail className="mx-auto size-8 text-muted-foreground/50" />
+          <h2 className="text-xl font-medium tracking-tight">
+            No hay invitaciones pendientes
+          </h2>
+          <p className="mt-1 text-xs text-gray-600">
+            Invitá a un empleado con el botón “Invitar al ERP”.
+          </p>
+        </div>
+      ) : null}
+
+      {!invitationsQuery.isLoading && !invitationsQuery.isError && invitations.length > 0 ? (
+        <Table>
+          <TableHeader className="bg-[#f6f6f6] rounded-2xl">
+            <TableRow>
+              <TableHead className="h-11 pl-5 text-xs">Empleado</TableHead>
+              <TableHead className="h-11 text-xs">Correo invitado</TableHead>
+              <TableHead className="h-11 text-xs">Vence</TableHead>
+              <TableHead className="h-11 text-xs">Estado</TableHead>
+              <TableHead className="h-11 pr-5 text-right text-xs"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {invitations.map((invitation) => {
+              const employeeName = getEmployeeName(invitation.employeeId, employees);
+              const expiresAtMs = new Date(invitation.expiresAt).getTime();
+              const isExpired = expiresAtMs < now;
+              const isExpiringSoon =
+                expiresAtMs >= now && expiresAtMs - now < 7 * 24 * 60 * 60 * 1000;
+              return (
+                <TableRow key={invitation.id}>
+                  <TableCell className="py-4 pl-5">
+                    <div className="flex items-center gap-3">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                        {employeeName.slice(0, 1).toUpperCase()}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">
+                          {employeeName}
+                        </div>
+                        <div className="truncate text-xs text-gray-600">
+                          {invitation.employeeId}
+                        </div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {invitation.inviteeEmail}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatDateTime(invitation.expiresAt)}
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={
+                        isExpired
+                          ? 'rounded-2xl border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700'
+                          : isExpiringSoon
+                            ? 'rounded-2xl border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700'
+                            : 'rounded-2xl border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700'
+                      }
+                    >
+                      {isExpired
+                        ? 'Vencida'
+                        : isExpiringSoon
+                          ? 'Por vencer'
+                          : 'Activa'}
+                    </span>
+                  </TableCell>
+                  <TableCell className="pr-5 text-right">
+                    <InvitationRowActions
+                      invitation={invitation}
+                      employeeName={employeeName}
+                      onRequestRevoke={setPendingRevoke}
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      ) : null}
+
+      <button
+        type="button"
+        aria-label="Nueva invitación"
+        className="fixed bottom-6 right-6 z-30 flex size-14 items-center justify-center rounded-full bg-primary text-white shadow-lg transition-all hover:bg-primary/90 hover:scale-105"
+        onClick={openCreateDialog}
+      >
+        <MailPlus className="size-6" />
+      </button>
+
+      <AlertDialog
+        open={pendingRevoke !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingRevoke(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Revocar el acceso al ERP?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción elimina la invitación pendiente de{' '}
+              <span className="font-medium text-foreground">
+                {pendingRevoke?.inviteeEmail}
+              </span>{' '}
+              y ya no podrá aceptar el acceso.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
           {revokeAccessMutation.error ? (
-            <p role="alert" className="mt-4 text-sm text-destructive">
+            <p role="alert" className="text-sm text-destructive">
               {revokeAccessMutation.error instanceof Error
                 ? revokeAccessMutation.error.message
                 : 'No se pudo revocar el acceso al ERP.'}
             </p>
           ) : null}
-        </CardContent>
-      </Card>
-    </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="rounded-2xl"
+              disabled={revokeAccessMutation.isPending}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                void confirmRevoke();
+              }}
+              className="rounded-2xl bg-red-500 text-white hover:bg-red-700"
+              disabled={revokeAccessMutation.isPending}
+            >
+              {revokeAccessMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Trash2 className="size-4" />
+              )}
+              Revocar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </section>
   );
 };

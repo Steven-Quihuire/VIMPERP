@@ -115,13 +115,15 @@ describe('hr-erp-access pages', () => {
 
     expect(screen.getByText('person@vimcore.test')).toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole('button', { name: 'Invitar al ERP' }));
+
     fireEvent.change(screen.getByLabelText('¿Qué empleado va a usar el sistema?'), {
       target: { value: 'employee-2' },
     });
     fireEvent.change(screen.getByLabelText('Correo de la persona invitada'), {
       target: { value: ' PERSON-2@VIMCORE.TEST ' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Invitar al acceso ERP' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar invitación' }));
 
     await waitFor(() => {
       expect(
@@ -133,7 +135,12 @@ describe('hr-erp-access pages', () => {
       });
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Revocar acceso ERP para employee-1' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Revocar acceso de la invitación de Ana Pérez',
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Revocar' }));
 
     await waitFor(() => {
       expect(
