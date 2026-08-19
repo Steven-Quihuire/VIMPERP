@@ -13,6 +13,7 @@ import {
 import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
+import { toast } from 'sonner';
 
 import type { AuthSession } from '@/features/auth/domain/auth';
 import { useOrgTree } from '@/features/org-tree/application/org-tree-queries';
@@ -47,7 +48,8 @@ import {
 } from '../../domain/employees';
 import { DatePickerField } from '../components/date-picker-field';
 import { DocumentDetectionBadge } from '../components/document-detection-badge';
-import { getScopeOptions, scopeTypeLabels } from './assignment-timeline';
+import { getScopeOptions } from './assignment-timeline';
+import { AssignmentFields } from '../components/assignment-fields';
 
 const defaultValues: EmployeeFormValues = {
   fullName: '',
@@ -65,7 +67,6 @@ const sectionClassName = 'rounded-2xl p-4';
 const sectionHeaderClassName = '-mt-4 flex items-center gap-3';
 const sectionIconClassName =
   'flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted';
-const noneOption = '__none__';
 const selectItemClassName =
   'focus:bg-foreground focus:text-background data-[highlighted]:bg-foreground data-[highlighted]:text-background';
 
@@ -127,9 +128,16 @@ export const EmployeeFormPage = ({
   };
 
   const handleCreate = form.handleSubmit(async (values) => {
+    if (!companyId) {
+      return;
+    }
+
     const employee = await createEmployeeMutation.mutateAsync(
       toCreateEmployeeInput(companyId, values),
     );
+    toast.success('Empleado creado', {
+      description: employee.fullName || employee.id,
+    });
     setCreated({
       employee,
       positionId: values.positionId,
@@ -231,13 +239,9 @@ export const EmployeeFormPage = ({
               </Button>
             ) : null}
             {onCancel ? (
-              <button
-                type="button"
-                className="h-10 hover:bg-red-700 hover:px-7 px-6 bg-red-500 text-sm rounded-2xl text-white cursor-pointer transition-all ease-in-out duration-400"
-                onClick={onCancel}
-              >
+              <Button type="button" variant="ghost" onClick={onCancel}>
                 Cancelar
-              </button>
+              </Button>
             ) : null}
           </div>
         </div>
@@ -430,140 +434,40 @@ export const EmployeeFormPage = ({
                     </p>
                   </div>
                 </div>
-                <FieldGroup className="mt-8 grid gap-8 sm:grid-cols-2">
-                  <Field className="sm:col-span-2">
-                    <FieldLabel htmlFor="employee-position">Puesto</FieldLabel>
-                    <FieldContent>
-                      <Select
-                        value={watchedValues.positionId || noneOption}
-                        onValueChange={(value) =>
-                          form.setValue(
-                            'positionId',
-                            value === noneOption ? '' : value,
-                            { shouldDirty: true, shouldValidate: true },
-                          )
-                        }
-                      >
-                        <SelectTrigger
-                          id="employee-position"
-                          aria-label="Puesto"
-                          className="cursor-pointer"
-                        >
-                          <SelectValue placeholder="Seleccioná un puesto" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem
-                            className={selectItemClassName}
-                            value={noneOption}
-                          >
-                            Seleccioná un puesto
-                          </SelectItem>
-                          {activePositions.map((position) => (
-                            <SelectItem
-                              key={position.id}
-                              className={selectItemClassName}
-                              value={position.id}
-                            >
-                              {position.name} · {position.remainingVacancies}{' '}
-                              vacantes
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FieldError errors={[form.formState.errors.positionId]} />
-                    </FieldContent>
-                  </Field>
-                  <Field className="sm:col-span-2">
-                    <FieldLabel htmlFor="employee-manager">
-                      Encargado
-                    </FieldLabel>
-                    <FieldContent>
-                      <Select
-                        value={watchedValues.managerId || noneOption}
-                        onValueChange={(value) =>
-                          form.setValue(
-                            'managerId',
-                            value === noneOption ? '' : value,
-                            { shouldDirty: true, shouldValidate: true },
-                          )
-                        }
-                      >
-                        <SelectTrigger
-                          id="employee-manager"
-                          aria-label="Encargado"
-                          className="cursor-pointer"
-                        >
-                          <SelectValue placeholder="Sin encargado asignado" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem
-                            className={selectItemClassName}
-                            value={noneOption}
-                          >
-                            Sin encargado asignado
-                          </SelectItem>
-                          {(employeesQuery.data ?? []).map((employee) => (
-                            <SelectItem
-                              key={employee.id}
-                              className={selectItemClassName}
-                              value={employee.id}
-                            >
-                              {employee.fullName || employee.id}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FieldContent>
-                  </Field>
-                  <Field className="sm:col-span-2">
-                    <FieldLabel htmlFor="employee-scope-node">
-                      Alcance / ubicación
-                    </FieldLabel>
-                    <FieldContent>
-                      <Select
-                        value={watchedValues.scopeNodeId || noneOption}
-                        onValueChange={(value) =>
-                          form.setValue(
-                            'scopeNodeId',
-                            value === noneOption ? '' : value,
-                            { shouldDirty: true, shouldValidate: true },
-                          )
-                        }
-                      >
-                        <SelectTrigger
-                          id="employee-scope-node"
-                          aria-label="Nodo de alcance"
-                          className="cursor-pointer"
-                        >
-                          <SelectValue placeholder="Seleccioná dónde trabajará" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem
-                            className={selectItemClassName}
-                            value={noneOption}
-                          >
-                            Seleccioná dónde trabajará
-                          </SelectItem>
-                          {scopeOptions.map(({ node, depth }) => (
-                            <SelectItem
-                              key={`${node.ref.scopeType}:${node.ref.scopeId}`}
-                              className={selectItemClassName}
-                              value={`${node.ref.scopeType}:${node.ref.scopeId}`}
-                            >
-                              {'— '.repeat(depth)}
-                              {node.name} ·{' '}
-                              {scopeTypeLabels[node.ref.scopeType]} (
-                              {node.employeeCount ?? 0} empleados)
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FieldError
-                        errors={[form.formState.errors.scopeNodeId]}
-                      />
-                    </FieldContent>
-                  </Field>
-                </FieldGroup>
+                <AssignmentFields
+                  positions={positionsQuery.data ?? []}
+                  managers={employeesQuery.data ?? []}
+                  scopeOptions={scopeOptions}
+                  scopeLoading={orgTreeQuery.isLoading}
+                  values={{
+                    positionId: watchedValues.positionId || '',
+                    managerId: watchedValues.managerId || '',
+                    scopeNodeId: watchedValues.scopeNodeId || '',
+                  }}
+                  onPositionChange={(value) =>
+                    form.setValue('positionId', value, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
+                  onManagerChange={(value) =>
+                    form.setValue('managerId', value, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
+                  onScopeChange={(value) =>
+                    form.setValue('scopeNodeId', value, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
+                  errors={{
+                    positionId: form.formState.errors.positionId?.message,
+                    managerId: form.formState.errors.managerId?.message,
+                    scopeNodeId: form.formState.errors.scopeNodeId?.message,
+                  }}
+                />
               </section>
             )}
           </div>
@@ -578,13 +482,9 @@ export const EmployeeFormPage = ({
           {currentStep === 1 ? (
             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               {onCancel ? (
-                <button
-                  className="h-10 hover:bg-red-700 hover:px-7 px-6 bg-red-500 text-sm rounded-2xl text-white cursor-pointer transition-all ease-in-out duration-400"
-                  type="button"
-                  onClick={onCancel}
-                >
+                <Button type="button" variant="ghost" onClick={onCancel}>
                   Cancelar
-                </button>
+                </Button>
               ) : null}
               <button
                 className="hover:bg-black hover:px-7 hover:text-white cursor-pointer transition-all ease-in-out duration-400 border text-sm h-10 px-5 flex items-center justify-center gap-2 rounded-2xl"
@@ -606,15 +506,15 @@ export const EmployeeFormPage = ({
                 Anterior
               </button>
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
-                {onCancel ? (
-                  <button
-                    className="h-10 hover:bg-red-700 hover:px-7 px-6 bg-red-500 text-sm rounded-2xl text-white cursor-pointer transition-all ease-in-out duration-400"
-                    type="button"
-                    onClick={onCancel}
-                  >
-                    Cerrar
-                  </button>
-                ) : null}
+                  {onCancel ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={onCancel}
+                    >
+                      Cerrar
+                    </Button>
+                  ) : null}
                 <button
                   className="hover:bg-black hover:px-7 hover:text-white cursor-pointer transition-all ease-in-out duration-400 border text-sm h-10 px-5 flex items-center justify-center gap-2 rounded-2xl"
                   type="button"
@@ -637,16 +537,16 @@ export const EmployeeFormPage = ({
                 Anterior
               </button>
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
-                {onCancel ? (
-                  <button
-                    className="h-10 hover:bg-red-700 hover:px-7 px-6 bg-red-500 text-sm rounded-2xl text-white cursor-pointer transition-all ease-in-out duration-400"
-                    type="button"
-                    onClick={onCancel}
-                    disabled={createEmployeeMutation.isPending}
-                  >
-                    Cerrar
-                  </button>
-                ) : null}
+                    {onCancel ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={onCancel}
+                        disabled={createEmployeeMutation.isPending}
+                      >
+                        Cerrar
+                      </Button>
+                    ) : null}
                 <button
                   className="hover:bg-black hover:px-7 hover:text-white cursor-pointer transition-all ease-in-out duration-400 border text-sm h-10 px-5 flex items-center justify-center gap-2 rounded-2xl"
                   type="button"

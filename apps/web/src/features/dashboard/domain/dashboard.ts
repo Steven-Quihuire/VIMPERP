@@ -144,13 +144,6 @@ export const rrhhSpaceLinks: RrhHWorkspaceLink[] = [
     description:
       'Gestiona el estado de los empleados de la empresa o division y sus datos registrados.',
   },
-  {
-    id: 'request-time-off',
-    label: 'solicitud tiempo libre',
-    href: '/dashboard/hr/employees/request-time-off',
-    description:
-      'Investiga los empleados con solicitudes asociados a tiempos libres y gestionalos.',
-  },
 ];
 
 export const canViewAdminSignals = (session: AuthSession) =>

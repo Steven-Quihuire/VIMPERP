@@ -1049,10 +1049,6 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
           element={<HrEmployeesRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
         />
         <Route
-          path="hr/employees/manage-employees"
-          element={<HrEmployeesRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
-        />
-        <Route
           path="hr/positions"
           element={<HrPositionsRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
         />
