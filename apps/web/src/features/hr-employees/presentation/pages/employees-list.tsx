@@ -64,6 +64,7 @@ import {
   defaultPageSizeOptions,
   TablePageSize,
 } from '@/shared/ui/table-page-size';
+import { HoverExpandFab } from '@/shared/ui/hover-expand-fab';
 
 const employeeMonthLabels = [
   'ene',
@@ -298,20 +299,24 @@ export const EmployeesListPage = ({
   return (
     <section className="space-y-6">
 
-      <div className="-mt-2 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center justify-between gap-4">
+      <div className="mt-0 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-3">
           <h2 className="text-xl font-medium tracking-tight">
             Gestionar Empleados
           </h2>
-          <Button
-            type="button"
-            variant="outline"
-            className="shrink-0 cursor-pointer rounded-2xl"
-            onClick={() => setIsCreateDialogOpen(true)}
+          <span
+            role="status"
+            aria-live="polite"
+            className="flex size-9 shrink-0 items-center justify-center"
           >
-            <Plus className="size-4" color="#000" />
-            Agregar empleado
-          </Button>
+            {employeesQuery.isFetching ? (
+              <Loader
+                color="#000"
+                className="size-4 animate-spin"
+                aria-label="Buscando empleados"
+              />
+            ) : null}
+          </span>
         </div>
         <div className="flex items-center justify-center">
           <div className="flex items-center gap-3 px-5 py-4">
@@ -328,19 +333,6 @@ export const EmployeesListPage = ({
                 }}
               />
             </div>
-            <span
-              role="status"
-              aria-live="polite"
-              className="flex size-10 shrink-0 items-center justify-center"
-            >
-              {employeesQuery.isFetching ? (
-                <Loader
-                  color="#000"
-                  className="size-4 animate-spin"
-                  aria-label="Buscando empleados"
-                />
-              ) : null}
-            </span>
           </div>
           <EmployeeFilters
             value={filters}
@@ -617,14 +609,12 @@ export const EmployeesListPage = ({
         </div>
       ) : null}
 
-      <button
-        type="button"
-        aria-label="Nuevo empleado"
-        className="fixed bottom-6 right-6 z-30 flex size-14 items-center justify-center rounded-full bg-primary text-white shadow-lg transition-all hover:bg-primary/90 hover:scale-105"
+      <HoverExpandFab
+        label="Agregar empleado"
+        icon={<Plus className="size-6" />}
+        ariaLabel="Nuevo empleado"
         onClick={() => setIsCreateDialogOpen(true)}
-      >
-        <Plus className="size-6" />
-      </button>
+      />
 
       <AlertDialog
         open={pendingDelete !== null}

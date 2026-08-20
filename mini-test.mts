@@ -1,0 +1,11 @@
+import { chromium } from '@playwright/test';
+import { existsSync } from 'node:fs';
+const executablePath = ['/usr/bin/chromium', '/usr/bin/chromium-browser'].find((p) => existsSync(p));
+const browser = await chromium.launch({ executablePath, headless: true });
+const page = await browser.newPage();
+page.on('console', (m) => console.log('[page]', m.text()));
+await page.goto('http://127.0.0.1:8123/mini-test2.html');
+await page.locator('#btn').click();
+await page.waitForTimeout(500);
+console.log('DONE');
+await browser.close();

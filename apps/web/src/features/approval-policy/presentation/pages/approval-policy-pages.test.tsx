@@ -7,10 +7,12 @@ import { PoliciesListPage } from './policies-list';
 import { PolicyFormPage } from './policy-form';
 
 const useApprovalPoliciesMock = vi.fn();
+const useApprovalPoliciesPageMock = vi.fn();
 const useOrgTreeMock = vi.fn();
 
 vi.mock('../../application/approval-policy-queries', () => ({
   useApprovalPolicies: (...args: unknown[]) => useApprovalPoliciesMock(...args),
+  useApprovalPoliciesPage: (...args: unknown[]) => useApprovalPoliciesPageMock(...args),
 }));
 
 vi.mock('@/features/org-tree/application/org-tree-queries', () => ({
@@ -29,6 +31,23 @@ const session: AuthSession = {
 describe('approval-policy pages', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    const sharedMutations = {
+      createPolicyMutation: {
+        mutateAsync: vi.fn().mockResolvedValue({ id: 'policy-2' }),
+        isPending: false,
+        error: null,
+      },
+      updatePolicyMutation: {
+        mutateAsync: vi.fn().mockResolvedValue({ id: 'policy-1' }),
+        isPending: false,
+        error: null,
+      },
+      deactivatePolicyMutation: {
+        mutateAsync: vi.fn().mockResolvedValue({ id: 'policy-1', isActive: false }),
+        isPending: false,
+        error: null,
+      },
+    };
     useApprovalPoliciesMock.mockReturnValue({
       policiesQuery: {
         data: [
@@ -48,21 +67,33 @@ describe('approval-policy pages', () => {
         isError: false,
         error: null,
       },
-      createPolicyMutation: {
-        mutateAsync: vi.fn().mockResolvedValue({ id: 'policy-2' }),
-        isPending: false,
+      ...sharedMutations,
+    });
+    useApprovalPoliciesPageMock.mockReturnValue({
+      policiesQuery: {
+        data: {
+          items: [
+            {
+              id: 'policy-1',
+              companyId: 'company-1',
+              scopeType: 'company',
+              scopeNodeId: null,
+              name: 'Company approvals',
+              definition: { steps: ['manager'] },
+              isActive: true,
+              createdAt: '2026-08-13T12:00:00.000Z',
+              updatedAt: '2026-08-13T12:00:00.000Z',
+            },
+          ],
+          total: 1,
+          page: 1,
+          pageSize: 10,
+        },
+        isLoading: false,
+        isError: false,
         error: null,
       },
-      updatePolicyMutation: {
-        mutateAsync: vi.fn().mockResolvedValue({ id: 'policy-1' }),
-        isPending: false,
-        error: null,
-      },
-      deactivatePolicyMutation: {
-        mutateAsync: vi.fn().mockResolvedValue({ id: 'policy-1', isActive: false }),
-        isPending: false,
-        error: null,
-      },
+      ...sharedMutations,
     });
     useOrgTreeMock.mockReturnValue({
       data: [
@@ -85,31 +116,27 @@ describe('approval-policy pages', () => {
     });
   });
 
-  it('renders policies and allows selecting and deactivating one', async () => {
-    const onSelectPolicy = vi.fn();
-
-    render(
-      <PoliciesListPage
-        session={session}
-        selectedPolicyId={null}
-        onSelectPolicy={onSelectPolicy}
-      />,
-    );
+  it('renders policies, deactivates one, and opens the edit dialog', async () => {
+    render(<PoliciesListPage session={session} />);
 
     expect(screen.getByText('Company approvals')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Abrir política policy-1' }));
-    expect(onSelectPolicy).toHaveBeenCalledWith('policy-1');
 
     fireEvent.click(screen.getByRole('button', { name: 'Desactivar política policy-1' }));
 
     await waitFor(() => {
       expect(
-        useApprovalPoliciesMock.mock.results[0]?.value.deactivatePolicyMutation.mutateAsync,
+        useApprovalPoliciesPageMock.mock.results[0]?.value.deactivatePolicyMutation.mutateAsync,
       ).toHaveBeenCalledWith({
         companyId: 'company-1',
         policyId: 'policy-1',
       });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir política policy-1' }));
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: 'Actualizar política' }),
+      ).toBeInTheDocument();
     });
   });
 

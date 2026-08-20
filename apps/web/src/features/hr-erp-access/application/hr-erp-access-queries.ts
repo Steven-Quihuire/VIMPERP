@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { authQueryKey } from '@/features/auth/presentation/use-auth';
 
@@ -6,7 +6,11 @@ import type {
   AcceptErpAccessInvitationInput,
   CreateErpAccessInvitationInput,
 } from '../domain/erp-access';
-import { createErpAccessApi, type RevokeErpAccessInput } from '../infrastructure/create-erp-access-api';
+import {
+  createErpAccessApi,
+  type ErpAccessInvitationPage,
+  type RevokeErpAccessInput,
+} from '../infrastructure/create-erp-access-api';
 
 export const hrErpAccessQueryKeys = {
   pendingInvitations: (companyId: string) =>
@@ -46,6 +50,50 @@ export const useInvitations = (
 
   return {
     invitationsQuery,
+    createInvitationMutation,
+    revokeAccessMutation,
+  };
+};
+
+export const useInvitationsPage = (
+  input: {
+    companyId: string | undefined;
+    page: number;
+    pageSize: number;
+    search: string;
+  },
+  apiBaseUrl?: string,
+) => {
+  const api = createErpAccessApi(apiBaseUrl);
+  const { createInvitationMutation, revokeAccessMutation } = useInvitations(
+    input.companyId,
+    apiBaseUrl,
+  );
+
+  const invitationsQuery = useQuery({
+    queryKey: [
+      'hr-erp-access',
+      'pending-invitations-page',
+      input.companyId ?? '',
+      input.page,
+      input.pageSize,
+      input.search,
+    ],
+    queryFn: () =>
+      api.listInvitationsPage({
+        companyId: input.companyId as string,
+        page: input.page,
+        pageSize: input.pageSize,
+        ...(input.search ? { search: input.search } : {}),
+      }),
+    placeholderData: keepPreviousData,
+    enabled: Boolean(input.companyId),
+  });
+
+  return {
+    invitationsQuery: invitationsQuery as typeof invitationsQuery & {
+      data: ErpAccessInvitationPage | undefined;
+    },
     createInvitationMutation,
     revokeAccessMutation,
   };

@@ -8,13 +8,13 @@ import type { AuthSession } from '@/features/auth/domain/auth';
 import { AcceptErpAccessInvitationPage } from './accept-invitation';
 import { InvitationsListPage } from './invitations-list';
 
-const useInvitationsMock = vi.fn();
+const useInvitationsPageMock = vi.fn();
 const useEmployeesMock = vi.fn();
 const useAcceptInvitationMock = vi.fn();
 const useAuthMock = vi.fn();
 
 vi.mock('../../application/hr-erp-access-queries', () => ({
-  useInvitations: (...args: unknown[]) => useInvitationsMock(...args),
+  useInvitationsPage: (...args: unknown[]) => useInvitationsPageMock(...args),
   useAcceptInvitation: (...args: unknown[]) => useAcceptInvitationMock(...args),
 }));
 
@@ -70,18 +70,23 @@ describe('hr-erp-access pages', () => {
       isError: false,
       error: null,
     });
-    useInvitationsMock.mockReturnValue({
+    useInvitationsPageMock.mockReturnValue({
       invitationsQuery: {
-        data: [
-          {
-            id: 'invitation-1',
-            companyId: 'company-1',
-            employeeId: 'employee-1',
-            inviteeEmail: 'person@vimcore.test',
-            createdAt: '2026-08-13T12:00:00.000Z',
-            expiresAt: '2026-08-14T12:00:00.000Z',
-          },
-        ],
+        data: {
+          items: [
+            {
+              id: 'invitation-1',
+              companyId: 'company-1',
+              employeeId: 'employee-1',
+              inviteeEmail: 'person@vimcore.test',
+              createdAt: '2026-08-13T12:00:00.000Z',
+              expiresAt: '2026-08-14T12:00:00.000Z',
+            },
+          ],
+          total: 1,
+          page: 1,
+          pageSize: 10,
+        },
         isLoading: false,
         isError: false,
         error: null,
@@ -115,7 +120,7 @@ describe('hr-erp-access pages', () => {
 
     expect(screen.getByText('person@vimcore.test')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Invitar al ERP' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nueva invitación' }));
 
     fireEvent.change(screen.getByLabelText('¿Qué empleado va a usar el sistema?'), {
       target: { value: 'employee-2' },
@@ -127,7 +132,7 @@ describe('hr-erp-access pages', () => {
 
     await waitFor(() => {
       expect(
-        useInvitationsMock.mock.results[0]?.value.createInvitationMutation.mutateAsync,
+        useInvitationsPageMock.mock.results[0]?.value.createInvitationMutation.mutateAsync,
       ).toHaveBeenCalledWith({
         companyId: 'company-1',
         employeeId: 'employee-2',
@@ -144,7 +149,7 @@ describe('hr-erp-access pages', () => {
 
     await waitFor(() => {
       expect(
-        useInvitationsMock.mock.results[0]?.value.revokeAccessMutation.mutateAsync,
+        useInvitationsPageMock.mock.results[0]?.value.revokeAccessMutation.mutateAsync,
       ).toHaveBeenCalledWith({
         companyId: 'company-1',
         employeeId: 'employee-1',

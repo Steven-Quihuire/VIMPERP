@@ -18,7 +18,7 @@ import {
 import { ErpAccessLinkConflictError } from '../../domain/erp-access-links';
 import { createAcceptErpAccessInvitationUseCase } from '../accept-erp-access-invitation';
 import { createCreateErpAccessInvitationUseCase } from '../create-erp-access-invitation';
-import { createListErpAccessInvitationsUseCase } from '../list-erp-access-invitations';
+import { createListErpAccessInvitationsPageUseCase } from '../list-erp-access-invitations-page';
 import { createRevokeErpAccessInvitationUseCase } from '../revoke-erp-access-invitation';
 import { hashErpAccessInvitationToken } from '../erp-access-invitation-token';
 
@@ -170,7 +170,7 @@ describe('hr-erp-access application', () => {
       createId: () => 'inv-1',
       createToken: () => 'token-1',
     });
-    const listInvitations = createListErpAccessInvitationsUseCase({
+    const listInvitations = createListErpAccessInvitationsPageUseCase({
       gateway,
       now: () => new Date('2026-08-13T12:00:00.000Z'),
     });

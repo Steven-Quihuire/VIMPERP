@@ -26,6 +26,7 @@ import {
   defaultPageSizeOptions,
   TablePageSize,
 } from '@/shared/ui/table-page-size';
+import { HoverExpandFab } from '@/shared/ui/hover-expand-fab';
 
 import { usePositions } from '../../application/hr-employees-queries';
 import { PositionDetailDrawer } from '../components/position-detail-drawer';
@@ -104,21 +105,10 @@ export const PositionsListPage = ({
 
   return (
     <section className="space-y-6">
-      <div className="-mt-2 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-xl font-medium tracking-tight">
-            Gestionar puestos
-          </h2>
-          <Button
-            type="button"
-            variant="outline"
-            className="shrink-0 cursor-pointer rounded-2xl"
-            onClick={() => setIsCreateOpen(true)}
-          >
-            <Plus className="size-4" color="#000" />
-            Agregar puesto
-          </Button>
-        </div>
+      <div className="mt-0 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <h2 className="text-xl font-medium tracking-tight">
+          Gestionar puestos
+        </h2>
         <PositionFilters
           value={filters}
           onChange={(next) => {
@@ -315,14 +305,12 @@ export const PositionsListPage = ({
         </footer>
       ) : null}
 
-      <button
-        type="button"
-        aria-label="Nuevo puesto"
-        className="fixed bottom-6 right-6 z-30 flex size-14 items-center justify-center rounded-full bg-primary text-white shadow-lg transition-all hover:bg-primary/90 hover:scale-105"
+      <HoverExpandFab
+        label="Agregar puesto"
+        icon={<BriefcaseBusiness className="size-6" />}
+        ariaLabel="Nuevo puesto"
         onClick={() => setIsCreateOpen(true)}
-      >
-        <BriefcaseBusiness className="size-6" />
-      </button>
+      />
 
       {detailPosition ? (
         <PositionDetailDrawer

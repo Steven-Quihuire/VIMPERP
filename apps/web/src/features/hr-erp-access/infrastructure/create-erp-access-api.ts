@@ -21,8 +21,21 @@ export type RevokeErpAccessInput = {
   employeeId: string;
 };
 
+export type ErpAccessInvitationPage = {
+  items: PendingErpAccessInvitation[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 export type HrErpAccessApi = {
   listInvitations: (companyId: string) => Promise<PendingErpAccessInvitation[]>;
+  listInvitationsPage: (input: {
+    companyId: string;
+    page: number;
+    pageSize: number;
+    search?: string;
+  }) => Promise<ErpAccessInvitationPage>;
   createInvitation: (
     input: CreateErpAccessInvitationInput,
   ) => Promise<CreatedErpAccessInvitation>;
@@ -40,6 +53,21 @@ export const createErpAccessApi = (
       httpClient.get<PendingErpAccessInvitation[]>(
         `/companies/${companyId}/hr-erp-access/invitations`,
       ),
+    listInvitationsPage: async ({
+      companyId,
+      page,
+      pageSize,
+      search,
+    }) => {
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(pageSize),
+      });
+      if (search) params.set('search', search);
+      return httpClient.get<ErpAccessInvitationPage>(
+        `/companies/${companyId}/hr-erp-access/invitations?${params.toString()}`,
+      );
+    },
     createInvitation: async (input) => {
       const response = await httpClient.post(
         `/companies/${input.companyId}/hr-erp-access/invitations`,

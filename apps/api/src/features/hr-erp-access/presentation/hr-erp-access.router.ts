@@ -8,6 +8,11 @@ import {
 
 const companyParamsSchema = z.object({ companyId: z.string().min(1) });
 const tokenParamsSchema = z.object({ token: z.string().min(1) });
+const invitationsListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(10),
+  search: z.string().trim().max(100).optional(),
+});
 const employeeParamsSchema = z.object({
   companyId: z.string().min(1),
   employeeId: z.string().min(1),
@@ -61,7 +66,15 @@ export const createHrErpAccessRouter = ({
     inviteeEmail: string;
     createdByUserId: string;
   }) => Promise<unknown>;
-  listInvitations: (input: { companyId: string }) => Promise<unknown>;
+  listInvitations: (input: {
+    companyId: string;
+    auth: AuthSession;
+    filters?: {
+      page: number;
+      pageSize: number;
+      search?: string | undefined;
+    };
+  }) => Promise<unknown>;
   acceptInvitation: (input: { token: string; password?: string }) => Promise<{ token: string }>;
   revokeAccess: (input: { companyId: string; employeeId: string }) => Promise<void>;
   sessionCookieName: string;
@@ -93,8 +106,17 @@ export const createHrErpAccessRouter = ({
     try {
       const params = companyParamsSchema.parse(request.params);
       ensureCompanyAccess(getAuth(response), params.companyId);
+      const filters = Object.keys(request.query).length
+        ? invitationsListQuerySchema.parse(request.query)
+        : undefined;
 
-      response.status(200).json(await listInvitations({ companyId: params.companyId }));
+      response.status(200).json(
+        await listInvitations({
+          companyId: params.companyId,
+          auth: getAuth(response),
+          ...(filters ? { filters } : {}),
+        }),
+      );
     } catch (error) {
       next(error);
     }

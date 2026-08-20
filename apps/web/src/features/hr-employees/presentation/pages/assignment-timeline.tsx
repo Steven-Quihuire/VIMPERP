@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { Loader2, Network } from 'lucide-react';
+import { useForm, useWatch } from 'react-hook-form';
 
 import type { AuthSession } from '@/features/auth/domain/auth';
 import { useOrgTree } from '@/features/org-tree/application/org-tree-queries';
@@ -17,11 +17,11 @@ import {
   Field,
   FieldContent,
   FieldError,
-  FieldGroup,
   FieldLabel,
 } from '@/shared/ui/field';
 import { Input } from '@/shared/ui/input';
 
+import { AssignmentFields } from '../components/assignment-fields';
 import {
   useAssignments,
   usePositions,
@@ -97,6 +97,7 @@ export const AssignmentTimelinePage = ({
     resolver: zodResolver(assignmentFormSchema),
     defaultValues,
   });
+  const watchedValues = useWatch({ control: form.control });
 
   if (!companyId) {
     return (
@@ -130,10 +131,19 @@ export const AssignmentTimelinePage = ({
   return (
     <Card className="border-border/70 bg-card/95 shadow-sm">
       <CardHeader className="border-b bg-muted/15 px-5 py-5">
-        <CardTitle className="text-base">Puesto y alcance</CardTitle>
-        <CardDescription>
-          Creá asignaciones principales y consultá la línea de reporte actual.
-        </CardDescription>
+        <div className="-mt-4 flex items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted">
+            <Network className="size-6" />
+          </span>
+          <div>
+            <CardTitle className="text-xl font-medium tracking-tight">
+              Asignación inicial
+            </CardTitle>
+            <CardDescription>
+              Puesto, ubicación y desde cuándo.
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6 px-5 py-5">
         <form
@@ -154,74 +164,47 @@ export const AssignmentTimelinePage = ({
             })(event);
           }}
         >
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="assignment-scope-node">
-                ¿Dónde trabajará?
-              </FieldLabel>
-              <FieldContent>
-                <select
-                  id="assignment-scope-node"
-                  aria-label="Nodo de alcance"
-                  className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2"
-                  {...form.register('scopeNodeId')}
-                >
-                  <option value="">Seleccioná dónde trabajará</option>
-                  {scopeOptions.map(({ node, depth }) => (
-                    <option key={scopeKey(node)} value={scopeKey(node)}>
-                      {'— '.repeat(depth)}
-                      {node.name} · {scopeTypeLabels[node.ref.scopeType]} (
-                      {node.employeeCount ?? 0} empleados)
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-muted-foreground">
-                  Elegí una ubicación de la estructura organizacional. No hace
-                  falta escribir el ID.
-                </p>
-                <FieldError errors={[form.formState.errors.scopeNodeId]} />
-              </FieldContent>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="assignment-position-id">
-                ¿Qué puesto ocupará?
-              </FieldLabel>
-              <FieldContent>
-                <select
-                  id="assignment-position-id"
-                  aria-label="Puesto"
-                  className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2"
-                  {...form.register('positionId')}
-                >
-                  <option value="">Seleccioná un puesto</option>
-                  {(positionsQuery.data ?? [])
-                    .filter((position) => position.isActive)
-                    .map((position) => (
-                      <option key={position.id} value={position.id}>
-                        {position.name} · {position.remainingVacancies} vacantes
-                      </option>
-                    ))}
-                </select>
-                <FieldError errors={[form.formState.errors.positionId]} />
-              </FieldContent>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="assignment-start-date">
-                ¿Desde cuándo?
-              </FieldLabel>
-              <FieldContent>
-                <Input
-                  id="assignment-start-date"
-                  aria-label="Fecha de inicio"
-                  type="datetime-local"
-                  {...form.register('startedAt')}
-                />
-                <FieldError errors={[form.formState.errors.startedAt]} />
-              </FieldContent>
-            </Field>
-          </FieldGroup>
+          <AssignmentFields
+            showManager={false}
+            positions={positionsQuery.data ?? []}
+            scopeOptions={scopeOptions}
+            scopeLoading={orgTreeQuery.isLoading}
+            scopeError={orgTreeQuery.isError}
+            values={{
+              positionId: watchedValues.positionId || '',
+              scopeNodeId: watchedValues.scopeNodeId || '',
+            }}
+            onPositionChange={(value) =>
+              form.setValue('positionId', value, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+            }
+            onScopeChange={(value) =>
+              form.setValue('scopeNodeId', value, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+            }
+            errors={{
+              positionId: form.formState.errors.positionId?.message,
+              scopeNodeId: form.formState.errors.scopeNodeId?.message,
+            }}
+          />
+          <Field>
+            <FieldLabel htmlFor="assignment-start-date">
+              ¿Desde cuándo?
+            </FieldLabel>
+            <FieldContent>
+              <Input
+                id="assignment-start-date"
+                aria-label="Fecha de inicio"
+                type="datetime-local"
+                {...form.register('startedAt')}
+              />
+              <FieldError errors={[form.formState.errors.startedAt]} />
+            </FieldContent>
+          </Field>
 
           {assignments.createAssignmentMutation.error ? (
             <p role="alert" className="text-sm text-destructive">
@@ -231,16 +214,19 @@ export const AssignmentTimelinePage = ({
             </p>
           ) : null}
 
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={assignments.createAssignmentMutation.isPending}
-          >
-            {assignments.createAssignmentMutation.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : null}
-            Crear asignación
-          </Button>
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              variant="vimcore"
+              disabled={assignments.createAssignmentMutation.isPending}
+              className="sm:w-auto"
+            >
+              {assignments.createAssignmentMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : null}
+              Crear asignación
+            </Button>
+          </div>
         </form>
 
         <div className="space-y-3">

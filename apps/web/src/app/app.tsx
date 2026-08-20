@@ -15,9 +15,7 @@ import {
 import { Toaster as SileoToaster } from 'sileo';
 import { toast } from 'sonner';
 
-import { useApprovalPolicies } from '../features/approval-policy/application/approval-policy-queries';
 import { PoliciesListPage } from '../features/approval-policy/presentation/pages/policies-list';
-import { PolicyFormPage } from '../features/approval-policy/presentation/pages/policy-form';
 import {
   hasBlockedActiveCompany,
   needsActiveCompanySelection,
@@ -248,7 +246,7 @@ const HrEmployeesWorkspace = ({
 
   return (
     <main className="mx-auto flex w-full max-w-[1480px] flex-col gap-6 p-4 md:p-6">
-      <div className="space-y-6">
+      <div className="space-y-3">
         <header>
           <div className="">
             {selectedEmployeeId ? (
@@ -336,7 +334,7 @@ const HrEmployeesWorkspace = ({
             onDeleted={handleDeletedEmployee}
           />
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-3">
             <EmployeesListPage
               session={session}
               {...(apiBaseUrl ? { apiBaseUrl } : {})}
@@ -363,11 +361,9 @@ const HrPositionsWorkspace = ({
 
   return (
     <main className="mx-auto flex w-full max-w-[1480px] flex-col gap-6 p-4 md:p-6">
-      <div className="space-y-6">
+      <div className="space-y-3">
         <header>
-          <div className="">
-            <h1 className="text-3xl font-medium tracking-tight">Puestos</h1>
-          </div>
+          <h1 className="text-3xl font-medium tracking-tight">Puestos</h1>
           <Breadcrumb className="mt-1">
             <BreadcrumbList>
               <BreadcrumbItem>
@@ -420,21 +416,51 @@ const HrErpAccessWorkspace = ({
   apiBaseUrl?: string;
 }) => {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">
-          Invitaciones de acceso al ERP
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Invitá empleados al acceso ERP sin redefinir su identidad.
-        </p>
-      </div>
+    <main className="mx-auto flex w-full max-w-[1480px] flex-col gap-6 p-4 md:p-6">
+      <div className="space-y-3">
+        <header>
+          <h1 className="text-3xl font-medium tracking-tight">
+            Acceso al ERP
+          </h1>
+          <Breadcrumb className="mt-1">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link
+                    className="text-gray-500 text-xs hover:text-gray-700 transition-all ease-in-out duration-300"
+                    to="/dashboard"
+                  >
+                    Inicio
+                  </Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="text-gray-500 text-xs" />
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link
+                    className="text-gray-500 text-xs hover:text-gray-700 transition-all ease-in-out duration-300"
+                    to="/dashboard/hr/employees"
+                  >
+                    Recursos humanos
+                  </Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage className="text-gray-800 text-xs">
+                  Acceso al ERP
+                </BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </header>
 
-      <InvitationsListPage
-        session={session}
-        {...(apiBaseUrl ? { apiBaseUrl } : {})}
-      />
-    </div>
+        <InvitationsListPage
+          session={session}
+          {...(apiBaseUrl ? { apiBaseUrl } : {})}
+        />
+      </div>
+    </main>
   );
 };
 
@@ -445,39 +471,52 @@ const ApprovalPoliciesWorkspace = ({
   session: AuthSession;
   apiBaseUrl?: string;
 }) => {
-  const [selectedPolicyId, setSelectedPolicyId] = useState<string | null>(null);
-  const companyId = session.activeCompany?.companyId;
-  const { policiesQuery } = useApprovalPolicies(companyId, apiBaseUrl);
-  const selectedPolicy =
-    policiesQuery.data?.find((policy) => policy.id === selectedPolicyId) ??
-    null;
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Políticas de aprobación</h1>
-        <p className="text-sm text-muted-foreground">
-          Configurá las bases de las políticas de aprobación de la compañía y
-          sus nodos.
-        </p>
-      </div>
+    <main className="mx-auto flex w-full max-w-[1480px] flex-col gap-6 p-4 md:p-6">
+      <div className="space-y-3">
+        <header>
+          <h1 className="text-3xl font-medium tracking-tight">
+            Políticas de aprobación
+          </h1>
+          <Breadcrumb className="mt-1">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link
+                    className="text-gray-500 text-xs hover:text-gray-700 transition-all ease-in-out duration-300"
+                    to="/dashboard"
+                  >
+                    Inicio
+                  </Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="text-gray-500 text-xs" />
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link
+                    className="text-gray-500 text-xs hover:text-gray-700 transition-all ease-in-out duration-300"
+                    to="/dashboard/hr/employees"
+                  >
+                    Recursos humanos
+                  </Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage className="text-gray-800 text-xs">
+                  Políticas de aprobación
+                </BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </header>
 
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <PoliciesListPage
           session={session}
           {...(apiBaseUrl ? { apiBaseUrl } : {})}
-          selectedPolicyId={selectedPolicyId}
-          onSelectPolicy={setSelectedPolicyId}
-        />
-        <PolicyFormPage
-          key={selectedPolicy?.id ?? 'new-policy'}
-          session={session}
-          {...(apiBaseUrl ? { apiBaseUrl } : {})}
-          policy={selectedPolicy}
-          onSaved={setSelectedPolicyId}
         />
       </div>
-    </div>
+    </main>
   );
 };
 

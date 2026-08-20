@@ -6,9 +6,10 @@ import {
   Loader2,
   Mail,
   MailPlus,
+  Search,
   Trash2,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import type { z } from 'zod';
@@ -26,6 +27,7 @@ import {
   AlertDialogTitle,
 } from '@/shared/ui/alert-dialog';
 import { Button } from '@/shared/ui/button';
+import { Checkbox } from '@/shared/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -51,8 +53,9 @@ import {
   defaultPageSizeOptions,
   TablePageSize,
 } from '@/shared/ui/table-page-size';
+import { HoverExpandFab } from '@/shared/ui/hover-expand-fab';
 
-import { useInvitations } from '../../application/hr-erp-access-queries';
+import { useInvitationsPage } from '../../application/hr-erp-access-queries';
 import type { PendingErpAccessInvitation } from '../../domain/erp-access';
 import {
   invitationFormSchema,
@@ -60,6 +63,14 @@ import {
   toCreateErpAccessInvitationInput,
   type InvitationFormValues,
 } from '../../domain/erp-access';
+import {
+  InvitationFilters,
+  type InvitationFiltersValue,
+} from '../components/invitation-filters';
+
+const emptyInvitationFilters: InvitationFiltersValue = {
+  status: new Set(),
+};
 
 type InvitationFormInput = z.input<typeof invitationFormSchema>;
 
@@ -129,18 +140,59 @@ export const InvitationsListPage = ({
   apiBaseUrl?: string;
 }) => {
   const companyId = session.activeCompany?.companyId;
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(10);
   const { invitationsQuery, createInvitationMutation, revokeAccessMutation } =
-    useInvitations(companyId, apiBaseUrl);
+    useInvitationsPage(
+      { companyId, page, pageSize, search: debouncedSearch },
+      apiBaseUrl,
+    );
   const employeesQuery = useEmployees(companyId, apiBaseUrl);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [pendingRevoke, setPendingRevoke] =
     useState<PendingErpAccessInvitation | null>(null);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<number>(10);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [filters, setFilters] =
+    useState<InvitationFiltersValue>(emptyInvitationFilters);
   const form = useForm<InvitationFormInput, unknown, InvitationFormValues>({
     resolver: zodResolver(invitationFormSchema),
     defaultValues,
   });
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 350);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [search]);
+
+  const now = Date.now();
+
+  const statusOf = useCallback(
+    (invitation: PendingErpAccessInvitation) => {
+      const expiresAtMs = new Date(invitation.expiresAt).getTime();
+      if (expiresAtMs < now) return 'expired';
+      if (expiresAtMs - now < 7 * 24 * 60 * 60 * 1000)
+        return 'expiringSoon';
+      return 'active';
+    },
+    [now],
+  );
+
+  const allInvitations = useMemo(
+    () => sortInvitationsByExpiresAt(invitationsQuery.data?.items ?? []),
+    [invitationsQuery.data],
+  );
+
+  const invitations = useMemo(() => {
+    if (filters.status.size === 0) return allInvitations;
+    return allInvitations.filter((invitation) =>
+      filters.status.has(statusOf(invitation)),
+    );
+  }, [allInvitations, filters, statusOf]);
 
   if (!companyId) {
     return (
@@ -150,19 +202,36 @@ export const InvitationsListPage = ({
     );
   }
 
-  const invitations = sortInvitationsByExpiresAt(invitationsQuery.data ?? []);
   const employees = employeesQuery.data ?? [];
-  const now = Date.now();
-  const totalInvitations = invitations.length;
+  const totalInvitations = invitationsQuery.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalInvitations / pageSize));
-  const paginatedInvitations = invitations.slice(
-    (page - 1) * pageSize,
-    page * pageSize,
-  );
 
   const openCreateDialog = () => {
     form.reset(defaultValues);
     setIsCreateOpen(true);
+  };
+
+  const toggleId = (id: string) => {
+    setSelectedIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllOnPage = () => {
+    const allOnPageSelected =
+      invitations.length > 0 &&
+      invitations.every((invitation) => selectedIds.has(invitation.id));
+    if (allOnPageSelected) {
+      setSelectedIds(new Set());
+      return;
+    }
+    setSelectedIds(new Set(invitations.map((invitation) => invitation.id)));
   };
 
   const confirmRevoke = async () => {
@@ -181,21 +250,52 @@ export const InvitationsListPage = ({
     }
   };
 
+  const bulkRevoke = async () => {
+    const ids = [...selectedIds];
+    try {
+      for (const id of ids) {
+        await revokeAccessMutation.mutateAsync({
+          companyId,
+          employeeId: id,
+        });
+      }
+      toast.success('Invitaciones revocadas', {
+        description: `${ids.length} registros actualizados`,
+      });
+      setSelectedIds(new Set());
+    } catch {
+      // Mantener la selección para reintentar.
+    }
+  };
+
   return (
     <section className="space-y-6">
-      <div className="-mt-2 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="mt-0 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <h2 className="text-xl font-medium tracking-tight">
           Invitaciones pendientes
         </h2>
-        <Button
-          type="button"
-          variant="outline"
-          className="shrink-0 cursor-pointer rounded-2xl"
-          onClick={openCreateDialog}
-        >
-          <MailPlus className="size-4" color="#000" />
-          Invitar al ERP
-        </Button>
+        <div className="flex items-center justify-center">
+          <div className="flex items-center gap-3 px-5 py-4">
+            <div className="h-10 w-full border px-4 rounded-2xl justify-start flex items-center">
+              <Search size={18} color="#000" />
+              <Input
+                aria-label="Buscar invitaciones"
+                className="h-10 placeholder:truncate placeholder:text-xs border-none text-sm focus-visible:border-none focus-visible:outline-none"
+                placeholder="Buscar por correo o empleado"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+          </div>
+          <InvitationFilters
+            value={filters}
+            onChange={setFilters}
+            onClear={() => setFilters(emptyInvitationFilters)}
+          />
+        </div>
       </div>
 
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
@@ -338,8 +438,8 @@ export const InvitationsListPage = ({
         </p>
       ) : null}
 
-      {!invitationsQuery.isLoading && !invitationsQuery.isError && totalInvitations === 0 ? (
-        <div className="border-t px-5 py-12 text-center">
+      {!invitationsQuery.isLoading && !invitationsQuery.isError && totalInvitations === 0 && filters.status.size === 0 ? (
+        <div className="px-5 py-12 text-center">
           <Mail className="mx-auto size-8 text-muted-foreground/50" />
           <h2 className="text-xl font-medium tracking-tight">
             No hay invitaciones pendientes
@@ -350,10 +450,33 @@ export const InvitationsListPage = ({
         </div>
       ) : null}
 
-      {!invitationsQuery.isLoading && !invitationsQuery.isError && totalInvitations > 0 ? (
+      {!invitationsQuery.isLoading && !invitationsQuery.isError && totalInvitations > 0 && invitations.length === 0 ? (
+        <div className="px-5 py-12 text-center">
+          <h2 className="text-xl flex items-center justify-center gap-2 font-medium tracking-tight">
+            No encontramos invitaciones con esos filtros
+          </h2>
+          <p className="mt-1 text-xs text-gray-600">
+            Limpiá los filtros para ver todas las invitaciones pendientes.
+          </p>
+        </div>
+      ) : null}
+
+      {!invitationsQuery.isLoading && !invitationsQuery.isError && invitations.length > 0 ? (
         <Table>
           <TableHeader className="bg-[#f6f6f6] rounded-2xl">
             <TableRow>
+              <TableHead className="h-11 w-10 pl-5">
+                <Checkbox
+                  aria-label="Seleccionar página"
+                  checked={
+                    invitations.length > 0 &&
+                    invitations.every((invitation) =>
+                      selectedIds.has(invitation.id),
+                    )
+                  }
+                  onCheckedChange={toggleAllOnPage}
+                />
+              </TableHead>
               <TableHead className="h-11 pl-5 text-xs">Empleado</TableHead>
               <TableHead className="h-11 text-xs">Correo invitado</TableHead>
               <TableHead className="h-11 text-xs">Vence</TableHead>
@@ -362,7 +485,7 @@ export const InvitationsListPage = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedInvitations.map((invitation) => {
+            {invitations.map((invitation) => {
               const employeeName = getEmployeeName(invitation.employeeId, employees);
               const expiresAtMs = new Date(invitation.expiresAt).getTime();
               const isExpired = expiresAtMs < now;
@@ -370,6 +493,13 @@ export const InvitationsListPage = ({
                 expiresAtMs >= now && expiresAtMs - now < 7 * 24 * 60 * 60 * 1000;
               return (
                 <TableRow key={invitation.id}>
+                  <TableCell className="pl-5">
+                    <Checkbox
+                      aria-label={`Seleccionar invitación de ${employeeName}`}
+                      checked={selectedIds.has(invitation.id)}
+                      onCheckedChange={() => toggleId(invitation.id)}
+                    />
+                  </TableCell>
                   <TableCell className="py-4 pl-5">
                     <div className="flex items-center gap-3">
                       <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
@@ -428,7 +558,7 @@ export const InvitationsListPage = ({
             <span>
               Mostrando{' '}
               <strong className="font-semibold text-foreground">
-                {paginatedInvitations.length}
+                {invitations.length}
               </strong>{' '}
               invitaciones de{' '}
               <strong className="font-semibold text-foreground">
@@ -493,14 +623,43 @@ export const InvitationsListPage = ({
         </footer>
       ) : null}
 
-      <button
-        type="button"
-        aria-label="Nueva invitación"
-        className="fixed bottom-6 right-6 z-30 flex size-14 items-center justify-center rounded-full bg-primary text-white shadow-lg transition-all hover:bg-primary/90 hover:scale-105"
+      {selectedIds.size > 0 ? (
+        <div className="fixed inset-x-0 bottom-6 z-40 flex justify-center px-4">
+          <div className="flex flex-wrap items-center gap-3 rounded-2xl border bg-white px-4 py-3 shadow-xl">
+            <span className="text-sm font-medium">
+              {selectedIds.size} seleccionados
+            </span>
+            <span aria-hidden className="h-5 w-px bg-border" />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-2xl"
+              onClick={() => void bulkRevoke()}
+              disabled={revokeAccessMutation.isPending}
+            >
+              <Trash2 className="size-4" />
+              Revocar
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="rounded-2xl"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              Limpiar
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      <HoverExpandFab
+        label="Invitar al ERP"
+        icon={<MailPlus className="size-6" />}
+        ariaLabel="Nueva invitación"
         onClick={openCreateDialog}
-      >
-        <MailPlus className="size-6" />
-      </button>
+      />
 
       <AlertDialog
         open={pendingRevoke !== null}

@@ -12,8 +12,21 @@ export type DeactivateApprovalPolicyInput = {
   policyId: string;
 };
 
+export type ApprovalPolicyPage = {
+  items: ApprovalPolicy[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 export type ApprovalPolicyApi = {
   listApprovalPolicies: (companyId: string) => Promise<ApprovalPolicy[]>;
+  listApprovalPoliciesPage: (input: {
+    companyId: string;
+    page: number;
+    pageSize: number;
+    search?: string;
+  }) => Promise<ApprovalPolicyPage>;
   createApprovalPolicy: (input: CreateApprovalPolicyInput) => Promise<ApprovalPolicy>;
   updateApprovalPolicy: (input: UpdateApprovalPolicyInput) => Promise<ApprovalPolicy>;
   deactivateApprovalPolicy: (input: DeactivateApprovalPolicyInput) => Promise<ApprovalPolicy>;
@@ -27,6 +40,21 @@ export const createApprovalPolicyApi = (
   return {
     listApprovalPolicies: (companyId) =>
       httpClient.get<ApprovalPolicy[]>(`/companies/${companyId}/approval-policies`),
+    listApprovalPoliciesPage: async ({
+      companyId,
+      page,
+      pageSize,
+      search,
+    }) => {
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(pageSize),
+      });
+      if (search) params.set('search', search);
+      return httpClient.get<ApprovalPolicyPage>(
+        `/companies/${companyId}/approval-policies?${params.toString()}`,
+      );
+    },
     createApprovalPolicy: async (input) => {
       const response = await httpClient.post(
         `/companies/${input.companyId}/approval-policies`,

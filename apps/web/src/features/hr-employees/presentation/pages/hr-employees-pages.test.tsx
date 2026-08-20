@@ -303,7 +303,7 @@ describe('hr-employees pages', () => {
     );
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Agregar empleado' }),
+      screen.getByRole('button', { name: 'Nuevo empleado' }),
     );
 
     fireEvent.change(screen.getByLabelText('Nombre completo'), {

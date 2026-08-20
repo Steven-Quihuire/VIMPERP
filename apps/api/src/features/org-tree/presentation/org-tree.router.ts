@@ -20,10 +20,6 @@ const requireOrgTreeAccess = (auth: AuthSession, companyId: string) => {
     throw new ForbiddenError('Company access unavailable');
   }
 
-  if (auth.activeScope === null) {
-    throw new ForbiddenError('Active scope required');
-  }
-
   if (!hasAuthCapability(auth.capabilities, 'catalog.read')) {
     throw new ForbiddenError();
   }

@@ -10,6 +10,11 @@ const policyParamsSchema = z.object({
   companyId: z.string().min(1),
   policyId: z.string().min(1),
 });
+const approvalPolicyListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(10),
+  search: z.string().trim().max(100).optional(),
+});
 const approvalPolicyBodySchema = z.object({
   scopeType: z.enum(scopeTypeValues),
   scopeNodeId: z.string().min(1).nullable(),
@@ -65,7 +70,15 @@ export const createApprovalPolicyRouter = ({
     definition: unknown;
     isActive?: boolean;
   }) => Promise<unknown>;
-  listApprovalPolicies: (input: { companyId: string; auth: AuthSession }) => Promise<unknown>;
+  listApprovalPolicies: (input: {
+    companyId: string;
+    auth: AuthSession;
+    filters?: {
+      page: number;
+      pageSize: number;
+      search?: string | undefined;
+    };
+  }) => Promise<unknown>;
   getApprovalPolicy: (input: { companyId: string; policyId: string }) => Promise<unknown>;
   updateApprovalPolicy: (input: {
     companyId: string;
@@ -119,7 +132,17 @@ export const createApprovalPolicyRouter = ({
       try {
         const params = companyParamsSchema.parse(request.params);
         ensureCompanyAccess(getAuth(response), params.companyId);
-        response.status(200).json(await listApprovalPolicies({ companyId: params.companyId, auth: getAuth(response) }));
+        const filters = Object.keys(request.query).length
+          ? approvalPolicyListQuerySchema.parse(request.query)
+          : undefined;
+
+        response.status(200).json(
+          await listApprovalPolicies({
+            companyId: params.companyId,
+            auth: getAuth(response),
+            ...(filters ? { filters } : {}),
+          }),
+        );
       } catch (error) {
         next(error);
       }

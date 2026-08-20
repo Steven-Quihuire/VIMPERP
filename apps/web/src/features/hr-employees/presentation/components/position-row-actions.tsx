@@ -25,9 +25,9 @@ export const PositionRowActions = ({
           variant="ghost"
           size="icon"
           aria-label={`Acciones de ${position.name}`}
-          className="size-8 rounded-full"
+          className="size-8 cursor-pointer rounded-full hover:bg-muted [&[data-state=open]_svg]:rotate-90"
         >
-          <MoreHorizontal className="size-4" />
+          <MoreHorizontal className="size-4 transition-transform duration-200 ease-out" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44 rounded-xl">

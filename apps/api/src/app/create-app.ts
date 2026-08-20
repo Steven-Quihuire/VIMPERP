@@ -79,7 +79,7 @@ import { createDrizzleHrEmployeesGateway } from '../features/hr-employees/infras
 import { createHrEmployeesRouter } from '../features/hr-employees/presentation/hr-employees.router';
 import { createAcceptErpAccessInvitationUseCase } from '../features/hr-erp-access/application/accept-erp-access-invitation';
 import { createCreateErpAccessInvitationUseCase } from '../features/hr-erp-access/application/create-erp-access-invitation';
-import { createListErpAccessInvitationsUseCase } from '../features/hr-erp-access/application/list-erp-access-invitations';
+import { createListErpAccessInvitationsPageUseCase } from '../features/hr-erp-access/application/list-erp-access-invitations-page';
 import { createRevokeErpAccessInvitationUseCase } from '../features/hr-erp-access/application/revoke-erp-access-invitation';
 import type { ErpAccessGateway } from '../features/hr-erp-access/domain/erp-access-invitations';
 import { createDrizzleErpAccessGateway } from '../features/hr-erp-access/infrastructure/drizzle-erp-access.gateway';
@@ -691,13 +691,19 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
   const listVisibleApprovalPolicies = async ({
     companyId,
     auth,
+    filters,
   }: {
     companyId: string;
     auth: AuthSession;
+    filters?: {
+      page: number;
+      pageSize: number;
+      search?: string | undefined;
+    };
   }) => {
     const policies = await listApprovalPolicies(companyId);
     const activeScope = getActiveScope(auth);
-    return (
+    const visiblePolicies = (
       await Promise.all(
         policies.map(async (policy) => {
           if (!policy.scopeNodeId) return policy;
@@ -720,6 +726,27 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
         }),
       )
     ).filter((policy): policy is NonNullable<typeof policy> => policy !== null);
+
+    if (!filters) {
+      return visiblePolicies;
+    }
+
+    const normalizedSearch = filters.search?.trim().toLowerCase();
+    const filtered = normalizedSearch
+      ? visiblePolicies.filter(
+          (policy) =>
+            policy.name.toLowerCase().includes(normalizedSearch) ||
+            policy.id.toLowerCase().includes(normalizedSearch),
+        )
+      : visiblePolicies;
+    const first = (filters.page - 1) * filters.pageSize;
+
+    return {
+      items: filtered.slice(first, first + filters.pageSize),
+      total: filtered.length,
+      page: filters.page,
+      pageSize: filters.pageSize,
+    };
   };
   const getActorTimesheetContext = async ({
     companyId,
@@ -1228,7 +1255,7 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       createInvitation: createCreateErpAccessInvitationUseCase({
         gateway: hrErpAccessGateway,
       }),
-      listInvitations: createListErpAccessInvitationsUseCase({
+      listInvitations: createListErpAccessInvitationsPageUseCase({
         gateway: hrErpAccessGateway,
       }),
       acceptInvitation: createAcceptErpAccessInvitationUseCase({
