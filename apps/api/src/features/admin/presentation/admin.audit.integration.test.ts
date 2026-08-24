@@ -1,23 +1,28 @@
 import { randomUUID } from 'node:crypto';
 
 import { afterEach, describe, expect, it } from 'vitest';
-import { Pool } from 'pg';
 import request from 'supertest';
 
 import { createApp } from '../../../app/create-app';
-import { applyMigrationsThrough } from '../../../db/migrations/__tests__/migration-test-helpers';
+import {
+  applyMigrationsThrough,
+  createMigrationTestDatabase,
+} from '../../../db/migrations/__tests__/migration-test-helpers';
 import { createArgon2PasswordHasher } from '../../identity/infrastructure/argon2-password-hasher';
 import { orgHierarchyAuditEventTypes } from '../../org-hierarchy/domain/org-hierarchy';
 
-const databaseUrl =
-  process.env.DATABASE_URL ?? 'postgres://postgres:postgres@127.0.0.1:5432/vimcore';
-
 const runtimeIds = {
-  platformAdminUserId: 'runtime-platform-admin-user',
-  ownerCompanyAUserId: 'runtime-owner-company-a',
-  ownerCompanyBUserId: 'runtime-owner-company-b',
-  companyAId: 'runtime-company-a',
-  companyBId: 'runtime-company-b',
+  platformAdminUserId: `runtime-platform-admin-user-${randomUUID()}`,
+  ownerCompanyAUserId: `runtime-owner-company-a-${randomUUID()}`,
+  ownerCompanyBUserId: `runtime-owner-company-b-${randomUUID()}`,
+  companyAId: `runtime-company-a-${randomUUID()}`,
+  companyBId: `runtime-company-b-${randomUUID()}`,
+  platformAdminEmail: `runtime-platform-admin-${randomUUID()}@vimcore.test`,
+  ownerCompanyAEmail: `runtime-owner-a-${randomUUID()}@vimcore.test`,
+  ownerCompanyBEmail: `runtime-owner-b-${randomUUID()}@vimcore.test`,
+  platformAdminUsername: `runtime-platform-admin-${randomUUID()}`,
+  ownerCompanyAUsername: `runtime-owner-a-${randomUUID()}`,
+  ownerCompanyBUsername: `runtime-owner-b-${randomUUID()}`,
 };
 
 type AuditEventResponse = {
@@ -36,7 +41,8 @@ type AuditEventsResponseBody = {
 const auditEventsBody = (response: { body: unknown }): AuditEventsResponseBody =>
   response.body as AuditEventsResponseBody;
 
-const latestMigrationFile = '0019_org_hierarchy_company_integrity.sql';
+const latestMigrationFile = '0027_inventory_foundation.sql';
+let currentDatabase: Awaited<ReturnType<typeof createMigrationTestDatabase>> | null = null;
 
 const getSessionCookie = (headers: string | string[] | undefined): string => {
   const cookieHeaders = Array.isArray(headers) ? headers : headers ? [headers] : [];
@@ -60,111 +66,15 @@ const getSessionCookie = (headers: string | string[] | undefined): string => {
   return cookieValue;
 };
 
-const cleanupRuntimeAdminAuditFixture = async () => {
-  const pool = new Pool({ connectionString: databaseUrl, allowExitOnIdle: true, max: 1 });
-
-  try {
-    await pool.query('BEGIN');
-    await pool.query(
-      `DELETE FROM audit_events
-       WHERE company_id IN ($1, $2)
-          OR actor_user_id IN ($3, $4, $5)`,
-      [
-        runtimeIds.companyAId,
-        runtimeIds.companyBId,
-        runtimeIds.platformAdminUserId,
-        runtimeIds.ownerCompanyAUserId,
-        runtimeIds.ownerCompanyBUserId,
-      ],
-    );
-    await pool.query(
-      `DELETE FROM areas WHERE company_id IN ($1, $2)`,
-      [runtimeIds.companyAId, runtimeIds.companyBId],
-    );
-    await pool.query(
-      `DELETE FROM locals WHERE company_id IN ($1, $2)`,
-      [runtimeIds.companyAId, runtimeIds.companyBId],
-    );
-    await pool.query(
-      `DELETE FROM divisions WHERE company_id IN ($1, $2)`,
-      [runtimeIds.companyAId, runtimeIds.companyBId],
-    );
-    await pool.query(
-      `DELETE FROM sessions WHERE user_id IN ($1, $2, $3)`,
-      [
-        runtimeIds.platformAdminUserId,
-        runtimeIds.ownerCompanyAUserId,
-        runtimeIds.ownerCompanyBUserId,
-      ],
-    );
-    await pool.query(
-      `DELETE FROM user_preferences WHERE user_id IN ($1, $2, $3)`,
-      [
-        runtimeIds.platformAdminUserId,
-        runtimeIds.ownerCompanyAUserId,
-        runtimeIds.ownerCompanyBUserId,
-      ],
-    );
-    await pool.query(
-      `DELETE FROM memberships
-       WHERE user_id IN ($1, $2, $3)
-          OR company_id IN ($4, $5)`,
-      [
-        runtimeIds.platformAdminUserId,
-        runtimeIds.ownerCompanyAUserId,
-        runtimeIds.ownerCompanyBUserId,
-        runtimeIds.companyAId,
-        runtimeIds.companyBId,
-      ],
-    );
-    await pool.query(
-      `DELETE FROM scope_nodes WHERE company_id IN ($1, $2)`,
-      [runtimeIds.companyAId, runtimeIds.companyBId],
-    );
-    await pool.query(
-      `DELETE FROM companies WHERE id IN ($1, $2)`,
-      [runtimeIds.companyAId, runtimeIds.companyBId],
-    );
-    await pool.query(
-      `DELETE FROM users WHERE id IN ($1, $2, $3)`,
-      [
-        runtimeIds.platformAdminUserId,
-        runtimeIds.ownerCompanyAUserId,
-        runtimeIds.ownerCompanyBUserId,
-      ],
-    );
-    await pool.query('COMMIT');
-  } catch (error) {
-    await pool.query('ROLLBACK');
-    throw error;
-  } finally {
-    await pool.end();
-  }
-};
-
-afterEach(async () => {
-  await cleanupRuntimeAdminAuditFixture();
+afterEach(() => {
+  currentDatabase = null;
 });
 
 const seedRuntimeAdminAuditFixture = async () => {
-  const migrationPool = new Pool({ connectionString: databaseUrl, allowExitOnIdle: true, max: 1 });
+  currentDatabase = await createMigrationTestDatabase();
+  await applyMigrationsThrough(currentDatabase.pool, latestMigrationFile);
 
-  try {
-    const schemaCheck = await migrationPool.query<{ exists: string | null }>(
-      'SELECT to_regclass($1) AS exists',
-      ['public.audit_events'],
-    );
-
-    if (!schemaCheck.rows[0]?.exists) {
-      await applyMigrationsThrough(migrationPool, latestMigrationFile);
-    }
-  } finally {
-    await migrationPool.end();
-  }
-
-  await cleanupRuntimeAdminAuditFixture();
-
-  const pool = new Pool({ connectionString: databaseUrl, allowExitOnIdle: true, max: 1 });
+  const pool = currentDatabase.pool;
   const passwordHasher = createArgon2PasswordHasher();
   const passwordHash = await passwordHasher.hash('secret123');
   const now = new Date('2026-08-12T10:00:00.000Z');
@@ -179,15 +89,15 @@ const seedRuntimeAdminAuditFixture = async () => {
          ($8, $9, $10, $4)`,
       [
         runtimeIds.platformAdminUserId,
-        'runtime-platform-admin@vimcore.test',
-        'runtime-platform-admin',
+        runtimeIds.platformAdminEmail,
+        runtimeIds.platformAdminUsername,
         passwordHash,
         runtimeIds.ownerCompanyAUserId,
-        'runtime-owner-a@vimcore.test',
-        'runtime-owner-a',
+        runtimeIds.ownerCompanyAEmail,
+        runtimeIds.ownerCompanyAUsername,
         runtimeIds.ownerCompanyBUserId,
-        'runtime-owner-b@vimcore.test',
-        'runtime-owner-b',
+        runtimeIds.ownerCompanyBEmail,
+        runtimeIds.ownerCompanyBUsername,
       ],
     );
     await pool.query(
@@ -227,9 +137,9 @@ const seedRuntimeAdminAuditFixture = async () => {
   } catch (error) {
     await pool.query('ROLLBACK');
     throw error;
-  } finally {
-    await pool.end();
   }
+
+  return currentDatabase.connectionString;
 };
 
 const loginAs = async (app: ReturnType<typeof createApp>, username: string) => {
@@ -245,7 +155,7 @@ const loginAs = async (app: ReturnType<typeof createApp>, username: string) => {
 
 describe('admin audit routes integration', () => {
   it('persists org-tree audit events and filters them by company through the platform admin audit path', async () => {
-    await seedRuntimeAdminAuditFixture();
+    const databaseUrl = await seedRuntimeAdminAuditFixture();
 
     const app = createApp({
       databaseUrl,
@@ -255,9 +165,9 @@ describe('admin audit routes integration', () => {
     });
 
     const [platformAdminCookie, companyAOwnerCookie, companyBOwnerCookie] = await Promise.all([
-      loginAs(app, 'runtime-platform-admin'),
-      loginAs(app, 'runtime-owner-a'),
-      loginAs(app, 'runtime-owner-b'),
+      loginAs(app, runtimeIds.platformAdminUsername),
+      loginAs(app, runtimeIds.ownerCompanyAUsername),
+      loginAs(app, runtimeIds.ownerCompanyBUsername),
     ]);
 
     const createDivisionResponse = await request(app)

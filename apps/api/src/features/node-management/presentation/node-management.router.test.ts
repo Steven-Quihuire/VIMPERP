@@ -282,7 +282,7 @@ describe('node management routes', () => {
       inviteeEmail: 'manager@vimcore.test',
       managedRoleKey: nodeManagementRoleKey,
       baseMembershipRole: nodeManagementBaseMembershipRole,
-      expiresAt: new Date('2026-08-20T12:00:00.000Z'),
+      expiresAt: new Date('2026-09-20T12:00:00.000Z'),
       status: 'pending',
     };
 
@@ -357,7 +357,7 @@ describe('node management routes', () => {
       baseMembershipRole: nodeManagementBaseMembershipRole,
       createdByUserId: 'owner-1',
       createdAt: new Date('2026-08-13T12:00:00.000Z'),
-      expiresAt: new Date('2026-08-20T12:00:00.000Z'),
+      expiresAt: new Date('2026-09-20T12:00:00.000Z'),
       acceptedAt: null,
       acceptedByUserId: null,
     };
@@ -376,7 +376,7 @@ describe('node management routes', () => {
       inviteeEmail: 'manager@vimcore.test',
       managedRoleKey: 'node-manager',
       baseMembershipRole: 'company-user',
-      expiresAt: '2026-08-20T12:00:00.000Z',
+      expiresAt: '2026-09-20T12:00:00.000Z',
       status: 'pending',
       userExists: false,
     });
@@ -423,7 +423,7 @@ describe('node management routes', () => {
       baseMembershipRole: nodeManagementBaseMembershipRole,
       createdByUserId: 'owner-1',
       createdAt: new Date('2026-08-13T12:00:00.000Z'),
-      expiresAt: new Date('2026-08-20T12:00:00.000Z'),
+      expiresAt: new Date('2026-09-20T12:00:00.000Z'),
       acceptedAt: null,
       acceptedByUserId: null,
     };
