@@ -11,10 +11,7 @@ import {
   positionsTable,
   scopeNodesTable,
 } from '../../../shared/infrastructure/db/schema';
-import type {
-  EmployeeAssignment,
-  EmployeeAssignmentWithEmployee,
-} from '../domain/employee-assignments';
+import type { EmployeeAssignment } from '../domain/employee-assignments';
 import {
   EmployeeDocumentConflictError,
   type Employee,

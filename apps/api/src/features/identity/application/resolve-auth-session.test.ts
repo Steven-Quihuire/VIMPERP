@@ -857,7 +857,7 @@ describe('createResolveAuthSession', () => {
           mode: 'exact_node',
         },
       ]),
-      computeEffectivePermissions: async () => ['hr.timesheets.read'],
+      computeEffectivePermissions: () => Promise.resolve(['hr.timesheets.read']),
       seedAdminEnabled: false,
     });
 
@@ -914,7 +914,7 @@ describe('createResolveAuthSession', () => {
           mode: 'exact_node',
         },
       ]),
-      computeEffectivePermissions: async () => ['catalog.delete'],
+      computeEffectivePermissions: () => Promise.resolve(['catalog.delete']),
       seedAdminEnabled: false,
     });
 

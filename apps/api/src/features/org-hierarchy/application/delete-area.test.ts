@@ -27,6 +27,8 @@ const createGateway = (): OrgHierarchyGateway => ({
   countMembershipsInLocal: () => Promise.resolve(0),
   countAreasInDivision: () => Promise.resolve(0),
   countAreasInLocal: () => Promise.resolve(0),
+  countWarehousesInLocal: () => Promise.resolve(0),
+  countPointsOfSaleInLocal: () => Promise.resolve(0),
   createArea: () => {
     throw new Error('not implemented');
   },

@@ -643,6 +643,9 @@ describe('hr employees routes', () => {
         startedAt: '2026-08-13T12:00:00.000Z',
       });
     expect(managerAssignmentResponse.status).toBe(201);
+    const managerAssignmentId = (
+      managerAssignmentResponse.body as { id: string }
+    ).id;
 
     const createEmployeeResponse = await request(app)
       .post('/companies/company-1/hr-employees')
@@ -680,7 +683,7 @@ describe('hr employees routes', () => {
     expect(managerResponse.body).toEqual({
       employeeId: manager.id,
       positionId: 'position-lead',
-      assignmentId: managerAssignmentResponse.body.id,
+      assignmentId: managerAssignmentId,
     });
 
     const listedPositionsResponse = await request(app)

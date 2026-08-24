@@ -142,7 +142,12 @@ describe('org hierarchy parent invariants', () => {
     });
 
     await expect(
-      useCase({ areaId: 'area-1', name: 'Renamed Area' }),
+      useCase({
+        areaId: 'area-1',
+        name: 'Renamed Area',
+        actorUserId: 'user-1',
+        correlationId: 'corr-1',
+      }),
     ).resolves.toMatchObject({
       id: 'area-1',
       name: 'Renamed Area',
@@ -174,7 +179,12 @@ describe('org hierarchy parent invariants', () => {
     });
 
     await expect(
-      useCase({ areaId: 'area-1', divisionId: 'division-foreign' }),
+      useCase({
+        areaId: 'area-1',
+        divisionId: 'division-foreign',
+        actorUserId: 'user-1',
+        correlationId: 'corr-1',
+      }),
     ).rejects.toBeInstanceOf(ParentOwnershipError);
   });
 
@@ -231,7 +241,12 @@ describe('org hierarchy parent invariants', () => {
     });
 
     await expect(
-      useCase({ warehouseId: 'warehouse-1', areaId: 'area-foreign' }),
+      useCase({
+        warehouseId: 'warehouse-1',
+        areaId: 'area-foreign',
+        actorUserId: 'user-1',
+        correlationId: 'corr-1',
+      }),
     ).rejects.toBeInstanceOf(ParentOwnershipError);
   });
 
@@ -286,7 +301,12 @@ describe('org hierarchy parent invariants', () => {
     });
 
     await expect(
-      useCase({ pointOfSaleId: 'pos-1', localId: 'local-foreign' }),
+      useCase({
+        pointOfSaleId: 'pos-1',
+        localId: 'local-foreign',
+        actorUserId: 'user-1',
+        correlationId: 'corr-1',
+      }),
     ).rejects.toBeInstanceOf(ParentOwnershipError);
   });
 });

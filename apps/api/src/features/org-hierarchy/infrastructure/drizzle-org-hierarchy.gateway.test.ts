@@ -692,7 +692,12 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     const gateway = createDrizzleOrgHierarchyGateway(db);
 
     await expect(
-      gateway.updateDivision({ divisionId: 'missing', name: 'X' }),
+      gateway.updateDivision({
+        divisionId: 'missing',
+        name: 'X',
+        actorUserId: 'user-1',
+        correlationId: 'corr-1',
+      }),
     ).rejects.toBeInstanceOf(DivisionNotFoundError);
   });
 
@@ -733,7 +738,11 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     const gateway = createDrizzleOrgHierarchyGateway(db);
 
     await expect(
-      gateway.deleteDivision({ divisionId: 'd-1' }),
+      gateway.deleteDivision({
+        divisionId: 'd-1',
+        actorUserId: 'user-1',
+        correlationId: 'corr-1',
+      }),
     ).rejects.toBeInstanceOf(DivisionConflictError);
   });
 
@@ -828,6 +837,8 @@ describe('createDrizzleOrgHierarchyGateway', () => {
       companyId: 'company-a',
       name: 'Store A',
       divisionId: 'retail-1',
+      actorUserId: 'user-1',
+      correlationId: 'corr-1',
     });
 
     expect(state.locals[0]?.divisionId).toBe('retail-1');
@@ -850,7 +861,12 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     });
 
     await expect(
-      gateway.createLocal({ companyId: 'company-a', name: 'Main' }),
+      gateway.createLocal({
+        companyId: 'company-a',
+        name: 'Main',
+        actorUserId: 'user-1',
+        correlationId: 'corr-1',
+      }),
     ).rejects.toBeInstanceOf(LocalNameConflictError);
   });
 
@@ -875,6 +891,8 @@ describe('createDrizzleOrgHierarchyGateway', () => {
         companyId: 'company-a',
         name: 'Main',
         divisionId: 'division-1',
+        actorUserId: 'user-1',
+        correlationId: 'corr-1',
       }),
     ).resolves.toMatchObject({ id: 'local-2', divisionId: 'division-1' });
   });
@@ -932,6 +950,8 @@ describe('createDrizzleOrgHierarchyGateway', () => {
       localId: 'l-1',
       name: 'A Updated',
       divisionId: 'wholesale-1',
+      actorUserId: 'user-1',
+      correlationId: 'corr-1',
     });
 
     expect(updated.name).toBe('A Updated');
@@ -956,6 +976,8 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     const updated = await gateway.updateLocal({
       localId: 'l-1',
       divisionId: null,
+      actorUserId: 'user-1',
+      correlationId: 'corr-1',
     });
 
     expect(updated.divisionId).toBeNull();
@@ -984,7 +1006,12 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     const gateway = createDrizzleOrgHierarchyGateway(db);
 
     await expect(
-      gateway.updateLocal({ localId: 'l-1', name: 'B' }),
+      gateway.updateLocal({
+        localId: 'l-1',
+        name: 'B',
+        actorUserId: 'user-1',
+        correlationId: 'corr-1',
+      }),
     ).rejects.toBeInstanceOf(LocalNameConflictError);
   });
 
@@ -1010,7 +1037,12 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     const gateway = createDrizzleOrgHierarchyGateway(db);
 
     await expect(
-      gateway.updateLocal({ localId: 'l-1', name: 'B' }),
+      gateway.updateLocal({
+        localId: 'l-1',
+        name: 'B',
+        actorUserId: 'user-1',
+        correlationId: 'corr-1',
+      }),
     ).resolves.toMatchObject({ id: 'l-1', name: 'B' });
   });
 
@@ -1019,7 +1051,12 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     const gateway = createDrizzleOrgHierarchyGateway(db);
 
     await expect(
-      gateway.updateLocal({ localId: 'missing', name: 'X' }),
+      gateway.updateLocal({
+        localId: 'missing',
+        name: 'X',
+        actorUserId: 'user-1',
+        correlationId: 'corr-1',
+      }),
     ).rejects.toBeInstanceOf(LocalNotFoundError);
   });
 
@@ -1037,7 +1074,11 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     });
     const gateway = createDrizzleOrgHierarchyGateway(db);
 
-    await gateway.deleteLocal('l-1');
+    await gateway.deleteLocal({
+      localId: 'l-1',
+      actorUserId: 'user-1',
+      correlationId: 'corr-1',
+    });
 
     expect(state.locals).toHaveLength(0);
   });
@@ -1057,9 +1098,13 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     });
     const gateway = createDrizzleOrgHierarchyGateway(db);
 
-    await expect(gateway.deleteLocal('l-1')).rejects.toBeInstanceOf(
-      LocalConflictError,
-    );
+    await expect(
+      gateway.deleteLocal({
+        localId: 'l-1',
+        actorUserId: 'user-1',
+        correlationId: 'corr-1',
+      }),
+    ).rejects.toBeInstanceOf(LocalConflictError);
   });
 
   it('maps wrapped local delete foreign key violations to LocalConflictError', async () => {
@@ -1077,9 +1122,13 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     });
     const gateway = createDrizzleOrgHierarchyGateway(db);
 
-    await expect(gateway.deleteLocal('l-1')).rejects.toBeInstanceOf(
-      LocalConflictError,
-    );
+    await expect(
+      gateway.deleteLocal({
+        localId: 'l-1',
+        actorUserId: 'user-1',
+        correlationId: 'corr-1',
+      }),
+    ).rejects.toBeInstanceOf(LocalConflictError);
   });
 
   it('countItemsInLocal returns count of items with matching localId', async () => {
@@ -1159,6 +1208,8 @@ describe('createDrizzleOrgHierarchyGateway', () => {
       companyId: 'company-a',
       name: 'Operations',
       localId: 'local-1',
+      actorUserId: 'user-1',
+      correlationId: 'corr-1',
     });
 
     expect(area).toEqual({
@@ -1197,6 +1248,8 @@ describe('createDrizzleOrgHierarchyGateway', () => {
       areaId: 'area-1',
       name: 'Ops',
       localId: 'local-1',
+      actorUserId: 'user-1',
+      correlationId: 'corr-1',
     });
 
     expect(updated).toMatchObject({
@@ -1206,7 +1259,11 @@ describe('createDrizzleOrgHierarchyGateway', () => {
       name: 'Ops',
     });
 
-    await gateway.deleteArea('area-1');
+    await gateway.deleteArea({
+      areaId: 'area-1',
+      actorUserId: 'user-1',
+      correlationId: 'corr-1',
+    });
     expect(state.areas).toHaveLength(0);
   });
 
@@ -1215,7 +1272,12 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     const gateway = createDrizzleOrgHierarchyGateway(db);
 
     await expect(
-      gateway.updateArea({ areaId: 'missing', name: 'Ops' }),
+      gateway.updateArea({
+        areaId: 'missing',
+        name: 'Ops',
+        actorUserId: 'user-1',
+        correlationId: 'corr-1',
+      }),
     ).rejects.toBeInstanceOf(AreaNotFoundError);
   });
 
@@ -1292,6 +1354,8 @@ describe('createDrizzleOrgHierarchyGateway', () => {
       companyId: 'company-a',
       name: 'Main Warehouse',
       localId: 'local-1',
+      actorUserId: 'user-1',
+      correlationId: 'corr-1',
     });
 
     expect(warehouse).toEqual({
@@ -1309,6 +1373,8 @@ describe('createDrizzleOrgHierarchyGateway', () => {
       warehouseId: 'warehouse-1',
       name: 'Warehouse A',
       areaId: 'area-1',
+      actorUserId: 'user-1',
+      correlationId: 'corr-1',
     });
 
     expect(updated).toMatchObject({
@@ -1318,7 +1384,11 @@ describe('createDrizzleOrgHierarchyGateway', () => {
       name: 'Warehouse A',
     });
 
-    await gateway.deleteWarehouse('warehouse-1');
+    await gateway.deleteWarehouse({
+      warehouseId: 'warehouse-1',
+      actorUserId: 'user-1',
+      correlationId: 'corr-1',
+    });
     expect(state.warehouses).toHaveLength(0);
   });
 
@@ -1327,7 +1397,12 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     const gateway = createDrizzleOrgHierarchyGateway(db);
 
     await expect(
-      gateway.updateWarehouse({ warehouseId: 'missing', name: 'Warehouse A' }),
+      gateway.updateWarehouse({
+        warehouseId: 'missing',
+        name: 'Warehouse A',
+        actorUserId: 'user-1',
+        correlationId: 'corr-1',
+      }),
     ).rejects.toBeInstanceOf(WarehouseNotFoundError);
   });
 
@@ -1342,6 +1417,8 @@ describe('createDrizzleOrgHierarchyGateway', () => {
       companyId: 'company-a',
       name: 'POS 01',
       localId: 'local-1',
+      actorUserId: 'user-1',
+      correlationId: 'corr-1',
     });
 
     expect(pointOfSale).toEqual({
@@ -1361,6 +1438,8 @@ describe('createDrizzleOrgHierarchyGateway', () => {
       pointOfSaleId: 'pos-1',
       name: 'POS A',
       areaId: 'area-1',
+      actorUserId: 'user-1',
+      correlationId: 'corr-1',
     });
 
     expect(updated).toMatchObject({
@@ -1370,7 +1449,11 @@ describe('createDrizzleOrgHierarchyGateway', () => {
       name: 'POS A',
     });
 
-    await gateway.deletePointOfSale('pos-1');
+    await gateway.deletePointOfSale({
+      pointOfSaleId: 'pos-1',
+      actorUserId: 'user-1',
+      correlationId: 'corr-1',
+    });
     expect(state.pointsOfSale).toHaveLength(0);
   });
 
@@ -1379,7 +1462,12 @@ describe('createDrizzleOrgHierarchyGateway', () => {
     const gateway = createDrizzleOrgHierarchyGateway(db);
 
     await expect(
-      gateway.updatePointOfSale({ pointOfSaleId: 'missing', name: 'POS A' }),
+      gateway.updatePointOfSale({
+        pointOfSaleId: 'missing',
+        name: 'POS A',
+        actorUserId: 'user-1',
+        correlationId: 'corr-1',
+      }),
     ).rejects.toBeInstanceOf(PointOfSaleNotFoundError);
   });
 });
