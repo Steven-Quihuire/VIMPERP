@@ -2,7 +2,9 @@ import type { AuthSession } from '@/features/auth/domain/auth';
 import {
   ChevronLeft,
   ChevronsLeft,
+  CheckCheck,
   CircleAlert,
+  Copy,
   Download,
   Loader,
   Plus,
@@ -112,6 +114,7 @@ export const EmployeesListPage = ({
   const [filters, setFilters] = useState<EmployeeFiltersValue>(emptyFilters);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [pendingDelete, setPendingDelete] = useState<Employee | null>(null);
+  const [copiedEmailId, setCopiedEmailId] = useState<string | null>(null);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -209,14 +212,25 @@ export const EmployeesListPage = ({
     setSelectedIds(new Set(employees.map((employee) => employee.id)));
   };
 
-  const copyEmployeeEmail = async (email: string | null | undefined) => {
+  const copyEmployeeEmail = async (
+    email: string | null | undefined,
+    employeeId: string,
+  ) => {
     if (!email || !navigator.clipboard?.writeText) {
       return;
     }
 
     try {
       await navigator.clipboard.writeText(email);
-      toast.success('Correo copiado');
+      setCopiedEmailId(employeeId);
+      toast.success('Correo copiado', {
+        icon: <CheckCheck color="#26a269" />,
+      });
+      window.setTimeout(
+        () =>
+          setCopiedEmailId((current) => (current === employeeId ? null : current)),
+        1500,
+      );
     } catch {
       // Clipboard permissions can be denied by the browser; keep the table usable.
     }
@@ -442,15 +456,32 @@ export const EmployeesListPage = ({
                       <button
                         type="button"
                         disabled={!employee.email}
-                        className="block cursor-pointer max-w-full truncate text-left text-xs text-gray-600 hover:text-black disabled:cursor-default disabled:hover:text-gray-600"
-                        onClick={() => void copyEmployeeEmail(employee.email)}
+                        className="group/email block max-w-full cursor-pointer truncate text-left text-xs text-gray-600 hover:text-black disabled:cursor-default disabled:hover:text-gray-600"
+                        onClick={() => void copyEmployeeEmail(employee.email, employee.id)}
                         aria-label={
                           employee.email
                             ? `Copiar correo ${employee.email}`
                             : 'Sin correo informado'
                         }
                       >
-                        {employee.email ?? 'Sin correo informado'}
+                        <span className="inline-flex items-center gap-1">
+                          <span className="truncate">
+                            {employee.email ?? 'Sin correo informado'}
+                          </span>
+                          {employee.email ? (
+                            copiedEmailId === employee.id ? (
+                              <CheckCheck
+                                color="#26a269"
+                                className="size-3.5 shrink-0"
+                              />
+                            ) : (
+                              <Copy
+                                color="#000"
+                                className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover/email:opacity-100"
+                              />
+                            )
+                          ) : null}
+                        </span>
                       </button>
                     </div>
                   </div>

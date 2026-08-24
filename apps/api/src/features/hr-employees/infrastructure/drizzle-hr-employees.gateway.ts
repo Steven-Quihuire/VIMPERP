@@ -11,7 +11,10 @@ import {
   positionsTable,
   scopeNodesTable,
 } from '../../../shared/infrastructure/db/schema';
-import type { EmployeeAssignment } from '../domain/employee-assignments';
+import type {
+  EmployeeAssignment,
+  EmployeeAssignmentWithEmployee,
+} from '../domain/employee-assignments';
 import {
   EmployeeDocumentConflictError,
   type Employee,
@@ -615,5 +618,33 @@ export const createDrizzleHrEmployeesGateway = (
       );
 
     return rows.map((row) => toEmployeeAssignment(row.employee_assignments));
+  },
+  listActivePrimaryAssignments: async (companyId) => {
+    const rows = await db
+      .select({
+        assignment: employeeAssignmentsTable,
+        fullName: employeesTable.fullName,
+      })
+      .from(employeeAssignmentsTable)
+      .innerJoin(
+        employeesTable,
+        and(
+          eq(employeesTable.id, employeeAssignmentsTable.employeeId),
+          eq(employeesTable.companyId, employeeAssignmentsTable.companyId),
+        ),
+      )
+      .where(
+        and(
+          eq(employeeAssignmentsTable.companyId, companyId),
+          eq(employeeAssignmentsTable.isPrimary, true),
+          isNull(employeeAssignmentsTable.endedAt),
+        ),
+      )
+      .orderBy(employeesTable.fullName);
+
+    return rows.map(({ assignment, fullName }) => ({
+      ...toEmployeeAssignment(assignment),
+      fullName,
+    }));
   },
 });

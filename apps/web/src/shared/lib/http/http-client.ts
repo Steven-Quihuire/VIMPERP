@@ -2,6 +2,7 @@ export class HttpError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    readonly code?: string,
   ) {
     super(message);
   }
@@ -14,18 +15,21 @@ export type HttpClient = {
   delete: (path: string) => Promise<Response>;
 };
 
-const readErrorMessage = async (response: Response) => {
+const readErrorDetails = async (response: Response) => {
   const contentType = response.headers.get('content-type') ?? '';
 
   if (contentType.includes('application/json')) {
     const body = (await response.json()) as {
-      error?: { message?: string };
+      error?: { message?: string; code?: string };
     };
 
-    return body.error?.message ?? 'Request failed';
+    return {
+      message: body.error?.message ?? 'Request failed',
+      code: body.error?.code,
+    };
   }
 
-  return 'Request failed';
+  return { message: 'Request failed', code: undefined };
 };
 
 export const createHttpClient = (baseUrl: string): HttpClient => ({
@@ -39,7 +43,8 @@ export const createHttpClient = (baseUrl: string): HttpClient => ({
     });
 
     if (!response.ok) {
-      throw new HttpError(await readErrorMessage(response), response.status);
+      const error = await readErrorDetails(response);
+      throw new HttpError(error.message, response.status, error.code);
     }
 
     return (await response.json()) as T;
@@ -61,7 +66,8 @@ export const createHttpClient = (baseUrl: string): HttpClient => ({
     const response = await fetch(`${baseUrl}${path}`, requestInit);
 
     if (!response.ok) {
-      throw new HttpError(await readErrorMessage(response), response.status);
+      const error = await readErrorDetails(response);
+      throw new HttpError(error.message, response.status, error.code);
     }
 
     return response;
@@ -80,7 +86,8 @@ export const createHttpClient = (baseUrl: string): HttpClient => ({
     const response = await fetch(`${baseUrl}${path}`, requestInit);
 
     if (!response.ok) {
-      throw new HttpError(await readErrorMessage(response), response.status);
+      const error = await readErrorDetails(response);
+      throw new HttpError(error.message, response.status, error.code);
     }
 
     return response;
@@ -96,7 +103,8 @@ export const createHttpClient = (baseUrl: string): HttpClient => ({
     });
 
     if (!response.ok) {
-      throw new HttpError(await readErrorMessage(response), response.status);
+      const error = await readErrorDetails(response);
+      throw new HttpError(error.message, response.status, error.code);
     }
 
     return response;

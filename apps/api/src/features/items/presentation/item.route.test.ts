@@ -6,6 +6,7 @@ import { createApp } from '../../../app/create-app';
 import type { ApplicationErrorRecorder } from '../../../shared/presentation/error.middleware';
 import type {
   AuthIdentityGateway,
+  AuthCapability,
   AuthMembership,
   AuthSessionRecord,
   AuthUser,
@@ -1214,11 +1215,32 @@ describe('item routes', () => {
     const listItems = (input: {
       companyId: string;
       localId: string | null;
-      capabilities: ('catalog.read' | 'catalog.write' | 'catalog.delete')[];
+      capabilities: AuthCapability[];
       companyStatus: 'active' | 'suspended' | 'provisioning_failed';
       limit: number;
       cursor?: string;
-    }) => Promise.resolve({ items: [{ id: input.localId ?? 'company-scope' }], nextCursor: null });
+    }) =>
+      Promise.resolve({
+        items: [
+          {
+            id: input.localId ?? 'company-scope',
+            companyId: input.companyId,
+            localId: input.localId,
+            categoryId: null,
+            sku: null,
+            name: 'Scoped item',
+            type: 'product' as const,
+            unit: 'unit' as const,
+            unitPrice: 10,
+            tracksStock: true,
+            trackBatchMode: 'none' as const,
+            deletedAt: null,
+            createdAt: new Date('2026-01-02T00:00:00.000Z'),
+            updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+          },
+        ],
+        nextCursor: null,
+      });
 
     const app = express();
     app.use(express.json());

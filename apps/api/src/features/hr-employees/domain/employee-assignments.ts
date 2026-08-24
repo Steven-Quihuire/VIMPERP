@@ -15,6 +15,10 @@ export type EmployeeAssignmentHistory = EmployeeAssignment & {
   scopeNodeName: string;
 };
 
+export type EmployeeAssignmentWithEmployee = EmployeeAssignment & {
+  fullName: string;
+};
+
 export class EmployeeAssignmentConflictError extends Error {
   readonly code = 'HR_EMPLOYEE_ASSIGNMENT_CONFLICT';
 

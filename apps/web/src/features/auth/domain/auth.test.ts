@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  hasTimesheetReadVisibility,
   hasBlockedActiveCompany,
   needsActiveCompanySelection,
   type AuthSession,
@@ -29,5 +30,16 @@ describe('auth domain helpers', () => {
         activeCompany: { companyId: 'company-1', status: 'suspended' },
       }),
     ).toBe(true);
+  });
+
+  it('derives timesheet visibility from the dedicated capability', () => {
+    expect(
+      hasTimesheetReadVisibility({
+        ...session,
+        capabilities: [...session.capabilities, 'hr.timesheets.read'],
+      }),
+    ).toBe(true);
+
+    expect(hasTimesheetReadVisibility(session)).toBe(false);
   });
 });

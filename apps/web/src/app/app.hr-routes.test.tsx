@@ -38,8 +38,28 @@ const readUrl = (input: RequestInfo | URL) =>
       ? input.toString()
       : input.url;
 
+const setDesktopBrowser = () => {
+  Object.defineProperty(window.navigator, 'userAgent', {
+    configurable: true,
+    value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0',
+  });
+
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: query === '(pointer: coarse)' ? false : false,
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+};
+
 describe('App HR routes', () => {
   it('registers the HR employee, position, ERP access, and approval-policy routes', async () => {
+    setDesktopBrowser();
+
     vi.stubGlobal(
       'fetch',
       vi.fn((input: RequestInfo | URL) => {
@@ -72,6 +92,35 @@ describe('App HR routes', () => {
         }
 
         if (url.endsWith('/companies/company-1/approval-policies')) {
+          return Promise.resolve(createJsonResponse([], 200));
+        }
+
+        if (url.endsWith('/companies/company-1/timesheets')) {
+          return Promise.resolve(createJsonResponse([], 200));
+        }
+
+        if (url.endsWith('/companies/company-1/timesheets/period-1')) {
+          return Promise.resolve(
+            createJsonResponse({
+              id: 'period-1',
+              companyId: 'company-1',
+              employeeAssignmentId: 'assignment-1',
+              periodStart: '2026-08-11',
+              periodEnd: '2026-08-17',
+              status: 'draft',
+              submittedAt: null,
+              submittedByUserId: null,
+              approvedAt: null,
+              approvedByUserId: null,
+              rejectionReason: null,
+              approvalPolicyId: null,
+              createdAt: '2026-08-11T00:00:00.000Z',
+              updatedAt: '2026-08-11T00:00:00.000Z',
+            }, 200),
+          );
+        }
+
+        if (url.endsWith('/companies/company-1/timesheets/period-1/entries')) {
           return Promise.resolve(createJsonResponse([], 200));
         }
 
@@ -115,22 +164,18 @@ describe('App HR routes', () => {
 
     cleanup();
     render(<App initialEntries={['/dashboard/hr/positions']} />);
-    expect(await screen.findByRole('heading', { name: 'Puestos de Recursos Humanos' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Gestionar puestos' })).toBeInTheDocument();
 
     cleanup();
     render(<App initialEntries={['/dashboard/hr/erp-access']} />);
-    expect(await screen.findByRole('heading', { name: 'Invitaciones de acceso al ERP' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Invitaciones pendientes' })).toBeInTheDocument();
 
     cleanup();
-    render(<App initialEntries={['/dashboard/hr/approval-policies']} />);
-    expect(await screen.findByRole('heading', { name: 'Políticas de aprobación' })).toBeInTheDocument();
+    render(<App initialEntries={['/dashboard/hr/timesheets']} />);
+    expect(await screen.findByRole('heading', { name: 'Registro de horas' })).toBeInTheDocument();
 
-    cleanup();
-    render(<App initialEntries={['/dashboard/hr/responsibility']} />);
-    expect(await screen.findByRole('heading', { name: 'Responsables de RRHH' })).toBeInTheDocument();
-
-    cleanup();
-    render(<App initialEntries={['/hr/responsibility']} />);
-    expect(await screen.findByRole('heading', { name: 'Responsables de RRHH' })).toBeInTheDocument();
+      cleanup();
+      render(<App initialEntries={['/dashboard/hr/timesheets/period-1']} />);
+      expect(await screen.findByRole('heading', { name: 'Detalle del período' })).toBeInTheDocument();
   });
 });

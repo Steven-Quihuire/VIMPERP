@@ -48,11 +48,20 @@ import {
   toEmployeeFormValues,
   type Employee,
 } from '../features/hr-employees/domain/employees';
-import { EmployeeDetailPage } from '../features/hr-employees/presentation/pages/employee-detail';
+import {
+  EmployeeDetailPage,
+} from '../features/hr-employees/presentation/pages/employee-detail';
+import {
+  DETAIL_TAB_IDS,
+  tabItems,
+  type DetailTab,
+} from '../features/hr-employees/presentation/pages/employee-detail-tabs';
 import { EmployeesListPage } from '../features/hr-employees/presentation/pages/employees-list';
 import { PositionsListPage } from '../features/hr-employees/presentation/pages/positions-list';
 import { AcceptErpAccessInvitationPage } from '../features/hr-erp-access/presentation/pages/accept-invitation';
 import { InvitationsListPage } from '../features/hr-erp-access/presentation/pages/invitations-list';
+import { TimesheetPeriodDetailPage } from '../features/hr-timesheets/presentation/pages/timesheet-period-detail';
+import { TimesheetPeriodsListPage } from '../features/hr-timesheets/presentation/pages/timesheet-periods-list';
 import { useHrResponsibility } from '../features/hr-responsibility/application/hr-responsibility-queries';
 import { AcceptHrResponsibilityInvitationPage } from '../features/hr-responsibility/presentation/accept-invitation-page';
 import { HrResponsibilityPage } from '../features/hr-responsibility/presentation/hr-responsibility-page';
@@ -201,7 +210,10 @@ const HrEmployeesWorkspace = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { employeeId: routeEmployeeId } = useParams<{ employeeId?: string }>();
+  const { employeeId: routeEmployeeId, tab: routeTab } = useParams<{
+    employeeId?: string;
+    tab?: string;
+  }>();
   const [localEmployeeId, setLocalEmployeeId] = useState<string | null>(null);
   const selectedEmployeeId = routeEmployeeId ?? localEmployeeId;
   const employeesQuery = useEmployees(
@@ -212,6 +224,9 @@ const HrEmployeesWorkspace = ({
   const selectedEmployeeName = employeesQuery.data?.find(
     (employee) => employee.id === selectedEmployeeId,
   )?.fullName;
+  const activeTab: DetailTab = DETAIL_TAB_IDS.includes(routeTab as DetailTab)
+    ? (routeTab as DetailTab)
+    : 'info';
   const selectEmployee = (employeeId: string) => {
     if (location.pathname.startsWith('/manage-employees')) {
       void navigate(`/manage-employees/${employeeId}`);
@@ -219,6 +234,11 @@ const HrEmployeesWorkspace = ({
     }
 
     setLocalEmployeeId(employeeId);
+  };
+  const selectTab = (tab: DetailTab) => {
+    if (!selectedEmployeeId) return;
+    const base = `/manage-employees/${selectedEmployeeId}`;
+    void navigate(tab === 'info' ? base : `${base}/${tab}`);
   };
 
   const handleDeletedEmployee = (deleted: Employee) => {
@@ -312,6 +332,17 @@ const HrEmployeesWorkspace = ({
                       {selectedEmployeeName || 'Detalles del empleado'}
                     </BreadcrumbPage>
                   </BreadcrumbItem>
+                  {activeTab !== 'info' ? (
+                    <>
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem>
+                        <BreadcrumbPage className="text-gray-800 text-xs">
+                          {tabItems.find((item) => item.id === activeTab)?.label ??
+                            'Detalles del empleado'}
+                        </BreadcrumbPage>
+                      </BreadcrumbItem>
+                    </>
+                  ) : null}
                 </>
               ) : (
                 <BreadcrumbItem>
@@ -331,6 +362,8 @@ const HrEmployeesWorkspace = ({
             session={session}
             {...(apiBaseUrl ? { apiBaseUrl } : {})}
             employeeId={selectedEmployeeId}
+            activeTab={activeTab}
+            onSelectTab={selectTab}
             onDeleted={handleDeletedEmployee}
           />
         ) : (
@@ -593,6 +626,71 @@ const HrResponsibilityRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   return (
     <HrResponsibilityPage
       session={scoped.auth.session!}
+      {...(apiBaseUrl ? { apiBaseUrl } : {})}
+    />
+  );
+};
+
+const HrTimesheetsWorkspace = ({
+  session,
+  periodId,
+  apiBaseUrl,
+}: {
+  session: AuthSession;
+  periodId?: string;
+  apiBaseUrl?: string;
+}) => (
+  <main className="mx-auto flex w-full max-w-[1480px] flex-col gap-6 p-4 md:p-6">
+    <div className="space-y-3">
+      {periodId ? (
+        <TimesheetPeriodDetailPage
+          session={session}
+          periodId={periodId}
+          {...(apiBaseUrl ? { apiBaseUrl } : {})}
+        />
+      ) : (
+        <TimesheetPeriodsListPage
+          session={session}
+          {...(apiBaseUrl ? { apiBaseUrl } : {})}
+        />
+      )}
+    </div>
+  </main>
+);
+
+const HrTimesheetsRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+  const scoped = useCompanyScopedSession(apiBaseUrl);
+  const fallback = renderCompanyScopedRoute(scoped.state);
+
+  if (fallback) {
+    return fallback;
+  }
+
+  return (
+    <HrTimesheetsWorkspace
+      session={scoped.auth.session!}
+      {...(apiBaseUrl ? { apiBaseUrl } : {})}
+    />
+  );
+};
+
+const HrTimesheetDetailRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
+  const scoped = useCompanyScopedSession(apiBaseUrl);
+  const fallback = renderCompanyScopedRoute(scoped.state);
+  const { periodId } = useParams<{ periodId: string }>();
+
+  if (fallback) {
+    return fallback;
+  }
+
+  if (!periodId) {
+    return <Navigate to="/dashboard/hr/timesheets" replace />;
+  }
+
+  return (
+    <HrTimesheetsWorkspace
+      session={scoped.auth.session!}
+      periodId={periodId}
       {...(apiBaseUrl ? { apiBaseUrl } : {})}
     />
   );
@@ -1050,6 +1148,16 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
           }
         />
         <Route
+          path="hr/timesheets"
+          element={<HrTimesheetsRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path="hr/timesheets/:periodId"
+          element={
+            <HrTimesheetDetailRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />
+          }
+        />
+        <Route
           path="warehouses"
           element={<WarehousesRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
         />
@@ -1174,6 +1282,10 @@ const AppRoutes = ({ apiBaseUrl }: { apiBaseUrl?: string }) => (
         />
         <Route
           path=":employeeId"
+          element={<HrEmployeesRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
+        />
+        <Route
+          path=":employeeId/:tab"
           element={<HrEmployeesRoute {...(apiBaseUrl ? { apiBaseUrl } : {})} />}
         />
       </Route>

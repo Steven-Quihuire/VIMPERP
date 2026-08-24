@@ -4,6 +4,7 @@ import { createHttpClient } from '@/shared/lib/http/http-client';
 import type {
   CreateAssignmentInput,
   EmployeeAssignment,
+  EmployeeAssignmentWithEmployee,
   ReportingLineRecord,
 } from '../domain/assignments';
 import type {
@@ -47,6 +48,9 @@ export type HrEmployeesApi = {
     companyId: string,
     employeeId: string,
   ) => Promise<EmployeeAssignment[]>;
+  listAssignments: (
+    companyId: string,
+  ) => Promise<EmployeeAssignmentWithEmployee[]>;
   getManager: (
     companyId: string,
     employeeId: string,
@@ -150,6 +154,10 @@ export const createHrEmployeesApi = (
     listAssignmentHistory: (companyId, employeeId) =>
       httpClient.get<EmployeeAssignment[]>(
         `/companies/${companyId}/hr-employees/${employeeId}/assignments`,
+      ),
+    listAssignments: (companyId) =>
+      httpClient.get<EmployeeAssignmentWithEmployee[]>(
+        `/companies/${companyId}/hr-employees/assignments`,
       ),
     getManager: (companyId, employeeId) =>
       httpClient.get<ReportingLineRecord | null>(

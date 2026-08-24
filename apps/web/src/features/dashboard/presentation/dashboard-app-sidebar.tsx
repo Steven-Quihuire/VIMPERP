@@ -35,7 +35,10 @@ import {
   SidebarRail,
 } from '../../../shared/ui/sidebar';
 import type { AuthSession } from '../../auth/domain/auth';
-import { getCompanyMemberships } from '../../auth/domain/auth';
+import {
+  getCompanyMemberships,
+  hasTimesheetReadVisibility,
+} from '../../auth/domain/auth';
 import { TeamSwitcher } from '../../auth/presentation/components/team-switcher';
 import { useSwitchActiveCompany } from '../../auth/presentation/use-auth';
 import { useHrResponsibility } from '../../hr-responsibility/application/hr-responsibility-queries';
@@ -60,6 +63,13 @@ const hrItems = [
     label: 'Políticas de aprobación',
     href: '/dashboard/hr/approval-policies',
     icon: ShieldCheck,
+  },
+  {
+    label: 'Timesheets',
+    href: '/dashboard/hr/timesheets',
+    icon: LayoutDashboard,
+    isVisible: (session: AuthSession) =>
+      Array.isArray(session.capabilities) && hasTimesheetReadVisibility(session),
   },
 ];
 
@@ -113,6 +123,9 @@ export const DashboardAppSidebar = ({
   );
   const hasHrResponsibility = Boolean(
     hrResponsibilityQuery.data?.hasResponsibles,
+  );
+  const visibleHrItems = hrItems.filter(
+    (item) => !('isVisible' in item) || item.isVisible(session),
   );
   const canViewHr = canConfigureHr || hasHrResponsibility;
   const canViewOrganization = canConfigureHr || hasHrResponsibility;
@@ -216,7 +229,7 @@ export const DashboardAppSidebar = ({
                     <CollapsibleContent>
                       <SidebarMenuSub>
                         {hasHrResponsibility
-                          ? hrItems.map((item) => (
+                          ? visibleHrItems.map((item) => (
                               <SidebarMenuSubItem key={item.href}>
                                 <NavLink to={item.href} end>
                                   {({ isActive }) => (

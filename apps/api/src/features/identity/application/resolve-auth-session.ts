@@ -183,7 +183,11 @@ export const createResolveAuthSession = ({
         (permissionKey): permissionKey is AuthCapability =>
           permissionKey === 'catalog.read' ||
           permissionKey === 'catalog.write' ||
-          permissionKey === 'catalog.delete',
+          permissionKey === 'catalog.delete' ||
+          permissionKey === 'hr.timesheets.read' ||
+          permissionKey === 'hr.timesheets.write' ||
+          permissionKey === 'hr.timesheets.submit' ||
+          permissionKey === 'hr.timesheets.approve',
       );
   };
 

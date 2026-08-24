@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { authCapabilityValues, type AuthSession } from '../domain/auth';
 import type {
   AuthMembership as ApiAuthMembership,
   AuthSession as ApiAuthSession,
@@ -51,5 +52,31 @@ describe('auth session shape lockstep (api zod <-> web type)', () => {
     ].sort() as (keyof WebAuthMembership)[];
 
     expect(membershipShapeKeys).toEqual(webMembershipFields);
+  });
+});
+
+describe('auth session schema capability parsing', () => {
+  it('accepts a session whose capabilities include hr.timesheets.read', () => {
+    const session: AuthSession = {
+      user: { id: 'user-1', email: 'owner@vimcore.test', username: 'owner' },
+      memberships: [
+        {
+          companyId: 'company-1',
+          role: 'company-owner',
+          divisionId: null,
+          localId: null,
+        },
+      ],
+      activeCompany: { companyId: 'company-1', status: 'active' },
+      activeScope: null,
+      activeLocalId: null,
+      capabilities: ['catalog.read', 'hr.timesheets.read'],
+    };
+
+    expect(authCapabilityValues).toContain('hr.timesheets.read');
+
+    const parsed = authSessionSchema.parse(session);
+
+    expect(parsed.capabilities).toContain('hr.timesheets.read');
   });
 });

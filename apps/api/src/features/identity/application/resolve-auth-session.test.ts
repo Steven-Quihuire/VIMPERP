@@ -808,6 +808,121 @@ describe('createResolveAuthSession', () => {
     expect(session.activeScope).toEqual({ scopeType: 'local', scopeId: 'local-1' });
     expect(session.capabilities).toEqual(['catalog.read', 'catalog.write']);
   });
+
+  it('grants hr.timesheets.read when the active scope has that scoped permission', async () => {
+    const memberships = new Map<string, AuthMembership[]>();
+    memberships.set('user-1', [
+      {
+        companyId: 'company-1',
+        role: 'company-user',
+        divisionId: null,
+        localId: null,
+      },
+    ]);
+    const activeCompany = new Map<string, string | null>();
+    activeCompany.set('user-1', 'company-1');
+    const activeScopeNodeId = new Map<string, string | null>();
+    activeScopeNodeId.set('user-1', 'warehouse:warehouse-1');
+    const companyStatus = new Map<string, CompanyLifecycle>();
+    companyStatus.set('company-1', 'active');
+    const sessions = new Map<string, AuthSessionRecord>();
+    sessions.set('token-1', {
+      token: 'token-1',
+      userId: 'user-1',
+      expiresAt: new Date(Date.now() + 60000),
+    });
+    const users = new Map<string, AuthUser>();
+    users.set('user-1', {
+      id: 'user-1',
+      email: 'member@vimcore.test',
+      username: 'member',
+      passwordHash: 'hashed',
+    });
+    const gateway = createGateway({
+      membershipsByUserId: memberships,
+      activeCompanyIdByUserId: activeCompany,
+      activeScopeNodeIdByUserId: activeScopeNodeId,
+      companyStatusByCompanyId: companyStatus,
+      sessions,
+      users,
+    });
+
+    const resolve = createResolveAuthSession({
+      authIdentityGateway: gateway,
+      scopeResolver: createScopeResolver([
+        {
+          companyId: 'company-1',
+          userId: 'user-1',
+          scope: { scopeType: 'warehouse', scopeId: 'warehouse-1' },
+          mode: 'exact_node',
+        },
+      ]),
+      computeEffectivePermissions: async () => ['hr.timesheets.read'],
+      seedAdminEnabled: false,
+    });
+
+    const session = await resolve('token-1');
+
+    expect(session.capabilities).toEqual(['catalog.read', 'catalog.write', 'hr.timesheets.read']);
+  });
+
+  it('omits hr.timesheets.read when the active scope does not grant it', async () => {
+    const memberships = new Map<string, AuthMembership[]>();
+    memberships.set('user-1', [
+      {
+        companyId: 'company-1',
+        role: 'company-user',
+        divisionId: null,
+        localId: null,
+      },
+    ]);
+    const activeCompany = new Map<string, string | null>();
+    activeCompany.set('user-1', 'company-1');
+    const activeScopeNodeId = new Map<string, string | null>();
+    activeScopeNodeId.set('user-1', 'warehouse:warehouse-1');
+    const companyStatus = new Map<string, CompanyLifecycle>();
+    companyStatus.set('company-1', 'active');
+    const sessions = new Map<string, AuthSessionRecord>();
+    sessions.set('token-1', {
+      token: 'token-1',
+      userId: 'user-1',
+      expiresAt: new Date(Date.now() + 60000),
+    });
+    const users = new Map<string, AuthUser>();
+    users.set('user-1', {
+      id: 'user-1',
+      email: 'member@vimcore.test',
+      username: 'member',
+      passwordHash: 'hashed',
+    });
+    const gateway = createGateway({
+      membershipsByUserId: memberships,
+      activeCompanyIdByUserId: activeCompany,
+      activeScopeNodeIdByUserId: activeScopeNodeId,
+      companyStatusByCompanyId: companyStatus,
+      sessions,
+      users,
+    });
+
+    const resolve = createResolveAuthSession({
+      authIdentityGateway: gateway,
+      scopeResolver: createScopeResolver([
+        {
+          companyId: 'company-1',
+          userId: 'user-1',
+          scope: { scopeType: 'warehouse', scopeId: 'warehouse-1' },
+          mode: 'exact_node',
+        },
+      ]),
+      computeEffectivePermissions: async () => ['catalog.delete'],
+      seedAdminEnabled: false,
+    });
+
+    const session = await resolve('token-1');
+
+    expect(session.capabilities).not.toContain('hr.timesheets.read');
+    expect(session.capabilities).toEqual(['catalog.delete', 'catalog.read', 'catalog.write']);
+  });
 });
 
 void setupSession;

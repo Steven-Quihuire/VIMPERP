@@ -268,6 +268,26 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
       ),
     );
   }
+  listActivePrimaryAssignments(companyId: string) {
+    return Promise.resolve(
+      this.assignments
+        .filter(
+          (assignment) =>
+            assignment.companyId === companyId &&
+            assignment.isPrimary &&
+            assignment.endedAt === null,
+        )
+        .map((assignment) => ({
+          ...assignment,
+          fullName:
+            this.employees.find(
+              (employee) =>
+                employee.id === assignment.employeeId &&
+                employee.companyId === companyId,
+            )?.fullName ?? '',
+        })),
+    );
+  }
 }
 
 describe('createCreateEmployeeUseCase', () => {

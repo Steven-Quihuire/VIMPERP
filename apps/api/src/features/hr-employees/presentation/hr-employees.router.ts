@@ -85,6 +85,7 @@ export const createHrEmployeesRouter = ({
   listPositions,
   createAssignment,
   listAssignmentHistory,
+  listAssignments,
   resolveReportingLine,
   resolveDirectReports,
 }: {
@@ -149,6 +150,7 @@ export const createHrEmployeesRouter = ({
     companyId: string;
     employeeId: string;
   }) => Promise<unknown>;
+  listAssignments: (input: { companyId: string }) => Promise<unknown>;
   resolveReportingLine: (input: {
     companyId: string;
     employeeId: string;
@@ -278,6 +280,21 @@ export const createHrEmployeesRouter = ({
             auth: getAuth(response),
           }),
         );
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.get(
+    '/companies/:companyId/hr-employees/assignments',
+    requireAuth,
+    requireEmployeeCapability('hr.employees.read'),
+    async (request, response, next) => {
+      try {
+        const params = companyParamsSchema.parse(request.params);
+        ensureCompanyAccess(getAuth(response), params.companyId);
+        response.status(200).json(await listAssignments(params));
       } catch (error) {
         next(error);
       }

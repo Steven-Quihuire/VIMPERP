@@ -339,7 +339,14 @@ describe('hr-employees pages', () => {
   });
 
   it('renders employee detail with manager and direct reports', () => {
-    render(<EmployeeDetailPage session={session} employeeId="employee-1" />);
+    render(
+      <EmployeeDetailPage
+        session={session}
+        employeeId="employee-1"
+        activeTab="info"
+        onSelectTab={() => {}}
+      />,
+    );
 
     expect(screen.getByText('employee-1')).toBeInTheDocument();
     expect(screen.getByText(/employee-9/)).toBeInTheDocument();

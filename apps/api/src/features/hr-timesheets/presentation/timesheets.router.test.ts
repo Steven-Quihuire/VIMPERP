@@ -327,6 +327,12 @@ const applicationErrorRecorder: ApplicationErrorRecorder = {
 };
 
 const periodListSchema = z.array(z.object({ id: z.string() }));
+const entryListSchema = z.array(
+  z.object({
+    id: z.string(),
+    periodId: z.string(),
+  }),
+);
 const errorResponseSchema = z.object({
   error: z.object({
     code: z.string(),
@@ -342,6 +348,9 @@ type PermissionCall = {
 
 const getPeriodIds = (body: unknown) =>
   periodListSchema.parse(body).map((period) => period.id);
+
+const getEntryIds = (body: unknown) =>
+  entryListSchema.parse(body).map((entry) => entry.id);
 
 const getErrorCode = (body: unknown) => errorResponseSchema.parse(body).error.code;
 
@@ -835,6 +844,41 @@ describe('timesheets router', () => {
 
     expect(createOutsiderResponse.status).toBe(404);
     expect(getErrorCode(createOutsiderResponse.body)).toBe('TIMESHEET_ASSIGNMENT_NOT_FOUND');
+  });
+
+  it('lists scoped period entries for own and direct-report periods, returns empty lists, rejects outsiders, and validates params', async () => {
+    const { app, ownerSessionCookie, permissionCalls } = await createAuthenticatedApp();
+
+    const selfEntriesResponse = await request(app)
+      .get('/companies/company-a/timesheets/period-self/entries')
+      .set('Cookie', ownerSessionCookie);
+
+    expect(selfEntriesResponse.status).toBe(200);
+    expect(getEntryIds(selfEntriesResponse.body)).toEqual([]);
+    expect(permissionCalls.at(-1)?.permissionScope).toEqual({ kind: 'self' });
+
+    const reportEntriesResponse = await request(app)
+      .get('/companies/company-a/timesheets/period-report/entries')
+      .set('Cookie', ownerSessionCookie);
+
+    expect(reportEntriesResponse.status).toBe(200);
+    expect(getEntryIds(reportEntriesResponse.body)).toEqual(
+      expect.arrayContaining(['entry-update', 'entry-duplicate']),
+    );
+    expect(permissionCalls.at(-1)?.permissionScope).toEqual({ kind: 'direct_reports' });
+
+    const outsiderEntriesResponse = await request(app)
+      .get('/companies/company-a/timesheets/period-outsider/entries')
+      .set('Cookie', ownerSessionCookie);
+
+    expect(outsiderEntriesResponse.status).toBe(404);
+    expect(getErrorCode(outsiderEntriesResponse.body)).toBe('TIMESHEET_PERIOD_NOT_FOUND');
+
+    const invalidParamsResponse = await request(app)
+      .get('/companies/%20/timesheets/period-self/entries')
+      .set('Cookie', ownerSessionCookie);
+
+    expect(invalidParamsResponse.status).toBe(400);
   });
 
   it('returns 409 for locked, conflict, and self-approval cases', async () => {
