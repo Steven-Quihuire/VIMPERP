@@ -101,6 +101,27 @@ import { createUpdateApprovalPolicyUseCase } from '../features/approval-policy/a
 import type { ApprovalPolicyGateway } from '../features/approval-policy/domain/approval-policy';
 import { createDrizzleApprovalPolicyGateway } from '../features/approval-policy/infrastructure/drizzle-approval-policy.gateway';
 import { createApprovalPolicyRouter } from '../features/approval-policy/presentation/approval-policy.router';
+import { createCancelDocumentUseCase } from '../features/inventory/application/cancel-document';
+import { createConfirmDocumentUseCase } from '../features/inventory/application/confirm-document';
+import { createCreateDocumentUseCase } from '../features/inventory/application/create-document';
+import { createAddLineUseCase } from '../features/inventory/application/lines/add-line';
+import { createRemoveLineUseCase } from '../features/inventory/application/lines/remove-line';
+import { createUpdateLineUseCase } from '../features/inventory/application/lines/update-line';
+import { createCreateLotUseCase } from '../features/inventory/application/lots/create-lot';
+import { createListLotsUseCase } from '../features/inventory/application/lots/list-lot';
+import {
+  createGetDocumentUseCase,
+  createListDocumentsUseCase,
+} from '../features/inventory/application/list-document';
+import { createListQuantsUseCase } from '../features/inventory/application/list-quants';
+import { createReverseDocumentUseCase } from '../features/inventory/application/reverse-document';
+import type {
+  StockDocumentsGateway,
+  StockLotsGateway,
+  StockQuantsGateway,
+} from '../features/inventory/domain/stock-documents';
+import { createDrizzleStockDocumentsGateway } from '../features/inventory/infrastructure/drizzle-stock-documents.gateway';
+import { createStockRouter } from '../features/inventory/presentation/stock.router';
 import { createApprovePeriodUseCase } from '../features/hr-timesheets/application/approve-period';
 import type { ApprovalPolicyGateway as TimesheetApprovalPolicyGateway } from '../features/hr-timesheets/application/approval-policy.gateway';
 import { createCreatePeriodUseCase } from '../features/hr-timesheets/application/create-period';
@@ -210,6 +231,7 @@ type CreateAppInput = {
   hrErpAccessGateway?: ErpAccessGateway;
   hrResponsibilityGateway?: HrResponsibilityGateway;
   approvalPolicyGateway?: ApprovalPolicyGateway;
+  inventoryGateway?: StockDocumentsGateway & StockLotsGateway & StockQuantsGateway;
   timesheetGateway?: TimesheetGateway;
   nodeManagementGateway?: NodeManagementGateway;
   scopeResolver?: ScopeResolver;
@@ -266,6 +288,8 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     input.hrResponsibilityGateway ?? createDrizzleHrResponsibilityGateway(db);
   const approvalPolicyGateway =
     input.approvalPolicyGateway ?? createDrizzleApprovalPolicyGateway(db);
+  const inventoryGateway =
+    input.inventoryGateway ?? createDrizzleStockDocumentsGateway(db);
   const timesheetGateway =
     input.timesheetGateway ?? createDrizzleTimesheetsGateway(db);
   const timesheetApprovalPolicyGateway: TimesheetApprovalPolicyGateway = {
@@ -408,6 +432,22 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
   const requireHrCapability = createRequireHrCapability({
     computeEffectivePermissions,
   });
+  const resolveInventoryCapabilities = async (auth: AuthSession) => {
+    if (!auth.activeCompany) {
+      throw new ForbiddenError('Active company required');
+    }
+
+    const currentContext = auth.activeScope ?? {
+      scopeType: 'company',
+      scopeId: auth.activeCompany.companyId,
+    };
+
+    return await computeEffectivePermissions({
+      companyId: auth.activeCompany.companyId,
+      userId: auth.user.id,
+      currentContext,
+    });
+  };
   const getActiveScope = (auth: AuthSession): ScopeRef =>
     auth.activeScope ?? {
       scopeType: 'company',
@@ -1113,6 +1153,32 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
       deactivateApprovalPolicy: createDeactivateApprovalPolicyUseCase({
         gateway: approvalPolicyGateway,
       }),
+    }),
+  );
+  app.use(
+    createStockRouter({
+      requireAuth,
+      requireHrCapability,
+      createDocument: createCreateDocumentUseCase({ gateway: inventoryGateway }),
+      listDocuments: createListDocumentsUseCase({ gateway: inventoryGateway }),
+      getDocument: createGetDocumentUseCase({ gateway: inventoryGateway }),
+      addLine: createAddLineUseCase({ gateway: inventoryGateway }),
+      updateLine: createUpdateLineUseCase({ gateway: inventoryGateway }),
+      removeLine: createRemoveLineUseCase({ gateway: inventoryGateway }),
+      confirmDocument: async ({ companyId, documentId, auth }) =>
+        await createConfirmDocumentUseCase({ gateway: inventoryGateway })({
+          companyId,
+          documentId,
+          capabilities: await resolveInventoryCapabilities(auth),
+        }),
+      cancelDocument: createCancelDocumentUseCase({ gateway: inventoryGateway }),
+      reverseDocument: createReverseDocumentUseCase({ gateway: inventoryGateway }),
+      createLot: createCreateLotUseCase({
+        documentsGateway: inventoryGateway,
+        lotsGateway: inventoryGateway,
+      }),
+      listLots: createListLotsUseCase({ gateway: inventoryGateway }),
+      listQuants: createListQuantsUseCase({ gateway: inventoryGateway }),
     }),
   );
   app.use(

@@ -57,6 +57,14 @@ import {
   TimesheetValidationError,
 } from '../../features/hr-timesheets/domain/timesheets';
 import {
+  StockDocumentItemNotFoundError,
+  StockDocumentLineLotInvalidError,
+  StockDocumentLineNotFoundError,
+  StockDocumentLineQuantityError,
+  StockDocumentNotFoundError,
+  StockDocumentValidationError,
+} from '../../features/inventory/domain/stock-documents';
+import {
   PositionHeadcountExceededError,
   PositionHierarchyError,
   PositionParentNotFoundError,
@@ -181,9 +189,16 @@ export const createErrorMiddleware = ({
 
     if (
       error instanceof TimesheetValidationError ||
-      error instanceof TimesheetRejectionReasonRequiredError
+      error instanceof TimesheetRejectionReasonRequiredError ||
+      error instanceof StockDocumentValidationError ||
+      error instanceof StockDocumentLineQuantityError
     ) {
       response.status(400).json(toResponseBody(error.code, error.message));
+      return;
+    }
+
+    if (error instanceof StockDocumentLineLotInvalidError) {
+      response.status(409).json(toResponseBody(error.code, error.message));
       return;
     }
 
@@ -218,7 +233,10 @@ export const createErrorMiddleware = ({
       error instanceof HrEmployeesScopeNotFoundError ||
       error instanceof ApprovalPolicyScopeNotFoundError ||
       error instanceof ErpAccessInvitationNotFoundError ||
-      error instanceof ErpAccessLinkNotFoundError
+      error instanceof ErpAccessLinkNotFoundError ||
+      error instanceof StockDocumentNotFoundError ||
+      error instanceof StockDocumentLineNotFoundError ||
+      error instanceof StockDocumentItemNotFoundError
       || error instanceof HrResponsibilityInvitationNotFoundError
       || error instanceof HrResponsibilityCompanyNotFoundError
       || error instanceof HrResponsibleUserNotFoundError
