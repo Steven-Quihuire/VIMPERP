@@ -64,7 +64,7 @@ class InMemoryNodeManagementGateway implements NodeManagementGateway {
     tokenHash: string;
     createdByUserId: string;
     expiresAt: Date;
-  }) {
+  }): Promise<NodeManagementInvitation> {
     throw new Error(`not used: ${input.id}`);
   }
 

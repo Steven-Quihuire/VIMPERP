@@ -69,6 +69,14 @@ class AtomicOnlyAuthGateway implements AuthIdentityGateway {
     await Promise.resolve();
   }
 
+  async findActiveScopeNodeId() {
+    return await Promise.resolve(null);
+  }
+
+  async setActiveScopeNodeId() {
+    await Promise.resolve();
+  }
+
   async countRecentActiveCompanySwitches() {
     return await Promise.resolve(0);
   }

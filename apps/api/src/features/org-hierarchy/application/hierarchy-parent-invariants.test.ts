@@ -12,6 +12,11 @@ import { createUpdateAreaUseCase } from './update-area';
 import { createUpdatePointOfSaleUseCase } from './update-point-of-sale';
 import { createUpdateWarehouseUseCase } from './update-warehouse';
 
+const auditContext = {
+  actorUserId: 'owner-1',
+  correlationId: 'corr-test',
+};
+
 const baseGateway = (): OrgHierarchyGateway => ({
   getScopeNodeDependencyCounts: () => Promise.resolve({
     roleAssignments: 0,
@@ -142,7 +147,7 @@ describe('org hierarchy parent invariants', () => {
     });
 
     await expect(
-      useCase({ areaId: 'area-1', name: 'Renamed Area' }),
+      useCase({ areaId: 'area-1', name: 'Renamed Area', ...auditContext }),
     ).resolves.toMatchObject({
       id: 'area-1',
       name: 'Renamed Area',
@@ -174,7 +179,7 @@ describe('org hierarchy parent invariants', () => {
     });
 
     await expect(
-      useCase({ areaId: 'area-1', divisionId: 'division-foreign' }),
+      useCase({ areaId: 'area-1', divisionId: 'division-foreign', ...auditContext }),
     ).rejects.toBeInstanceOf(ParentOwnershipError);
   });
 
@@ -231,7 +236,7 @@ describe('org hierarchy parent invariants', () => {
     });
 
     await expect(
-      useCase({ warehouseId: 'warehouse-1', areaId: 'area-foreign' }),
+      useCase({ warehouseId: 'warehouse-1', areaId: 'area-foreign', ...auditContext }),
     ).rejects.toBeInstanceOf(ParentOwnershipError);
   });
 
@@ -286,7 +291,7 @@ describe('org hierarchy parent invariants', () => {
     });
 
     await expect(
-      useCase({ pointOfSaleId: 'pos-1', localId: 'local-foreign' }),
+      useCase({ pointOfSaleId: 'pos-1', localId: 'local-foreign', ...auditContext }),
     ).rejects.toBeInstanceOf(ParentOwnershipError);
   });
 });

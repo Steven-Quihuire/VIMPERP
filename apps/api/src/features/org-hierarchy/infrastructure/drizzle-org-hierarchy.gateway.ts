@@ -1000,7 +1000,7 @@ export const createDrizzleOrgHierarchyGateway = (
       let deleted: AreaRow | null = null;
 
       try {
-        [deleted] = await db.transaction(async (tx) => {
+        const [deletedRow] = await db.transaction(async (tx) => {
           await clearScopeNodeReferences(tx, `area:${input.areaId}`);
           const [row] = await tx
             .delete(areasTable)
@@ -1031,6 +1031,7 @@ export const createDrizzleOrgHierarchyGateway = (
 
           return [row];
         });
+        deleted = deletedRow ?? null;
       } catch (error) {
         if (isForeignKeyViolation(error)) {
           throw new AreaConflictError(
@@ -1224,7 +1225,7 @@ export const createDrizzleOrgHierarchyGateway = (
       let deleted: WarehouseRow | null = null;
 
       try {
-        [deleted] = await db.transaction(async (tx) => {
+        const [deletedRow] = await db.transaction(async (tx) => {
           await clearScopeNodeReferences(tx, `warehouse:${input.warehouseId}`);
           const [row] = await tx
             .delete(warehousesTable)
@@ -1255,6 +1256,7 @@ export const createDrizzleOrgHierarchyGateway = (
 
           return [row];
         });
+        deleted = deletedRow ?? null;
       } catch (error) {
         if (isForeignKeyViolation(error)) {
           throw new WarehouseConflictError(
@@ -1418,7 +1420,7 @@ export const createDrizzleOrgHierarchyGateway = (
       let deleted: PointOfSaleRow | null = null;
 
       try {
-        [deleted] = await db.transaction(async (tx) => {
+        const [deletedRow] = await db.transaction(async (tx) => {
           await clearScopeNodeReferences(
             tx,
             `point-of-sale:${input.pointOfSaleId}`,
@@ -1452,6 +1454,7 @@ export const createDrizzleOrgHierarchyGateway = (
 
           return [row];
         });
+        deleted = deletedRow ?? null;
       } catch (error) {
         if (isForeignKeyViolation(error)) {
           throw new PointOfSaleConflictError(
