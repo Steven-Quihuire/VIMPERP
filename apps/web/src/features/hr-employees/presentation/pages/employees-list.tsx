@@ -49,7 +49,6 @@ import {
   useDeleteEmployee,
   useEmployees,
   useEmployeesPage,
-  usePositions,
   useUpdateEmployee,
 } from '../../application/hr-employees-queries';
 import {
@@ -62,10 +61,8 @@ import { EmployeeFilters } from '../components/employee-filters';
 import type { EmployeeFiltersValue } from '../components/employee-filters';
 import { EmployeeRowActions } from '../components/employee-row-actions';
 import { EmployeeFormPage } from './employee-form';
-import {
-  defaultPageSizeOptions,
-  TablePageSize,
-} from '@/shared/ui/table-page-size';
+import { TablePageSize } from '@/shared/ui/table-page-size';
+import { defaultPageSizeOptions } from '@/shared/ui/table-page-size-options';
 import { HoverExpandFab } from '@/shared/ui/hover-expand-fab';
 
 const employeeMonthLabels = [
@@ -135,12 +132,10 @@ export const EmployeesListPage = ({
     apiBaseUrl,
   );
   const allEmployeesQuery = useEmployees(companyId, apiBaseUrl);
-  const positionsQuery = usePositions(companyId, apiBaseUrl);
   const deleteEmployeeMutation = useDeleteEmployee(apiBaseUrl);
   const updateEmployeeMutation = useUpdateEmployee(apiBaseUrl);
 
   const allEmployees = allEmployeesQuery.data ?? [];
-  const positions = positionsQuery.data ?? [];
 
   const employees = useMemo(() => {
     const base = employeesQuery.data?.items ?? [];
@@ -188,9 +183,6 @@ export const EmployeesListPage = ({
 
   const allOnPageSelected =
     employees.length > 0 && employees.every((employee) => selectedIds.has(employee.id));
-  const someOnPageSelected = employees.some((employee) =>
-    selectedIds.has(employee.id),
-  );
 
   const toggleId = (id: string) => {
     setSelectedIds((previous) => {

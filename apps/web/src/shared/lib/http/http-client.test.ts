@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createHttpClient, HttpError } from './http-client';
+import { createHttpClient } from './http-client';
 
 const createJsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {

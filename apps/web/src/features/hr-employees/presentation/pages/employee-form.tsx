@@ -48,7 +48,7 @@ import {
 } from '../../domain/employees';
 import { DatePickerField } from '../components/date-picker-field';
 import { DocumentDetectionBadge } from '../components/document-detection-badge';
-import { getScopeOptions } from './assignment-timeline';
+import { getScopeOptions } from './assignment-timeline.shared';
 import { AssignmentFields } from '../components/assignment-fields';
 
 const defaultValues: EmployeeFormValues = {

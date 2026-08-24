@@ -104,7 +104,7 @@ type AssignEmployeeRowProps = {
   employeeId: string;
   fullName: string;
   companyId: string;
-  apiBaseUrl?: string;
+  apiBaseUrl?: string | undefined;
 };
 
 const AssignEmployeeRow = ({
@@ -530,7 +530,7 @@ export const TimesheetPeriodsListPage = ({
                     key={option.employeeId}
                     employeeId={option.employeeId}
                     fullName={option.fullName}
-                    companyId={companyId as string}
+                    companyId={companyId}
                     apiBaseUrl={apiBaseUrl}
                   />
                 ))}

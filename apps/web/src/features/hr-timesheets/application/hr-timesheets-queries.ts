@@ -1,9 +1,9 @@
 import {
-  QueryClient,
   useMutation,
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
+import type { QueryClient } from '@tanstack/react-query';
 
 import type {
   CreateTimesheetEntryInput,
@@ -11,6 +11,7 @@ import type {
   DeleteTimesheetEntryInput,
   PatchTimesheetPeriodInput,
   RejectTimesheetPeriodInput,
+  TimesheetPeriod,
   TimesheetPeriodActionInput,
   TimesheetPeriodStatus,
   UpdateTimesheetEntryInput,
@@ -138,8 +139,10 @@ export const useDeleteTimesheetEntry = (apiBaseUrl?: string) => {
   });
 };
 
-const useTimesheetPeriodActionMutation = (
-  handler: (api: ReturnType<typeof createHrTimesheetsApi>) => (input: any) => Promise<any>,
+const useTimesheetPeriodActionMutation = <I extends TimesheetPeriodActionInput>(
+  handler: (
+    api: ReturnType<typeof createHrTimesheetsApi>,
+  ) => (input: I) => Promise<TimesheetPeriod>,
   apiBaseUrl?: string,
 ) => {
   const api = createHrTimesheetsApi(apiBaseUrl);
@@ -147,7 +150,7 @@ const useTimesheetPeriodActionMutation = (
 
   return useMutation({
     mutationFn: handler(api),
-    onSuccess: async (_period, input: TimesheetPeriodActionInput) => {
+    onSuccess: async (_period, input) => {
       await invalidatePeriodResources(queryClient, input.companyId, input.periodId);
     },
   });

@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import type { Employee } from '../../domain/employees';
 import type { Position } from '../../domain/positions';
 import type { OrgTreeNode } from '@/features/org-tree/domain/org-tree';
-import { scopeTypeLabels } from '../pages/assignment-timeline';
+import { scopeTypeLabels } from '../pages/assignment-timeline.shared';
 import {
   Field,
   FieldContent,

@@ -8,7 +8,6 @@ import {
 import type {
   AssignmentFormValues,
   CreateAssignmentInput,
-  EmployeeAssignmentWithEmployee,
 } from '../domain/assignments';
 import type {
   CreateEmployeeInput,

@@ -266,7 +266,7 @@ export const TimesheetPeriodDetailPage = ({
       <Dialog open={isEditDatesOpen} onOpenChange={setIsEditDatesOpen}>
         <DialogContent>
           <DialogTitle>Editar fechas del período</DialogTitle>
-          <form className="space-y-4" onSubmit={handlePatchDates}>
+          <form className="space-y-4" onSubmit={(event) => void handlePatchDates(event)}>
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="timesheet-edit-start">
                 Inicio

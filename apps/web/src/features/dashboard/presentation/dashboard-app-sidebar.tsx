@@ -79,7 +79,7 @@ const sidebarItemClass =
 const sidebarParentItemClass =
   'hover:bg-neutral-700 hover:text-white hover:pl-4 hover:rounded-2xl hover:[&>svg]:text-white data-[active=true]:bg-neutral-700 data-[active=true]:text-white data-[active=true]:[&>svg]:text-white data-[active=true]:pl-4 data-[active=true]:rounded-2xl transition-[width,height,padding,color,background-color] transition-all duration-400 ease-in-out';
 
-export const isHrNavigationActive = (pathname: string) =>
+const isHrNavigationActive = (pathname: string) =>
   pathname.startsWith('/dashboard/hr/') ||
   pathname === '/manage-employees' ||
   pathname === '/hr/responsibility';

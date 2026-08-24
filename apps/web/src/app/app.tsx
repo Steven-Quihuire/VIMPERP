@@ -748,9 +748,7 @@ const CategoriesRoute = ({ apiBaseUrl }: { apiBaseUrl?: string }) => {
   return <CategoriesPage session={auth.session} />;
 };
 
-const getActiveRole = (
-  session: import('../features/auth/domain/auth').AuthSession,
-) => {
+const getActiveRole = (session: AuthSession) => {
   if (!session.activeCompany) return null;
   return (
     session.memberships.find(

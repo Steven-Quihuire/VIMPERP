@@ -1,7 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { HttpError } from '@/shared/lib/http/http-client';
-
 import { createHrTimesheetsApi } from './create-hr-timesheets-api';
 
 const createJsonResponse = (body: unknown, status = 200) =>
