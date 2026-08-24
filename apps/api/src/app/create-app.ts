@@ -1,4 +1,5 @@
 import express, { type Express, type RequestHandler } from 'express';
+import { z } from 'zod';
 
 import { createGetApplicationErrorDetail } from '../features/admin/application/get-application-error-detail';
 import { createGetAuditEventDetail } from '../features/admin/application/get-audit-event-detail';
@@ -71,6 +72,7 @@ import { createCreatePositionUseCase } from '../features/hr-employees/applicatio
 import { createGetEmployeeUseCase } from '../features/hr-employees/application/get-employee';
 import { createListEmployeesUseCase } from '../features/hr-employees/application/list-employees';
 import { createListAssignmentHistoryUseCase } from '../features/hr-employees/application/list-assignment-history';
+import { createListAssignmentsUseCase } from '../features/hr-employees/application/list-assignments';
 import { createUpdateEmployeeUseCase } from '../features/hr-employees/application/update-employee';
 import { createResolveDirectReportsUseCase } from '../features/hr-employees/application/resolve-direct-reports';
 import { createResolveReportingLineUseCase } from '../features/hr-employees/application/resolve-reporting-line';
@@ -126,6 +128,7 @@ import { createApprovePeriodUseCase } from '../features/hr-timesheets/applicatio
 import type { ApprovalPolicyGateway as TimesheetApprovalPolicyGateway } from '../features/hr-timesheets/application/approval-policy.gateway';
 import { createCreatePeriodUseCase } from '../features/hr-timesheets/application/create-period';
 import { createGetPeriodUseCase } from '../features/hr-timesheets/application/get-period';
+import { createListEntriesUseCase } from '../features/hr-timesheets/application/list-entries';
 import { createListPeriodsUseCase } from '../features/hr-timesheets/application/list-periods';
 import { createPatchPeriodUseCase } from '../features/hr-timesheets/application/patch-period';
 import { createRejectPeriodUseCase } from '../features/hr-timesheets/application/reject-period';
@@ -247,6 +250,7 @@ type CreateAppInput = {
 
 const ACTIVE_COMPANY_SWITCH_WINDOW_MS = 60 * 1000;
 const ACTIVE_COMPANY_SWITCH_LIMIT = 10;
+const nonEmptyPathParamSchema = z.string().trim().min(1);
 
 export const createAppRuntime = (input: CreateAppInput = {}) => {
   const db = createDb(input.databaseUrl);
@@ -853,10 +857,14 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     response: Parameters<RequestHandler>[1];
     auth: AuthSession;
   }): Promise<PermissionScope | undefined> => {
-    const companyId = String(request.params.companyId);
+    const companyId = nonEmptyPathParamSchema.parse(request.params.companyId);
+    const periodId =
+      typeof request.params.periodId === 'string'
+        ? nonEmptyPathParamSchema.parse(request.params.periodId)
+        : null;
     const body = (request.body ?? {}) as { employeeAssignmentId?: unknown };
     const context = await getActorTimesheetContext({ companyId, auth });
-    const isPeriodRoute = typeof request.params.periodId === 'string';
+    const isPeriodRoute = periodId !== null;
 
     let targetEmployeeId: string | null = null;
 
@@ -874,7 +882,7 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
     } else if (isPeriodRoute) {
       const period = await timesheetGateway.getPeriod(
         companyId,
-        String(request.params.periodId),
+        periodId,
       );
 
       if (!period) {
@@ -916,6 +924,7 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
   const createPeriod = createCreatePeriodUseCase({ gateway: timesheetGateway });
   const listPeriods = createListPeriodsUseCase({ gateway: timesheetGateway });
   const getPeriod = createGetPeriodUseCase({ gateway: timesheetGateway });
+  const listEntries = createListEntriesUseCase({ gateway: timesheetGateway });
   const patchPeriod = createPatchPeriodUseCase({ gateway: timesheetGateway });
   const addEntry = createAddEntryUseCase({ gateway: timesheetGateway });
   const updateEntry = createUpdateEntryUseCase({ gateway: timesheetGateway });
@@ -1218,6 +1227,14 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
 
         return await getPeriod({ companyId, periodId, visibleEmployeeIds });
       },
+      listEntries: async ({ companyId, periodId, auth }) => {
+        const visibleEmployeeIds = await listVisibleTimesheetEmployeeIds({
+          companyId,
+          auth,
+        });
+
+        return await listEntries({ companyId, periodId, visibleEmployeeIds });
+      },
       patchPeriod: async ({ companyId, periodId, periodStart, periodEnd }) =>
         await patchPeriod({ companyId, periodId, periodStart, periodEnd }),
       createEntry: async ({
@@ -1304,6 +1321,9 @@ export const createAppRuntime = (input: CreateAppInput = {}) => {
         gateway: hrEmployeesGateway,
       }),
       listAssignmentHistory: createListAssignmentHistoryUseCase({
+        gateway: hrEmployeesGateway,
+      }),
+      listAssignments: createListAssignmentsUseCase({
         gateway: hrEmployeesGateway,
       }),
       resolveReportingLine: createResolveReportingLineUseCase({

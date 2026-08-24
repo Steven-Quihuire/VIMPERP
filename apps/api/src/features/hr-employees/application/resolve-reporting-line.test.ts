@@ -98,6 +98,7 @@ const createGateway = (): HrEmployeesGateway => ({
   },
   getActivePrimaryAssignmentByPositionId: () => Promise.resolve(null),
   listDirectReportAssignments: () => Promise.resolve([]),
+  listActivePrimaryAssignments: () => Promise.resolve([]),
 });
 
 describe('createResolveReportingLineUseCase', () => {

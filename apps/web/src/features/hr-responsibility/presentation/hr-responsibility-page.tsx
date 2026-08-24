@@ -25,10 +25,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/ui/table';
-import {
-  defaultPageSizeOptions,
-  TablePageSize,
-} from '@/shared/ui/table-page-size';
+import { TablePageSize } from '@/shared/ui/table-page-size';
+import { defaultPageSizeOptions } from '@/shared/ui/table-page-size-options';
 
 import { useHrResponsibility } from '../application/hr-responsibility-queries';
 

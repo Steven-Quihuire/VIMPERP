@@ -5,7 +5,10 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 
-import type { AssignmentFormValues } from '../domain/assignments';
+import type {
+  AssignmentFormValues,
+  CreateAssignmentInput,
+} from '../domain/assignments';
 import type {
   CreateEmployeeInput,
   UpdateEmployeeInput,
@@ -44,6 +47,8 @@ export const hrEmployeesQueryKeys = {
     ['hr-employees', 'direct-reports', companyId, employeeId] as const,
   assignmentHistory: (companyId: string, employeeId: string) =>
     ['hr-employees', 'assignment-history', companyId, employeeId] as const,
+  assignments: (companyId: string) =>
+    ['hr-employees', 'assignments', companyId] as const,
 };
 
 export const useEmployees = (
@@ -196,6 +201,38 @@ export const useCreatePosition = (apiBaseUrl?: string) => {
         queryKey: hrEmployeesQueryKeys.positions(position.companyId),
       });
     },
+  });
+};
+
+export const useCreateAssignment = (apiBaseUrl?: string) => {
+  const api = createHrEmployeesApi(apiBaseUrl);
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateAssignmentInput) => api.createAssignment(input),
+    onSuccess: async (assignment) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: hrEmployeesQueryKeys.assignments(assignment.companyId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: hrEmployeesQueryKeys.employees(assignment.companyId),
+        }),
+      ]);
+    },
+  });
+};
+
+export const useCompanyAssignments = (
+  companyId: string | undefined,
+  apiBaseUrl?: string,
+) => {
+  const api = createHrEmployeesApi(apiBaseUrl);
+
+  return useQuery({
+    queryKey: hrEmployeesQueryKeys.assignments(companyId ?? ''),
+    queryFn: () => api.listAssignments(companyId as string),
+    enabled: Boolean(companyId),
   });
 };
 

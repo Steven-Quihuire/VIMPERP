@@ -997,7 +997,7 @@ export const createDrizzleOrgHierarchyGateway = (
       return toArea(updated);
     },
     deleteArea: async (input) => {
-      let deleted: AreaRow | null = null;
+      let deleted: AreaRow | null | undefined = null;
 
       try {
         const [deletedRow] = await db.transaction(async (tx) => {
@@ -1222,7 +1222,7 @@ export const createDrizzleOrgHierarchyGateway = (
       return toWarehouse(updated);
     },
     deleteWarehouse: async (input) => {
-      let deleted: WarehouseRow | null = null;
+      let deleted: WarehouseRow | null | undefined = null;
 
       try {
         const [deletedRow] = await db.transaction(async (tx) => {
@@ -1417,7 +1417,7 @@ export const createDrizzleOrgHierarchyGateway = (
       return toPointOfSale(updated);
     },
     deletePointOfSale: async (input) => {
-      let deleted: PointOfSaleRow | null = null;
+      let deleted: PointOfSaleRow | null | undefined = null;
 
       try {
         const [deletedRow] = await db.transaction(async (tx) => {

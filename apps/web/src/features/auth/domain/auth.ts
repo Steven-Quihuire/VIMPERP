@@ -30,7 +30,11 @@ export type ScopeRef = {
 export type AuthCapability =
   | 'catalog.read'
   | 'catalog.write'
-  | 'catalog.delete';
+  | 'catalog.delete'
+  | 'hr.timesheets.read'
+  | 'hr.timesheets.write'
+  | 'hr.timesheets.submit'
+  | 'hr.timesheets.approve';
 
 export type AuthUser = {
   id: string;
@@ -92,3 +96,6 @@ export const needsActiveCompanySelection = (session: AuthSession) =>
 export const hasBlockedActiveCompany = (session: AuthSession) =>
   session.activeCompany?.status === 'suspended' ||
   session.activeCompany?.status === 'provisioning_failed';
+
+export const hasTimesheetReadVisibility = (session: AuthSession) =>
+  session.capabilities.includes('hr.timesheets.read');

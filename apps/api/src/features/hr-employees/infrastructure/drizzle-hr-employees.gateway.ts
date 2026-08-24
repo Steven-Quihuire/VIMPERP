@@ -616,4 +616,32 @@ export const createDrizzleHrEmployeesGateway = (
 
     return rows.map((row) => toEmployeeAssignment(row.employee_assignments));
   },
+  listActivePrimaryAssignments: async (companyId) => {
+    const rows = await db
+      .select({
+        assignment: employeeAssignmentsTable,
+        fullName: employeesTable.fullName,
+      })
+      .from(employeeAssignmentsTable)
+      .innerJoin(
+        employeesTable,
+        and(
+          eq(employeesTable.id, employeeAssignmentsTable.employeeId),
+          eq(employeesTable.companyId, employeeAssignmentsTable.companyId),
+        ),
+      )
+      .where(
+        and(
+          eq(employeeAssignmentsTable.companyId, companyId),
+          eq(employeeAssignmentsTable.isPrimary, true),
+          isNull(employeeAssignmentsTable.endedAt),
+        ),
+      )
+      .orderBy(employeesTable.fullName);
+
+    return rows.map(({ assignment, fullName }) => ({
+      ...toEmployeeAssignment(assignment),
+      fullName,
+    }));
+  },
 });

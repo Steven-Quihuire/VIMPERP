@@ -119,7 +119,7 @@ export const AcceptHrResponsibilityInvitationPage = ({
                 })
                 .then(async () => {
                   await auth.refetch();
-                  navigate('/dashboard/hr/responsibility', { replace: true });
+                  void navigate('/dashboard/hr/responsibility', { replace: true });
                 })
                 .catch((reason) => setError(message(reason)));
             }}

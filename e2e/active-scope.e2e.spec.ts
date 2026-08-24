@@ -39,7 +39,7 @@ const seedActiveScopeHierarchy = () => {
   );
 };
 
-test.beforeEach(async () => {
+test.beforeEach(() => {
   seedActiveScopeHierarchy();
 });
 

@@ -76,11 +76,11 @@ export const AcceptErpAccessInvitationPage = ({
                   const nextSession = await auth.refetch();
 
                   if (nextSession.data?.activeCompany) {
-                    navigate('/dashboard/organization', { replace: true });
+                    void navigate('/dashboard/organization', { replace: true });
                     return;
                   }
 
-                  navigate('/dashboard', { replace: true });
+                  void navigate('/dashboard', { replace: true });
                 } catch (error) {
                   form.setError('root', { message: getErrorMessage(error) });
                 }

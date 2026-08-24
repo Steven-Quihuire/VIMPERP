@@ -25,8 +25,6 @@ import {
   type Employee,
   type EmploymentStatus,
 } from '@/features/hr-employees/domain/employees';
-import { EmployeeEditDrawer } from '../components/employee-edit-drawer';
-import { AssignmentTimelinePage } from './assignment-timeline';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +44,9 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
 import { Skeleton } from '@/shared/ui/skeleton';
+import { EmployeeEditDrawer } from '../components/employee-edit-drawer';
+import { AssignmentTimelinePage } from './assignment-timeline';
+import { tabItems, type DetailTab } from './employee-detail-tabs';
 
 const fallbackImage =
   'https://i.ibb.co/Pzv53qFM/Whats-App-Image-2026-08-15-at-13-57-12.jpg';
@@ -53,23 +54,18 @@ const fallbackImage =
 const formatDate = (value: string | null | undefined) =>
   value ? new Date(value).toLocaleDateString('es-AR') : 'No informado';
 
-type DetailTab = 'info' | 'assignment' | 'documents' | 'history';
-
-const tabItems: { id: DetailTab; label: string }[] = [
-  { id: 'info', label: 'Información' },
-  { id: 'assignment', label: 'Asignación' },
-  { id: 'documents', label: 'Documentos' },
-  { id: 'history', label: 'Historial' },
-];
-
 export const EmployeeDetailPage = ({
   session,
   employeeId,
+  activeTab,
+  onSelectTab,
   apiBaseUrl,
   onDeleted,
 }: {
   session: AuthSession;
   employeeId: string | null;
+  activeTab: DetailTab;
+  onSelectTab: (tab: DetailTab) => void;
   apiBaseUrl?: string;
   onDeleted?: (deleted: Employee) => void;
 }) => {
@@ -89,7 +85,6 @@ export const EmployeeDetailPage = ({
   );
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<DetailTab>('info');
 
   if (!companyId) {
     return (
@@ -204,127 +199,6 @@ export const EmployeeDetailPage = ({
 
   return (
     <section className="space-y-6">
-      <div className="overflow-hidden rounded-[18px] border border-black/10 bg-[#fbfbfa]">
-        <div className="grid lg:grid-cols-[minmax(260px,0.72fr)_1.28fr]">
-          <div className="relative h-56 lg:h-full">
-            <img
-              src={employee.avatarUrl || fallbackImage}
-              alt={`Foto de ${displayName}`}
-              className="absolute inset-0 size-full object-cover grayscale"
-              onError={(event) => {
-                event.currentTarget.src = fallbackImage;
-              }}
-            />
-            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 via-black/60 to-transparent" />
-            <div className="absolute inset-x-4 bottom-4 z-10 p-4">
-              <h2 className="mt-3 text-2xl font-medium tracking-[-0.04em] text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                {displayName}
-              </h2>
-              <p className="mt-2 text-sm text-white/95 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
-                {employee.email || 'Sin correo informado'}
-              </p>
-            </div>
-          </div>
-
-          <div className="relative p-9">
-            <div className="absolute right-5 top-5 flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="shrink-0 cursor-pointer rounded-2xl"
-                onClick={() => setIsEditOpen(true)}
-                disabled={updateEmployeeMutation.isPending}
-              >
-                <Pencil className="size-4" />
-                Editar
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    aria-label="Más acciones"
-                    className="shrink-0 cursor-pointer rounded-2xl"
-                  >
-                    <MoreHorizontal className="size-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                  {employee.employmentStatus === 'active' ? (
-                    <DropdownMenuItem onClick={() => void changeStatus('suspended')}>
-                      Suspender
-                    </DropdownMenuItem>
-                  ) : (
-                    <DropdownMenuItem onClick={() => void changeStatus('active')}>
-                      Activar
-                    </DropdownMenuItem>
-                  )}
-                  {employee.employmentStatus !== 'separated' ? (
-                    <DropdownMenuItem onClick={() => void changeStatus('separated')}>
-                      Desvincular
-                    </DropdownMenuItem>
-                  ) : null}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    variant="destructive"
-                    onClick={() => setIsDeleteOpen(true)}
-                  >
-                    Eliminar
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={
-                  employee.employmentStatus === 'separated'
-                    ? 'rounded-2xl border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700'
-                    : employee.employmentStatus === 'suspended'
-                      ? 'rounded-2xl border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700'
-                      : 'rounded-2xl border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700'
-                }
-              >
-                {employee.employmentStatus === 'active'
-                  ? 'Activo'
-                  : employee.employmentStatus === 'suspended'
-                    ? 'Suspendido'
-                    : 'Desvinculado'}
-              </span>
-            </div>
-
-            <div className="mt-6 grid gap-x-8 sm:grid-cols-2">
-              {readOnlyField('Nombre completo', employee.fullName || 'No informado')}
-              {readOnlyField('Correo electrónico', employee.email || 'No informado')}
-              {readOnlyField(
-                'Tipo de documento',
-                employee.documentType
-                  ? employee.documentType.toUpperCase()
-                  : 'No informado',
-              )}
-              {readOnlyField(
-                'Número de documento',
-                employee.documentNumber || 'No informado',
-              )}
-              {readOnlyField(
-                'Fecha de contratación',
-                formatDate(employee.hiredAt),
-              )}
-              {readOnlyField('Fecha de registro', formatDate(employee.createdAt))}
-              {readOnlyField('ID del empleado', employee.id)}
-              {readOnlyField('Jefe directo', managerName)}
-              <div className="py-4 sm:col-span-2">
-                <p className="text-xs text-black/45">Reportes directos</p>
-                <p className="mt-1 wrap-break-words text-sm leading-5 text-black/80">
-                  {directReportsName}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <nav aria-label="Secciones del empleado" className="overflow-x-auto">
         <ul className="flex min-w-max gap-6 text-sm">
           {tabItems.map((tab) => (
@@ -332,8 +206,8 @@ export const EmployeeDetailPage = ({
               <button
                 type="button"
                 aria-pressed={activeTab === tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex h-8 items-center whitespace-nowrap border-b-2 px-1 font-medium transition-colors ${
+                onClick={() => onSelectTab(tab.id)}
+                className={`inline-flex h-8 items-center whitespace-nowrap border-b-2 px-1 font-medium transition-colors cursor-pointer ${
                   activeTab === tab.id
                     ? 'border-primary text-primary'
                     : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground'
@@ -345,6 +219,143 @@ export const EmployeeDetailPage = ({
           ))}
         </ul>
       </nav>
+      {activeTab === 'info' ? (
+        <div className="overflow-hidden rounded-[18px] border border-black/10 bg-[#fbfbfa]">
+          <div className="grid lg:grid-cols-[minmax(260px,0.72fr)_1.28fr]">
+            <div className="relative h-56 lg:h-full">
+              <img
+                src={employee.avatarUrl || fallbackImage}
+                alt={`Foto de ${displayName}`}
+                className="absolute inset-0 size-full object-cover grayscale"
+                onError={(event) => {
+                  event.currentTarget.src = fallbackImage;
+                }}
+              />
+              <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 via-black/60 to-transparent" />
+              <div className="absolute inset-x-4 bottom-4 z-10 p-4">
+                <h2 className="mt-3 text-2xl font-medium tracking-[-0.04em] text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                  {displayName}
+                </h2>
+                <p className="mt-2 text-sm text-white/95 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+                  {employee.email || 'Sin correo informado'}
+                </p>
+              </div>
+            </div>
+
+            <div className="relative p-9">
+              <div className="absolute right-5 top-5 flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="shrink-0 cursor-pointer rounded-2xl"
+                  onClick={() => setIsEditOpen(true)}
+                  disabled={updateEmployeeMutation.isPending}
+                >
+                  <Pencil className="size-4" />
+                  Editar
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      aria-label="Más acciones"
+                      className="shrink-0 cursor-pointer rounded-2xl"
+                    >
+                      <MoreHorizontal className="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                    {employee.employmentStatus === 'active' ? (
+                      <DropdownMenuItem
+                        onClick={() => void changeStatus('suspended')}
+                      >
+                        Suspender
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem
+                        onClick={() => void changeStatus('active')}
+                      >
+                        Activar
+                      </DropdownMenuItem>
+                    )}
+                    {employee.employmentStatus !== 'separated' ? (
+                      <DropdownMenuItem
+                        onClick={() => void changeStatus('separated')}
+                      >
+                        Desvincular
+                      </DropdownMenuItem>
+                    ) : null}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => setIsDeleteOpen(true)}
+                    >
+                      Eliminar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={
+                    employee.employmentStatus === 'separated'
+                      ? 'rounded-2xl border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700'
+                      : employee.employmentStatus === 'suspended'
+                        ? 'rounded-2xl border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700'
+                        : 'rounded-2xl border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700'
+                  }
+                >
+                  {employee.employmentStatus === 'active'
+                    ? 'Activo'
+                    : employee.employmentStatus === 'suspended'
+                      ? 'Suspendido'
+                      : 'Desvinculado'}
+                </span>
+              </div>
+
+              <div className="mt-6 grid gap-x-8 sm:grid-cols-2">
+                {readOnlyField(
+                  'Nombre completo',
+                  employee.fullName || 'No informado',
+                )}
+                {readOnlyField(
+                  'Correo electrónico',
+                  employee.email || 'No informado',
+                )}
+                {readOnlyField(
+                  'Tipo de documento',
+                  employee.documentType
+                    ? employee.documentType.toUpperCase()
+                    : 'No informado',
+                )}
+                {readOnlyField(
+                  'Número de documento',
+                  employee.documentNumber || 'No informado',
+                )}
+                {readOnlyField(
+                  'Fecha de contratación',
+                  formatDate(employee.hiredAt),
+                )}
+                {readOnlyField(
+                  'Fecha de registro',
+                  formatDate(employee.createdAt),
+                )}
+                {readOnlyField('ID del empleado', employee.id)}
+                {readOnlyField('Jefe directo', managerName)}
+                <div className="py-4 sm:col-span-2">
+                  <p className="text-xs text-black/45">Reportes directos</p>
+                  <p className="mt-1 wrap-break-words text-sm leading-5 text-black/80">
+                    {directReportsName}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {activeTab === 'assignment' ? (
         <AssignmentTimelinePage
@@ -415,9 +426,7 @@ export const EmployeeDetailPage = ({
             <AlertDialogTitle>¿Eliminar este empleado?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta acción elimina el registro de{' '}
-              <span className="font-medium text-foreground">
-                {displayName}
-              </span>{' '}
+              <span className="font-medium text-foreground">{displayName}</span>{' '}
               y no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>

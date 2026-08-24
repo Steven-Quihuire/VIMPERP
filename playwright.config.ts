@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 
 import { chromium, defineConfig } from '@playwright/test';
 
-const databaseUrl = 'postgres://postgres:postgres@127.0.0.1:5432/vimcore_e2e';
+const databaseUrl = 'postgres://postgres:postgres@127.0.0.1:5433/vimcore_e2e';
 const executablePath =
   process.env.PLAYWRIGHT_EXECUTABLE_PATH ??
   [

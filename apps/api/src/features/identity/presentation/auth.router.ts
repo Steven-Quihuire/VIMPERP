@@ -2,6 +2,7 @@ import { Router, type RequestHandler } from 'express';
 import { z } from 'zod';
 
 import type { AuthRole, AuthSession } from '../domain/auth';
+import { authCapabilityValues } from '../domain/auth';
 import { scopeTypeValues, type ScopeResolver } from '../../../shared/infrastructure/scope-hierarchy/scope-hierarchy.port';
 
 type Login = (input: {
@@ -71,7 +72,7 @@ const authSessionSchema = z.object({
     .nullable(),
   activeLocalId: z.string().min(1).nullable(),
   capabilities: z.array(
-    z.enum(['catalog.read', 'catalog.write', 'catalog.delete']),
+    z.enum(authCapabilityValues),
   ),
 });
 

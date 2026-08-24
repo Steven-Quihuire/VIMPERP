@@ -251,6 +251,26 @@ class InMemoryHrEmployeesGateway implements HrEmployeesGateway {
         scopeNodeName: this.scopeNodes.find((node) => node.id === assignment.scopeNodeId)?.name ?? '',
       })));
   }
+  listActivePrimaryAssignments(companyId: string) {
+    return Promise.resolve(
+      this.assignments
+        .filter(
+          (assignment) =>
+            assignment.companyId === companyId &&
+            assignment.isPrimary &&
+            assignment.endedAt === null,
+        )
+        .map((assignment) => ({
+          ...assignment,
+          fullName:
+            this.employees.find(
+              (employee) =>
+                employee.id === assignment.employeeId &&
+                employee.companyId === companyId,
+            )?.fullName ?? '',
+        })),
+    );
+  }
   getActivePrimaryAssignmentByEmployeeId(companyId: string, employeeId: string) {
     return Promise.resolve(
       this.assignments.find(
@@ -623,6 +643,9 @@ describe('hr employees routes', () => {
         startedAt: '2026-08-13T12:00:00.000Z',
       });
     expect(managerAssignmentResponse.status).toBe(201);
+    const managerAssignmentId = (
+      managerAssignmentResponse.body as { id: string }
+    ).id;
 
     const createEmployeeResponse = await request(app)
       .post('/companies/company-1/hr-employees')
@@ -660,7 +683,7 @@ describe('hr employees routes', () => {
     expect(managerResponse.body).toEqual({
       employeeId: manager.id,
       positionId: 'position-lead',
-      assignmentId: managerAssignmentResponse.body.id,
+      assignmentId: managerAssignmentId,
     });
 
     const listedPositionsResponse = await request(app)
@@ -732,5 +755,99 @@ describe('hr employees routes', () => {
       .set('Cookie', sessionCookie);
 
     expect(response.status).toBe(403);
+  });
+
+  it('lists active primary assignments joined with employee full name', async () => {
+    const authGateway = new InMemoryAuthGateway();
+    authGateway.addUser({
+      id: 'owner-1',
+      email: 'owner@vimcore.test',
+      username: 'owner',
+      passwordHash: 'hashed:secret123',
+    });
+    authGateway.setMemberships('owner-1', [
+      { companyId: 'company-1', role: 'company-owner', divisionId: null, localId: null },
+    ]);
+    await authGateway.setActiveCompanyId('owner-1', 'company-1');
+
+    const hrEmployeesGateway = new InMemoryHrEmployeesGateway();
+    hrEmployeesGateway.employees.push({
+      id: 'emp-1',
+      companyId: 'company-1',
+      fullName: 'Ana Torres',
+      createdAt: new Date('2026-08-13T12:00:00.000Z'),
+    });
+    hrEmployeesGateway.assignments.push({
+      id: 'assignment-1',
+      companyId: 'company-1',
+      employeeId: 'emp-1',
+      scopeNodeId: 'company:company-1',
+      positionId: 'position-1',
+      startedAt: new Date('2026-08-13T12:00:00.000Z'),
+      endedAt: null,
+      isPrimary: true,
+      createdAt: new Date('2026-08-13T12:00:00.000Z'),
+    });
+    hrEmployeesGateway.assignments.push({
+      id: 'assignment-ended',
+      companyId: 'company-1',
+      employeeId: 'emp-1',
+      scopeNodeId: 'company:company-1',
+      positionId: 'position-1',
+      startedAt: new Date('2026-08-01T12:00:00.000Z'),
+      endedAt: new Date('2026-08-10T12:00:00.000Z'),
+      isPrimary: true,
+      createdAt: new Date('2026-08-01T12:00:00.000Z'),
+    });
+
+    const app = createApp({
+      adminGateway,
+      authIdentityGateway: authGateway,
+      computeEffectivePermissions: () => Promise.resolve(['hr.employees.read']),
+      hrEmployeesGateway,
+      passwordHasher,
+      sessionTokenService,
+      scopeResolver: createInMemoryScopeResolver({
+        nodes: [
+          {
+            ref: { scopeType: 'company', scopeId: 'company-1' },
+            parentRef: null,
+            companyId: 'company-1',
+            name: 'Vimcore',
+          },
+        ],
+        assignments: [
+          {
+            companyId: 'company-1',
+            userId: 'owner-1',
+            scope: { scopeType: 'company', scopeId: 'company-1' },
+            mode: 'subtree_inclusive',
+          },
+        ],
+      }),
+      seedAdminEnabled: false,
+      nodeEnv: 'test',
+    });
+
+    const loginResponse = await request(app).post('/auth/login').send({
+      identifier: 'owner',
+      password: 'secret123',
+    });
+    const sessionCookie = getSessionCookie(loginResponse.headers['set-cookie']);
+
+    const response = await request(app)
+      .get('/companies/company-1/hr-employees/assignments')
+      .set('Cookie', sessionCookie);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([
+      expect.objectContaining({
+        id: 'assignment-1',
+        employeeId: 'emp-1',
+        fullName: 'Ana Torres',
+        isPrimary: true,
+        endedAt: null,
+      }),
+    ]);
   });
 });

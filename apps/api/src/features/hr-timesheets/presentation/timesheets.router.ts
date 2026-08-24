@@ -10,15 +10,17 @@ import type { PermissionScope } from '../../roles-management/domain/assignments'
 
 const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
 
-const companyParamsSchema = z.object({ companyId: z.string().min(1) });
+const nonEmptyPathParam = z.string().trim().min(1);
+
+const companyParamsSchema = z.object({ companyId: nonEmptyPathParam });
 const periodParamsSchema = z.object({
-  companyId: z.string().min(1),
-  periodId: z.string().min(1),
+  companyId: nonEmptyPathParam,
+  periodId: nonEmptyPathParam,
 });
 const entryParamsSchema = z.object({
-  companyId: z.string().min(1),
-  periodId: z.string().min(1),
-  entryId: z.string().min(1),
+  companyId: nonEmptyPathParam,
+  periodId: nonEmptyPathParam,
+  entryId: nonEmptyPathParam,
 });
 const listPeriodsQuerySchema = z.object({
   status: z.enum(timesheetPeriodStatusValues).optional(),
@@ -71,6 +73,7 @@ export const createTimesheetsRouter = ({
   getPeriod,
   patchPeriod,
   createEntry,
+  listEntries,
   updateEntry,
   deleteEntry,
   submitPeriod,
@@ -116,6 +119,11 @@ export const createTimesheetsRouter = ({
     projectId: string | null;
     taskLabel: string;
     note: string | null;
+    auth: AuthSession;
+  }) => Promise<unknown>;
+  listEntries: (input: {
+    companyId: string;
+    periodId: string;
     auth: AuthSession;
   }) => Promise<unknown>;
   updateEntry: (input: {
@@ -222,6 +230,23 @@ export const createTimesheetsRouter = ({
 
         ensureCompanyAccess(auth, params.companyId);
         response.status(200).json(await getPeriod({ ...params, auth }));
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.get(
+    '/companies/:companyId/timesheets/:periodId/entries',
+    requireAuth,
+    requireTimesheetCapability('hr.timesheets.read'),
+    async (request, response, next) => {
+      try {
+        const params = periodParamsSchema.parse(request.params);
+        const auth = getAuth(response);
+
+        ensureCompanyAccess(auth, params.companyId);
+        response.status(200).json(await listEntries({ ...params, auth }));
       } catch (error) {
         next(error);
       }

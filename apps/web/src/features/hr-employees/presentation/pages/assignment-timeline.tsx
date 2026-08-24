@@ -1,18 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, Network } from 'lucide-react';
+import { Briefcase, CalendarClock, Loader2, MapPin, Network } from 'lucide-react';
 import { useForm, useWatch } from 'react-hook-form';
 
 import type { AuthSession } from '@/features/auth/domain/auth';
 import { useOrgTree } from '@/features/org-tree/application/org-tree-queries';
-import type { OrgTreeNode } from '@/features/org-tree/domain/org-tree';
 import { Button } from '@/shared/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/shared/ui/card';
 import {
   Field,
   FieldContent,
@@ -32,49 +24,15 @@ import {
   toCreateAssignmentInput,
   type AssignmentFormValues,
 } from '../../domain/assignments';
+import {
+  getScopeOptions,
+  scopeTypeLabels,
+} from './assignment-timeline.shared';
 
 const defaultValues: AssignmentFormValues = {
   scopeNodeId: '',
   positionId: '',
   startedAt: '2026-08-13T12:30',
-};
-
-export const scopeTypeLabels = {
-  company: 'Empresa',
-  division: 'División',
-  local: 'Local',
-  area: 'Área',
-  warehouse: 'Almacén',
-  'point-of-sale': 'Punto de venta',
-} as const;
-
-const scopeKey = (node: { ref: { scopeType: string; scopeId: string } }) =>
-  `${node.ref.scopeType}:${node.ref.scopeId}`;
-
-export const getScopeOptions = (nodes: OrgTreeNode[]) => {
-  const nodeKeys = new Set(nodes.map(scopeKey));
-  const children = new Map<string, typeof nodes>();
-  for (const node of nodes) {
-    if (!node.parentRef) continue;
-    const parentKey = `${node.parentRef.scopeType}:${node.parentRef.scopeId}`;
-    children.set(parentKey, [...(children.get(parentKey) ?? []), node]);
-  }
-  const visit = (
-    node: (typeof nodes)[number],
-    depth: number,
-  ): { node: (typeof nodes)[number]; depth: number }[] => [
-    { node, depth },
-    ...(children.get(scopeKey(node)) ?? []).flatMap((child) =>
-      visit(child, depth + 1),
-    ),
-  ];
-  return nodes
-    .filter(
-      (node) =>
-        !node.parentRef ||
-        !nodeKeys.has(`${node.parentRef.scopeType}:${node.parentRef.scopeId}`),
-    )
-    .flatMap((node) => visit(node, 0));
 };
 
 export const AssignmentTimelinePage = ({
@@ -128,26 +86,43 @@ export const AssignmentTimelinePage = ({
   });
   const scopeOptions = getScopeOptions(orgTreeQuery.data ?? []);
 
+  const selectedPosition = (positionsQuery.data ?? []).find(
+    (position) => position.id === watchedValues.positionId,
+  );
+  const selectedScope = scopeOptions.find(
+    (option) =>
+      `${option.node.ref.scopeType}:${option.node.ref.scopeId}` ===
+      watchedValues.scopeNodeId,
+  );
+  const formatAssignmentDate = (value: string | undefined) => {
+    if (!value) return 'Por definir';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString('es-AR', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  };
+
   return (
-    <Card className="border-border/70 bg-card/95 shadow-sm">
-      <CardHeader className="border-b bg-muted/15 px-5 py-5">
-        <div className="-mt-4 flex items-center gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted">
+    <div className="space-y-6">
+      <div className="overflow-hidden rounded-[18px] border border-black/10 bg-[#fbfbfa]">
+        <div className="flex items-center gap-4 p-6">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
             <Network className="size-6" />
           </span>
           <div>
-            <CardTitle className="text-xl font-medium tracking-tight">
-              Asignación inicial
-            </CardTitle>
-            <CardDescription>
-              Puesto, ubicación y desde cuándo.
-            </CardDescription>
+            <h2 className="text-xl font-medium tracking-tight">Asignación</h2>
+            <p className="text-sm text-muted-foreground">
+              Elegí el puesto, dónde trabaja y desde cuándo.
+            </p>
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-6 px-5 py-5">
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
         <form
-          className="space-y-5 rounded-xl border bg-muted/10 p-5"
+          className="space-y-5 rounded-[18px] border border-black/10 bg-white p-6"
           onSubmit={(event) => {
             void form.handleSubmit(async (values) => {
               const payload = toCreateAssignmentInput(
@@ -229,29 +204,74 @@ export const AssignmentTimelinePage = ({
           </div>
         </form>
 
-        <div className="space-y-3">
-          <div>
-            <h3 className="font-medium">Historial de asignaciones</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Una vista cronológica de los puestos y ubicaciones.
-            </p>
+        <aside className="space-y-4 rounded-[18px] border border-black/10 bg-[#fbfbfa] p-6 lg:sticky lg:top-6 lg:self-start">
+          <p className="text-xs font-medium uppercase tracking-wide text-black/40">
+            Vista previa
+          </p>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white p-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Briefcase className="size-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs text-black/40">Puesto</p>
+                <p className="truncate text-sm font-medium">
+                  {selectedPosition?.name ?? 'Por elegir'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white p-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <MapPin className="size-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs text-black/40">Ubicación</p>
+                <p className="truncate text-sm font-medium">
+                  {selectedScope
+                    ? `${selectedScope.node.name} · ${scopeTypeLabels[selectedScope.node.ref.scopeType]}`
+                    : 'Por elegir'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white p-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <CalendarClock className="size-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs text-black/40">Desde</p>
+                <p className="truncate text-sm font-medium">
+                  {formatAssignmentDate(watchedValues.startedAt)}
+                </p>
+              </div>
+            </div>
           </div>
-          {timelineEntries.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Todavía no hay asignaciones disponibles.
-            </p>
-          ) : (
-            timelineEntries.map((entry) => (
+        </aside>
+      </div>
+
+      <div className="rounded-[18px] border border-black/10 bg-[#fbfbfa] p-6">
+        <div className="mb-4">
+          <h3 className="font-medium">Historial de asignaciones</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Una vista cronológica de los puestos y ubicaciones.
+          </p>
+        </div>
+        {timelineEntries.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Todavía no hay asignaciones disponibles.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {timelineEntries.map((entry) => (
               <div key={entry.id} className="rounded-lg border px-4 py-3">
                 <p className="font-medium">{entry.title}</p>
                 <p className="text-sm text-muted-foreground">
                   {entry.description}
                 </p>
               </div>
-            ))
-          )}
-        </div>
-      </CardContent>
-    </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 };

@@ -35,7 +35,10 @@ import {
   SidebarRail,
 } from '../../../shared/ui/sidebar';
 import type { AuthSession } from '../../auth/domain/auth';
-import { getCompanyMemberships } from '../../auth/domain/auth';
+import {
+  getCompanyMemberships,
+  hasTimesheetReadVisibility,
+} from '../../auth/domain/auth';
 import { TeamSwitcher } from '../../auth/presentation/components/team-switcher';
 import { useSwitchActiveCompany } from '../../auth/presentation/use-auth';
 import { useHrResponsibility } from '../../hr-responsibility/application/hr-responsibility-queries';
@@ -61,6 +64,13 @@ const hrItems = [
     href: '/dashboard/hr/approval-policies',
     icon: ShieldCheck,
   },
+  {
+    label: 'Timesheets',
+    href: '/dashboard/hr/timesheets',
+    icon: LayoutDashboard,
+    isVisible: (session: AuthSession) =>
+      Array.isArray(session.capabilities) && hasTimesheetReadVisibility(session),
+  },
 ];
 
 const sidebarItemClass =
@@ -69,7 +79,7 @@ const sidebarItemClass =
 const sidebarParentItemClass =
   'hover:bg-neutral-700 hover:text-white hover:pl-4 hover:rounded-2xl hover:[&>svg]:text-white data-[active=true]:bg-neutral-700 data-[active=true]:text-white data-[active=true]:[&>svg]:text-white data-[active=true]:pl-4 data-[active=true]:rounded-2xl transition-[width,height,padding,color,background-color] transition-all duration-400 ease-in-out';
 
-export const isHrNavigationActive = (pathname: string) =>
+const isHrNavigationActive = (pathname: string) =>
   pathname.startsWith('/dashboard/hr/') ||
   pathname === '/manage-employees' ||
   pathname === '/hr/responsibility';
@@ -113,6 +123,9 @@ export const DashboardAppSidebar = ({
   );
   const hasHrResponsibility = Boolean(
     hrResponsibilityQuery.data?.hasResponsibles,
+  );
+  const visibleHrItems = hrItems.filter(
+    (item) => !('isVisible' in item) || item.isVisible(session),
   );
   const canViewHr = canConfigureHr || hasHrResponsibility;
   const canViewOrganization = canConfigureHr || hasHrResponsibility;
@@ -216,7 +229,7 @@ export const DashboardAppSidebar = ({
                     <CollapsibleContent>
                       <SidebarMenuSub>
                         {hasHrResponsibility
-                          ? hrItems.map((item) => (
+                          ? visibleHrItems.map((item) => (
                               <SidebarMenuSubItem key={item.href}>
                                 <NavLink to={item.href} end>
                                   {({ isActive }) => (

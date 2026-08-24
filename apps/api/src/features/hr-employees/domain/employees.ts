@@ -1,6 +1,7 @@
 import type {
   EmployeeAssignment,
   EmployeeAssignmentHistory,
+  EmployeeAssignmentWithEmployee,
 } from './employee-assignments';
 import type { Position } from './positions';
 import { detectEcuadorianDocumentType } from '../../../shared/domain/ecuadorian-document';
@@ -167,6 +168,9 @@ export type HrEmployeesGateway = {
     companyId: string,
     managerPositionId: string,
   ) => Promise<EmployeeAssignment[]>;
+  listActivePrimaryAssignments: (
+    companyId: string,
+  ) => Promise<EmployeeAssignmentWithEmployee[]>;
 };
 
 export class EmployeeNotFoundError extends Error {

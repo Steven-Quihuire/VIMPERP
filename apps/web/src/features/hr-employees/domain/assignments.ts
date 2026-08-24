@@ -14,6 +14,10 @@ export type EmployeeAssignment = {
   scopeNodeName?: string;
 };
 
+export type EmployeeAssignmentWithEmployee = EmployeeAssignment & {
+  fullName: string;
+};
+
 export type ReportingLineRecord = {
   employeeId: string;
   positionId: string;

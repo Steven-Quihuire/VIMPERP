@@ -132,7 +132,7 @@ describe('createHrEmployeesApi', () => {
     );
     expect(
       JSON.parse(
-        (createEmployeeCall?.[1] as RequestInit | undefined)?.body as string,
+        createEmployeeCall?.[1]?.body as string,
       ),
     ).toMatchObject({
       fullName: 'New Employee',

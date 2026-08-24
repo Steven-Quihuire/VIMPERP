@@ -49,6 +49,10 @@ export const authCapabilityValues = [
   'catalog.read',
   'catalog.write',
   'catalog.delete',
+  'hr.timesheets.read',
+  'hr.timesheets.write',
+  'hr.timesheets.submit',
+  'hr.timesheets.approve',
 ] as const;
 
 export type AuthCapability = (typeof authCapabilityValues)[number];

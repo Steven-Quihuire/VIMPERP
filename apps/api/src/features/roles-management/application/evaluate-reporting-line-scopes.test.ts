@@ -88,6 +88,7 @@ const createHrEmployeesGateway = (): HrEmployeesGateway => ({
       createdAt: new Date('2026-08-13T10:00:00.000Z'),
     },
   ]),
+  listActivePrimaryAssignments: () => Promise.resolve([]),
 });
 
 const createErpAccessGateway = (): ErpAccessGateway => ({
