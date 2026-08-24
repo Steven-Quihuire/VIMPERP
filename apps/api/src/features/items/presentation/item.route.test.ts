@@ -6,6 +6,7 @@ import { createApp } from '../../../app/create-app';
 import type { ApplicationErrorRecorder } from '../../../shared/presentation/error.middleware';
 import type {
   AuthIdentityGateway,
+  AuthCapability,
   AuthMembership,
   AuthSessionRecord,
   AuthUser,
@@ -1214,7 +1215,7 @@ describe('item routes', () => {
     const listItems = (input: {
       companyId: string;
       localId: string | null;
-      capabilities: ('catalog.read' | 'catalog.write' | 'catalog.delete')[];
+      capabilities: AuthCapability[];
       companyStatus: 'active' | 'suspended' | 'provisioning_failed';
       limit: number;
       cursor?: string;
