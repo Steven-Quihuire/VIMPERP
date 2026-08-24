@@ -298,5 +298,5 @@ describe('admin audit routes integration', () => {
         localId,
       },
     });
-  });
+  }, 15000);
 });

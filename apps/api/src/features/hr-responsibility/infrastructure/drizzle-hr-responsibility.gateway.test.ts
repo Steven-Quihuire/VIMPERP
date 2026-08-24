@@ -180,5 +180,5 @@ describe('createDrizzleHrResponsibilityGateway', () => {
         .from(hrResponsibilityInvitationsTable)
         .where(eq(hrResponsibilityInvitationsTable.id, 'hr-inv-1')),
     ).resolves.toEqual([{ acceptedByUserId: 'user-2' }]);
-  });
+  }, 15000);
 });

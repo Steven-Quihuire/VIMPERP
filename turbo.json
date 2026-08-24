@@ -15,6 +15,7 @@
     },
     "test": {
       "cache": false,
+      "env": ["DATABASE_URL"],
       "dependsOn": ["^test"],
       "outputs": []
     },

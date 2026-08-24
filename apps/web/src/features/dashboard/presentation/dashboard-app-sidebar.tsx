@@ -52,7 +52,7 @@ const workspaceItems = [
 ];
 
 const hrItems = [
-  { label: 'Empleados', href: '/manage-employees', icon: Users },
+  { label: 'Empleados', href: '/dashboard/hr/employees', icon: Users },
   {
     label: 'Puestos',
     href: '/dashboard/hr/positions',

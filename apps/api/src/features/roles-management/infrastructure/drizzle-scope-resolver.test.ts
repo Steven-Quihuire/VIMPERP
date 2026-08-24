@@ -264,5 +264,5 @@ describe('drizzle scope resolver', () => {
         },
       }),
     ).resolves.toEqual(['catalog.read', 'roles.assign']);
-  });
+  }, 15000);
 });

@@ -671,7 +671,7 @@ describe('App dashboard shell', () => {
       name: /Recursos Humanos/,
     });
     expect(hrParent).toHaveAttribute('data-active', 'true');
-    expect(hrParent).toHaveClass('data-[active=true]:bg-muted');
+    expect(hrParent).toHaveClass('data-[active=true]:bg-neutral-700');
 
     const responsibilityLink = screen.getByRole('link', {
       name: 'Configurar responsables',
@@ -1130,6 +1130,13 @@ describe('App dashboard shell', () => {
     fireEvent.click(switcherButton);
     fireEvent.click(await screen.findByText(/Empresa 2/i));
 
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/me/active-company',
+        expect.objectContaining({ method: 'PATCH' }),
+      );
+    });
+
     expect(
       await screen.findByRole('heading', { name: 'Estado de tu empresa' }),
     ).toBeInTheDocument();
@@ -1139,13 +1146,6 @@ describe('App dashboard shell', () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/provisioning_failed/i)).not.toBeInTheDocument();
-
-    await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith(
-        '/api/me/active-company',
-        expect.objectContaining({ method: 'PATCH' }),
-      );
-    });
 
     unmount();
 

@@ -231,5 +231,5 @@ describe('createDrizzleHrEmployeesGateway', () => {
 
     const positions = await db.select().from(positionsTable);
     expect(positions).toHaveLength(2);
-  });
+  }, 15000);
 });

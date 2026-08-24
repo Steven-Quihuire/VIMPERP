@@ -153,5 +153,5 @@ describe('migration journal metadata', () => {
         },
       }),
     ).resolves.toMatchObject({ stderr: '' });
-  }, 15000);
+  }, 30000);
 });

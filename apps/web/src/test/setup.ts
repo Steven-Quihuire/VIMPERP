@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { afterEach } from 'vitest';
+import { afterEach, vi } from 'vitest';
 
 import { useAuthStore } from '../features/auth/infrastructure/auth-store';
 import { useOnboardingStore } from '../features/onboarding/infrastructure/onboarding-store';
@@ -42,6 +42,23 @@ if (!globalThis.ResizeObserver) {
   Object.defineProperty(globalThis, 'ResizeObserver', {
     value: ResizeObserverMock,
     configurable: true,
+  });
+}
+
+if (!globalThis.matchMedia) {
+  Object.defineProperty(globalThis, 'matchMedia', {
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+    configurable: true,
+    writable: true,
   });
 }
 

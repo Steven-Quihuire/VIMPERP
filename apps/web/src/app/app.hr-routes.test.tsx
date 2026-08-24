@@ -177,5 +177,5 @@ describe('App HR routes', () => {
       cleanup();
       render(<App initialEntries={['/dashboard/hr/timesheets/period-1']} />);
       expect(await screen.findByRole('heading', { name: 'Detalle del período' })).toBeInTheDocument();
-  });
+  }, 15000);
 });

@@ -558,7 +558,7 @@ const getSessionCookie = (headers: string | string[] | undefined): string => {
 
 const createAuthenticatedApp = async ({
   itemGateway = new InMemoryItemGateway(),
-  computeEffectivePermissions,
+  computeEffectivePermissions = () => Promise.resolve([]),
 }: {
   itemGateway?: InMemoryItemGateway;
   computeEffectivePermissions?: (input: {

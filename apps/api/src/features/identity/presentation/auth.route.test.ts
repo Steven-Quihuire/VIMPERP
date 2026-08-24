@@ -575,6 +575,7 @@ describe('auth routes', () => {
     const app = createApp({
       adminGateway,
       authIdentityGateway: gateway,
+      computeEffectivePermissions: () => Promise.resolve([]),
       passwordHasher,
       scopeResolver,
       sessionTokenService,
